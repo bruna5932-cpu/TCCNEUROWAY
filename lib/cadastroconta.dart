@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 
-
+ 
 // 1. Corrigido o nome da classe de CRIARCONTA para CriarConta (PascalCase)
 class CriarConta extends StatefulWidget {
   const CriarConta({super.key});
