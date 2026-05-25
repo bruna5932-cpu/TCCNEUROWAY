@@ -170,7 +170,7 @@ class LOGINState extends State<LOGIN> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const CriarConta()), // Substitua por 'CadastrarEmpresa()' ou a tela correta da sua empresa
+                      MaterialPageRoute(builder: (context) => const CadastroEmpresa()), // Substitua por 'CadastrarEmpresa()' ou a tela correta da sua empresa
                     );
                   },
                   child: const Text(
