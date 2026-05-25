@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:neuroway/cadastroconta.dart';
+import 'package:neuroway/cadastroempresa.dart';
 
 
 class LOGIN extends StatefulWidget {
@@ -165,10 +166,24 @@ class LOGINState extends State<LOGIN> {
               const SizedBox(height: 20),
               // Ícone final opcional
               Center(
-                child: SizedBox(
-                  width: 117,
-                  height: 63,
-                  child: Image.network("https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/ml6xocv0_expires_30_days.png"),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const CriarConta()), // Substitua por 'CadastrarEmpresa()' ou a tela correta da sua empresa
+                    );
+                  },
+                  child: const Text(
+                    'Quero cadastrar\nminha empresa',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black, // Se quiser parecer mais com um link da web, experimente Colors.blue[800]
+                      decoration: TextDecoration.underline,
+                      decorationThickness: 2.0,
+                    ),
+                  ),
                 ),
               ),
             ],
