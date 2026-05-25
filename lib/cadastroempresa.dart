@@ -1,34 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // IMPORTANTE: Adicionado para usar o FilteringTextInputFormatter
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class CadastroEmpresa extends StatefulWidget {
+  const CadastroEmpresa({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.green,
-        scaffoldBackgroundColor: Colors.white,
-      ),
-      home: const CadastroEmpresaScreen(),
-    );
-  }
+  State<CadastroEmpresa> createState() => _CadastroEmpresaState();
 }
 
-class CadastroEmpresaScreen extends StatefulWidget {
-  const CadastroEmpresaScreen({super.key});
-
-  @override
-  State<CadastroEmpresaScreen> createState() => _CadastroEmpresaScreenState();
-}
-
-class _CadastroEmpresaScreenState extends State<CadastroEmpresaScreen> {
+class _CadastroEmpresaState extends State<CadastroEmpresa> {
   String _necessitaAgendamento = 'NÃO';
 
   @override
@@ -55,8 +35,6 @@ class _CadastroEmpresaScreenState extends State<CadastroEmpresaScreen> {
                         fit: BoxFit.contain,
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    _buildTextField(label: 'Nome:'),
                     const SizedBox(height: 24),
                     _buildTextField(label: 'Nome:'),
                     _buildTextField(
