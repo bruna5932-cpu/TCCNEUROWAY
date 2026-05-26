@@ -117,7 +117,7 @@ class LOGINState extends State<LOGIN> {
                   children: [
                     ElevatedButton(
                       onPressed: () {
-                      Navigator.pop(context,
+                      Navigator.push(context,
                       MaterialPageRoute(builder: (context) => LOGIN()),
                       );
                       },
