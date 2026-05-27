@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:neuroway/cadastroempresa.dart';
+import 'package:neuroway/menuprincipal.dart';
 import 'package:neuroway/login.dart';
 
 class INICIO extends StatefulWidget {
@@ -83,13 +83,13 @@ class INICIOState extends State<INICIO> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const CadastroEmpresa()),
+                        MaterialPageRoute(builder: (context) => const MENUPRINCIPAL()),
                       );
                     },
                     child: const Padding(
                       padding: EdgeInsets.symmetric(vertical: 10),
                       child: Text(
-                        'Quero cadastrar\nminha empresa',
+                        'Continuar sem conta',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 22,
