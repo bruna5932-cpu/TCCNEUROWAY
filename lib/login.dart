@@ -12,7 +12,7 @@ class LOGIN extends StatefulWidget {
 
 class LOGINState extends State<LOGIN> {
   // Os controllers devem ficar dentro da State para melhor gerenciamento de memória
-  final TextEditingController _emailController = TextEditingController();
+   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
 
   @override
@@ -27,6 +27,7 @@ class LOGINState extends State<LOGIN> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
       body: SafeArea(
+        bottom: false, // Permite que a imagem ignore o padding seguro de baixo e cole de fato na tela
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,8 +186,22 @@ class LOGINState extends State<LOGIN> {
                     ),
                   ),
                 ),
+                
+              ),
+              const SizedBox(height: 20),
+              // --- Quebra-cabeça de baixo colado no fim da tela ---
+              Center(
+                child: SizedBox(
+                  width: double. infinity,
+                  height: 147,
+                  child: Image.network(
+                    "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/7gvs027p_expires_30_days.png",
+                    fit: BoxFit.fill,
+                  ),
+                ),
               ),
             ],
+            
           ),
         ),
       ),
