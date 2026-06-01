@@ -83,7 +83,7 @@ class INICIOState extends State<INICIO> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const MENUPRINCIPAL()),
+                        MaterialPageRoute(builder: (context) => const Menuprincipal()),
                       );
                     },
                     child: const Padding(
