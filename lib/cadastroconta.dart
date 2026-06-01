@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-
+import 'package:neuroway/menuprincipal.dart';
  
 // 1. Corrigido o nome da classe de CRIARCONTA para CriarConta (PascalCase)
 class CriarConta extends StatefulWidget {
@@ -53,7 +52,6 @@ class CriarContaState extends State<CriarConta> {
                   width: 224,
                   height: 147,
                   errorBuilder: (context, error, stackTrace) {
-                    // Evita que o app quebre caso a imagem local não seja encontrada
                     return const Text(
                       "Criar Conta",
                       style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
@@ -82,7 +80,9 @@ class CriarContaState extends State<CriarConta> {
                     // Botão Cadastrar
                     ElevatedButton(
                       onPressed: () {
-                        // Exemplo de como pegar os dados dos controllers:
+                        Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => Menuprincipal()),
+                      );
                         print("Usuário: ${_userController.text}");
                         print("E-mail: ${_emailController.text}");
                       },
