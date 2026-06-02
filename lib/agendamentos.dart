@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:neuroway/menuprincipal.dart';
 
 class Agendamentos extends StatefulWidget {
   const Agendamentos({super.key});
@@ -42,11 +43,7 @@ class _AgendamentosState extends State<Agendamentos> {
                     children: [
                       IconButton(
                         onPressed: () {
-                          if (Navigator.canPop(context)) {
-                            Navigator.pop(context);
-                          } else {
-                            debugPrint("Não há telas para voltar");
-                          }
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const Menuprincipal()));
                         },
                         icon: const Icon(
                           Icons.arrow_back_ios,
