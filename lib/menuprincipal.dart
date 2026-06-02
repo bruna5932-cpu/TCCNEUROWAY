@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:neuroway/agendamentos.dart';
 
 class Menuprincipal extends StatefulWidget {
   const Menuprincipal({super.key});
@@ -17,44 +18,60 @@ class _MenuprincipalState extends State<Menuprincipal> {
     super.dispose();
   }
 
+  // --- PASSO 1: Criar o método que retorna o conteúdo da sua Home atual ---
+  Widget _buildHomeContent() {
+    return SafeArea(
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                const PuzzleHeader(),
+                const SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: SearchBarWidget(controller: _searchController),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  return const BarbeariaCard();
+                },
+                childCount: 3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // --- PASSO 2: Lista de páginas mapeadas para cada ícone do BottomNavigationBar ---
+    final List<Widget> _paginas = [
+      _buildHomeContent(), // Index 0: Home
+      const Center(child: Text('Página Favoritos')), // Index 1: Favoritos (Placeholder)
+      const Agendamentos(), // Index 2: Linha 87-90 (Sua página importada de agendamentos.dart)
+      const Center(child: Text('Página Perfil')), // Index 3: Perfil (Placeholder)
+    ];
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            // Topo Decorativo com Botão Voltar, Puzzle e Barra de Busca
-            SliverToBoxAdapter(
-              child: Column(
-                children: [
-                  const PuzzleHeader(),
-                  const SizedBox(height: 20),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    child: SearchBarWidget(controller: _searchController),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-            
-            // Área de Conteúdo Rolável (Lista Customizada igual à imagem)
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    return const BarbeariaCard();
-                  },
-                  childCount: 3, // Quantidade baseada na imagem de exemplo
-                ),
-              ),
-            ),
-          ],
-        ),
+      
+      // --- PASSO 3: Alterar o body para IndexedStack (mantém o estado das telas ao alternar) ---
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _paginas,
       ),
-      // Barra de Navegação Inferior adicionada aqui
+
+      // Barra de Navegação Inferior (Mantida exatamente igual)
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           border: Border(
@@ -67,11 +84,11 @@ class _MenuprincipalState extends State<Menuprincipal> {
           backgroundColor: Colors.white,
           selectedItemColor: Colors.black,
           unselectedItemColor: const Color(0xFF9E9E9E),
-          showSelectedLabels: false, // Oculta os textos para focar nos ícones
+          showSelectedLabels: false,
           showUnselectedLabels: false,
           onTap: (index) {
             setState(() {
-              _currentIndex = index;
+              _currentIndex = index; // Isso muda a tela dinamicamente
             });
           },
           items: const [
@@ -83,10 +100,11 @@ class _MenuprincipalState extends State<Menuprincipal> {
               icon: Icon(Icons.favorite, size: 28),
               label: 'Favoritos',
             ),
+            // Linha 87 a 90 correspondente ao Index 2 da lista de _paginas
             BottomNavigationBarItem(
               icon: Icon(Icons.calendar_month, size: 28),
               label: 'Agenda',
-              
+              activeIcon: Icon(Icons.calendar_month, size: 28),
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person, size: 28),
