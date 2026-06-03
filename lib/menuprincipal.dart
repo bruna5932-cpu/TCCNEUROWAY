@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:neuroway/agendamentos.dart';
+import 'package:neuroway/descricaolocal.dart';
+import 'package:neuroway/localizacao.dart';
 
 class Menuprincipal extends StatefulWidget {
   const Menuprincipal({super.key});
@@ -234,11 +236,12 @@ class PuzzleHeader extends StatelessWidget {
   }
 }
 
-/// Widget simulando fielmente o Card da "Barbearia" presente na sua imagem
+/// Widget simulando fielmente o Card da "Barbearia" com clique na área de texto
+/// Widget simulando fielmente o Card da "Barbearia" com cliques na descrição e na localização
 class BarbeariaCard extends StatelessWidget {
   const BarbeariaCard({super.key});
 
-  @override
+  @override 
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -253,7 +256,7 @@ class BarbeariaCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Imagem da barbearia com cantos arredondados
+              // Imagem da barbearia com cantos arredondados (Não clicável)
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
@@ -261,41 +264,54 @@ class BarbeariaCard extends StatelessWidget {
                   height: 90,
                   color: Colors.grey[400],
                   child: const Icon(Icons.store, color: Colors.white, size: 40), 
-                ),
+                ),  
               ),
               const SizedBox(width: 12),
-              // Textos informativos
+              
+              // Área de textos clicável (Leva para a descrição do local)
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Barbearia',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DescricaoLocalScreen(),
+                      ),
+                    );
+                  },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Barbearia',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
                           ),
-                        ),
-                        Icon(Icons.favorite_border, color: Colors.grey[400], size: 22),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Barbearia desde 2015 com atendimento especializado há 7 anos.\nAmbiente calmo, organizado e silencioso, trazendo conforto aos nossos clientes.',
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 10, color: Colors.black87, height: 1.2),
-                    ),
-                  ],
+                          Icon(Icons.favorite_border, color: Colors.grey[400], size: 22),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Barbearia desde 2015 com atendimento specialized há 7 anos.\nAmbiente calmo, organizado e silencioso, trazendo conforto aos nossos clientes.',
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 10, color: Colors.black87, height: 1.2),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
+          
           // Linha inferior com as Estrelas e o Endereço
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -306,15 +322,28 @@ class BarbeariaCard extends StatelessWidget {
                   (index) => const Icon(Icons.star, color: Colors.amber, size: 20),
                 ),
               ),
-              const Row(
-                children: [
-                  Icon(Icons.location_on, color: Colors.red, size: 14),
-                  SizedBox(width: 2),
-                  Text(
-                    'Av. Andrômeda, 1232 - Jardim Satélite',
-                    style: TextStyle(fontSize: 9, color: Colors.black, fontWeight: FontWeight.w500),
-                  ),
-                ],
+              
+              // --- ALTERAÇÃO AQUI: Localização agora é clicável ---
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LocalizacaoScreen(), // <-- Substitua pelo nome da sua tela de mapa/localização
+                    ),
+                  );
+                },
+                child: const Row(
+                  children: [
+                    Icon(Icons.location_on, color: Colors.red, size: 14),
+                    SizedBox(width: 2),
+                    Text(
+                      'Av. Andrômeda, 1232 - Jardim Satélite',
+                      style: TextStyle(fontSize: 9, color: Colors.black, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
               ),
             ],
           )
