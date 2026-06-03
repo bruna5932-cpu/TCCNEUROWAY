@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
-class BarberiaScreen extends StatefulWidget {
-  const BarberiaScreen({super.key});
+
+class LocalizacaoScreen extends StatefulWidget {
+  const LocalizacaoScreen({super.key});
 
   @override
-  State<BarberiaScreen> createState() => _BarberiaScreenState();
+  State<LocalizacaoScreen> createState() => _LocalizacaoScreenState();
 }
 
-class _BarberiaScreenState extends State<BarberiaScreen> {
+class _LocalizacaoScreenState extends State<LocalizacaoScreen> {
   int _currentIndex = 0;
   bool _isFavorited = false; 
 
