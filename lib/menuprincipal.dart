@@ -206,16 +206,6 @@ class PuzzleHeader extends StatelessWidget {
             width: double.infinity,
             fit: BoxFit.fill,
           ),
-          Positioned(
-            left: 16,
-            top: 16,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87, size: 24),
-              onPressed: () {
-                Navigator.of(context).maybePop();
-              },
-            ),
-          ),
         ],
       ),
     );
