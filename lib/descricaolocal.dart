@@ -142,7 +142,18 @@ class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
                     const Text(
                       'Profissionais',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
+                      ),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const descricaoprofi(),
+                            ),
+                          );
+                        },
+                      ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
