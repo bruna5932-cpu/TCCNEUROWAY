@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'descricaoprofi.dart';
 
 class DescricaoLocalScreen extends StatefulWidget {
   const DescricaoLocalScreen({super.key});
@@ -9,7 +10,9 @@ class DescricaoLocalScreen extends StatefulWidget {
 
 class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
   bool _isFavorited = false;
-  int _currentNavIndex = 0;
+  
+  // --- ATUALIZADO: Agora usa a mesma variável de controle do primeiro código ---
+  int _currentIndex = 0; 
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +124,7 @@ class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Barbearia desde 2018 com atendimento especializado por 2 profissionais.\nAmbiente limpo, organized e silencioso, trazendo conforto aos nossos clientes.',
+                      'Barbearia desde 2018 com atendimento especializado por 2 profissionais.\nAmbiente limpo, organizado e silencioso, trazendo conforto aos nossos clientes.',
                       style: TextStyle(fontSize: 14, color: Colors.grey[700], height: 1.3),
                     ),
                   ],
@@ -142,25 +145,29 @@ class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
                     const Text(
                       'Profissionais',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const descricaoprofi(),
-                            ),
-                          );
-                        },
-                      ),
+                    ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        _buildProfessionalAvatar('Alisson Silva', '4 anos de experiência'),
-                        const SizedBox(width: 24),
-                        _buildProfessionalAvatar('João Souza', '2 anos de experiência'),
-                      ],
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const Descricaoprofi(),
+                          ),
+                        );
+                      },
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildProfessionalAvatar('Alisson Silva', '4 anos de exp.'),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildProfessionalAvatar('João Souza', '2 anos de exp.'),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -240,7 +247,7 @@ class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
 
               const SizedBox(height: 24),
 
-              // 8. Botão Agende seu horário (WhatsApp) - CORRIGIDO
+              // 8. Botão Agende seu horário (WhatsApp)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Align(
@@ -265,6 +272,9 @@ class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
                           Image.asset(
                             'assets/whatsApp.png',
                             height: 28,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.chat, color: Colors.green, size: 28);
+                            },
                           ),
                         ],
                       ),
@@ -278,26 +288,47 @@ class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
         ),
       ),
 
-      // 9. Barra de Navegação Inferior
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentNavIndex,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.grey,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        onTap: (index) {
-          setState(() {
-            _currentNavIndex = index;
-          });
-          print('Menu inferior: item $index clicado');
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: 'Favoritos'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_month), label: 'Agenda'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Perfil'),
-        ],
+      // --- PASSO 9: MODIFICADO PARA REPRODUZIR EXATAMENTE O SEU PRIMEIRO CÓDIGO ---
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(
+            top: BorderSide(color: Color(0xFFE0E0E0), width: 1),
+          ),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: Colors.black,
+          unselectedItemColor: const Color(0xFF9E9E9E),
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index; 
+            });
+            print('Menu inferior atualizado para o index: $index');
+          },
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_filled, size: 28),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.favorite, size: 28),
+              label: 'Favoritos',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_month, size: 28),
+              label: 'Agenda',
+              activeIcon: Icon(Icons.calendar_month, size: 28),
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person, size: 28),
+              label: 'Perfil',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -327,32 +358,33 @@ class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
   }
 
   Widget _buildProfessionalAvatar(String name, String experience) {
-    return InkWell(
-      onTap: () => print('Profissional $name selecionado'),
-      borderRadius: BorderRadius.circular(8),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: Colors.grey[300],
-            child: const Icon(Icons.person, color: Colors.grey, size: 30),
-          ),
-          const SizedBox(width: 8),
-          Column(
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: Colors.grey[300],
+          child: const Icon(Icons.person, color: Colors.grey, size: 30),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 name,
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
               ),
               Text(
                 experience,
                 style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
