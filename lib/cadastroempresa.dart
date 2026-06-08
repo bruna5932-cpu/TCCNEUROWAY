@@ -527,24 +527,22 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
   }
 
   Widget _buildPuzzleHeader() {
-    return SizedBox(
-      width: double.infinity,
-      child: Image.asset(
-        'imagens/cabecalho.png',
-        width: double.infinity,
-        fit: BoxFit.fitWidth,
+    const SizedBox(height: 16),
+          Image.network(
+                        "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/3bnn2jd1_expires_30_days.png",
+                        width: double.infinity,
+                        height: 150,
+                        fit: BoxFit.fill,
+                      ),
+
+              const SizedBox(height: 20),
       ),
     );
   }
 
-  Widget _buildPuzzleFooter() {
-    return SizedBox(
-      width: double.infinity,
-      child: Image.asset(
-        'imagens/cabecalhobaixo.png',
-        width: double.infinity,
-        fit: BoxFit.fitWidth,
-      ),
-    );
-  }
-}
+ mage.network(
+                    "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/mmm5zn7a_expires_30_days.png",
+                    width: double.infinity,
+                    height: 150,
+                    fit: BoxFit.fill,
+                  ),
