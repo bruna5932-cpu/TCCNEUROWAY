@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class ProfessionalProfilePage extends StatelessWidget {
-  const ProfessionalProfilePage({super.key});
+class Descricaoprofi extends StatelessWidget {
+  const Descricaoprofi({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -15,11 +15,15 @@ class ProfessionalProfilePage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Topo colorido com quebra-cabeças e foto de perfil
+                    Image.network(
+                      "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/0kaf4f8w_expires_30_days.png",
+                      height: 149,
+                      width: double.infinity,
+                      fit: BoxFit.fill,
+                    ),
+
                     const ProfileHeaderSection(),
                     
-                    const SizedBox(height: 16),
-
                     // Biografia/Descrição
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 20),
@@ -53,7 +57,7 @@ class ProfessionalProfilePage extends StatelessWidget {
                 ),
               ),
             ),
-            // Barra de Navegação Inferior Customizada
+            // --- ADICIONADO AQUI: A barra de navegação com as configurações do primeiro código ---
             const CustomBottomNavigationBar(),
           ],
         ),
@@ -70,29 +74,15 @@ class ProfileHeaderSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Faixa superior colorida (Simulando o padrão de quebra-cabeça com cores)
-        Container(
-          height: 90,
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.orange, Colors.red, Colors.purple, Colors.blue, Colors.green, Colors.yellow],
-              begin: Alignment.topLeft,
-              end: Alignment.topRight,
-            ),
-          ),
-          child: const Opacity(
-            opacity: 0.3,
-            child: Icon(Icons.extension, size: 50, color: Colors.white),
-          ),
-        ),
         // Botão de voltar
         Positioned(
           top: 45,
           left: 10,
           child: IconButton(
             icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 28),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.pop(context);
+            },
           ),
         ),
         // Botão de Favorito (Coração)
@@ -106,7 +96,6 @@ class ProfileHeaderSection extends StatelessWidget {
         ),
         // Foto de Perfil e Nome
         Padding(
-          // CORREÇÃO: Sintaxe de padding corrigida para evitar erros em tempo de execução
           padding: const EdgeInsets.only(top: 45, left: 45, right: 45),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -352,7 +341,6 @@ class CommentCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Row(
-            // CORREÇÃO: Propriedade trocada de 'alignment: Alignment.centerRight' para 'mainAxisAlignment'
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Icon(Icons.thumb_up_outlined, size: 14, color: Colors.grey[700]),
@@ -370,36 +358,56 @@ class CommentCard extends StatelessWidget {
   }
 }
 
-// MARK: - Bottom Navigation Bar Component
-class CustomBottomNavigationBar extends StatelessWidget {
+// MARK: - CONFIGURAÇÃO MODIFICADA PARA A PRIMEIRA BARRA DE NAVEGAÇÃO
+class CustomBottomNavigationBar extends StatefulWidget {
   const CustomBottomNavigationBar({super.key});
+
+  @override
+  State<CustomBottomNavigationBar> createState() => _CustomBottomNavigationBarState();
+}
+
+class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
+  int _currentIndex = 0; // Controla o item selecionado localmente na tela
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 60,
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
-        border: const Border(top: BorderSide(color: Colors.grey, width: 0.5)),
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Color(0xFFE0E0E0), width: 1),
+        ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.home, color: Colors.black, size: 28),
-            onPressed: () {},
+      child: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: Colors.black,
+        unselectedItemColor: const Color(0xFF9E9E9E),
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index; 
+          });
+          print('Menu inferior atualizado para o index: $index');
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_filled, size: 28),
+            label: 'Home',
           ),
-          IconButton(
-            icon: const Icon(Icons.favorite, color: Colors.grey, size: 28),
-            onPressed: () {},
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite, size: 28),
+            label: 'Favoritos',
           ),
-          IconButton(
-            icon: const Icon(Icons.calendar_month, color: Colors.grey, size: 28),
-            onPressed: () {},
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_month, size: 28),
+            label: 'Agenda',
+            activeIcon: Icon(Icons.calendar_month, size: 28),
           ),
-          IconButton(
-            icon: const Icon(Icons.person, color: Colors.grey, size: 28),
-            onPressed: () {},
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person, size: 28),
+            label: 'Perfil',
           ),
         ],
       ),
