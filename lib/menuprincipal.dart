@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:neuroway/agendamentos.dart';
 import 'package:neuroway/descricaolocal.dart';
 import 'package:neuroway/localizacao.dart';
+import 'package:neuroway/favoritos.dart'; 
+import 'package:neuroway/peril.dart'; // Importação do seu arquivo de perfil
 
 class Menuprincipal extends StatefulWidget {
   const Menuprincipal({super.key});
@@ -59,9 +61,9 @@ class _MenuprincipalState extends State<Menuprincipal> {
     // --- PASSO 2: Lista de páginas mapeadas para cada ícone do BottomNavigationBar ---
     final List<Widget> _paginas = [
       _buildHomeContent(), // Index 0: Home
-      const Center(child: Text('Página Favoritos')), // Index 1: Favoritos (Placeholder)
-      const Agendamentos(), // Index 2: Linha 87-90 (Sua página importada de agendamentos.dart)
-      const Center(child: Text('Página Perfil')), // Index 3: Perfil (Placeholder)
+      const Favoritos(),   // Index 1: Tela de Favoritos
+      const Agendamentos(), // Index 2: Tela de Agendamentos
+      const PerfilPage(),      // <-- MODIFICADO AQUI: Agora aponta para a sua tela real de Perfil
     ];
 
     return Scaffold(
@@ -73,7 +75,7 @@ class _MenuprincipalState extends State<Menuprincipal> {
         children: _paginas,
       ),
 
-      // Barra de Navegação Inferior (Mantida exatamente igual)
+      // Barra de Navegação Inferior
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           border: Border(
@@ -102,7 +104,6 @@ class _MenuprincipalState extends State<Menuprincipal> {
               icon: Icon(Icons.favorite, size: 28),
               label: 'Favoritos',
             ),
-            // Linha 87 a 90 correspondente ao Index 2 da lista de _paginas
             BottomNavigationBarItem(
               icon: Icon(Icons.calendar_month, size: 28),
               label: 'Agenda',
@@ -119,7 +120,7 @@ class _MenuprincipalState extends State<Menuprincipal> {
   }
 }
 
-/// Widget responsável pela barra de busca customizada idêntica à imagem
+/// Widget responsável pela barra de busca customizada
 class SearchBarWidget extends StatelessWidget {
   final TextEditingController controller;
 
@@ -187,7 +188,7 @@ class SearchBarWidget extends StatelessWidget {
   }
 }
 
-/// Widget do topo CORRIGIDO para aceitar a lista de filhos (children) no Stack
+/// Widget do topo com a imagem do Stack
 class PuzzleHeader extends StatelessWidget {
   const PuzzleHeader({super.key});
 
@@ -198,15 +199,13 @@ class PuzzleHeader extends StatelessWidget {
       width: double.infinity,
       color: Colors.white,
       child: Stack(
-        children: [ //
+        children: [ 
           Image.network(
             "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/0kaf4f8w_expires_30_days.png",
             height: 149,
             width: double.infinity,
             fit: BoxFit.fill,
           ),
-
-          // --- Seta de Voltar (Por cima de tudo no canto superior esquerdo) ---
           Positioned(
             left: 16,
             top: 16,
@@ -217,27 +216,13 @@ class PuzzleHeader extends StatelessWidget {
               },
             ),
           ),
-        ], //Children
-      ),
-    );
-  }
-
-  // Método auxiliar mantido caso queira usar futuramente
-  // ignore: unused_element
-  Widget _buildPuzzlePiece(Color color, double width, double height) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(16),
+        ],
       ),
     );
   }
 }
 
-/// Widget simulando fielmente o Card da "Barbearia" com clique na área de texto
-/// Widget simulando fielmente o Card da "Barbearia" com cliques na descrição e na localização
+/// Widget do Card da "Barbearia"
 class BarbeariaCard extends StatelessWidget {
   const BarbeariaCard({super.key});
 
@@ -256,7 +241,6 @@ class BarbeariaCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Imagem da barbearia com cantos arredondados (Não clicável)
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
@@ -267,8 +251,6 @@ class BarbeariaCard extends StatelessWidget {
                 ),  
               ),
               const SizedBox(width: 12),
-              
-              // Área de textos clicável (Leva para a descrição do local)
               Expanded(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -311,8 +293,6 @@ class BarbeariaCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          
-          // Linha inferior com as Estrelas e o Endereço
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -322,15 +302,13 @@ class BarbeariaCard extends StatelessWidget {
                   (index) => const Icon(Icons.star, color: Colors.amber, size: 20),
                 ),
               ),
-              
-              // --- ALTERAÇÃO AQUI: Localização agora é clicável ---
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const LocalizacaoScreen(), // <-- Substitua pelo nome da sua tela de mapa/localização
+                      builder: (context) => const LocalizacaoScreen(),
                     ),
                   );
                 },
