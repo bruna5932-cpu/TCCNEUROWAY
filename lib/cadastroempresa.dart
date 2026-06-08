@@ -10,6 +10,17 @@ class CadastroEmpresa extends StatefulWidget {
 
 class _CadastroEmpresaState extends State<CadastroEmpresa> {
   String _necessitaAgendamento = 'NÃO';
+  
+  // Controladores para validação de senha
+  final TextEditingController _senhaController = TextEditingController();
+  final TextEditingController _confirmarSenhaController = TextEditingController();
+
+  @override
+  void dispose() {
+    _senhaController.dispose();
+    _confirmarSenhaController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,12 +30,23 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildPuzzleHeader(),
+              // CORRIGIDO: Imagem do topo separada corretamente dos outros elementos
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
                   vertical: 16,
                 ),
+                child: Image.network(
+                  "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/0kaf4f8w_expires_30_days.png",
+                  height: 149,
+                  width: double.infinity,
+                  fit: BoxFit.fill,
+                ),
+              ),
+              
+              // CORRIGIDO: Agora a coluna do formulário segue o fluxo correto do layout
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -140,20 +162,32 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
                     _buildTextField(
                       label: 'Senha:',
                       obscureText: true,
+                      controller: _senhaController,
                     ),
                     _buildTextField(
                       label: 'Confirmar senha:',
                       obscureText: true,
+                      controller: _confirmarSenhaController,
                     ),
                     const SizedBox(height: 32),
+
+                    // BOTÃO CADASTRAR (Posicionado antes da imagem)
                     Center(
                       child: ElevatedButton(
                         onPressed: () {
+                          if (_senhaController.text != _confirmarSenhaController.text) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('As senhas não coincidem!'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text(
-                                'Processando cadastro...',
-                              ),
+                              content: Text('Processando cadastro...'),
                             ),
                           );
                         },
@@ -177,11 +211,24 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
                         ),
                       ),
                     ),
+
+                    const SizedBox(height: 32),
+
+                    // SUA IMAGEM ADICIONADA (Posicionada como rodapé/último elemento)
+                    Center(
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 147,
+                        child: Image.network(
+                          "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/7gvs027p_expires_30_days.png",
+                          fit: BoxFit.fill,
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 24),
                   ],
                 ),
               ),
-              _buildPuzzleFooter(),
             ],
           ),
         ),
@@ -189,7 +236,6 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     );
   }
 
-  // ALTERADO: Adicionado os parâmetros opcionais keyboardType e inputFormatters
   Widget _buildTextField({
     required String label,
     String? hint,
@@ -197,6 +243,7 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     bool obscureText = false,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
+    TextEditingController? controller,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -215,10 +262,11 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
+              controller: controller,
               maxLines: maxLines,
               obscureText: obscureText,
-              keyboardType: keyboardType, // Aplicado aqui
-              inputFormatters: inputFormatters, // Aplicado aqui
+              keyboardType: keyboardType,
+              inputFormatters: inputFormatters,
               decoration: InputDecoration(
                 hintText: hint,
                 hintStyle: TextStyle(
@@ -525,24 +573,4 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
       ),
     );
   }
-
-  Widget _buildPuzzleHeader() {
-    const SizedBox(height: 16),
-          Image.network(
-                        "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/3bnn2jd1_expires_30_days.png",
-                        width: double.infinity,
-                        height: 150,
-                        fit: BoxFit.fill,
-                      ),
-
-              const SizedBox(height: 20),
-      ),
-    );
-  }
-
- mage.network(
-                    "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/mmm5zn7a_expires_30_days.png",
-                    width: double.infinity,
-                    height: 150,
-                    fit: BoxFit.fill,
-                  ),
+}
