@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // IMPORTANTE: Adicionado para usar o FilteringTextInputFormatter
+import 'package:flutter/services.dart';
+// Certifique-se de que o caminho para o seu MenuPrincipal está correto aqui:
+import 'package:neuroway/menuprincipal.dart'; 
 
 class CadastroEmpresa extends StatefulWidget {
   const CadastroEmpresa({super.key});
@@ -14,6 +16,34 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
   // Controladores para validação de senha
   final TextEditingController _senhaController = TextEditingController();
   final TextEditingController _confirmarSenhaController = TextEditingController();
+
+  // FUNÇÃO DE CADASTRO CORRIGIDA: Valida as senhas e envia para o MenuPrincipal
+  void _realizarCadastro() {
+    if (_senhaController.text != _confirmarSenhaController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('As senhas não coincidem!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Cadastro realizado com sucesso!'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    // Navega para o Menu Principal após o sucesso
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const Menuprincipal()),
+      (route) => false, // Impede o usuário de voltar para a tela de cadastro ao apertar o botão "Voltar" do celular
+    );
+  }
 
   @override
   void dispose() {
@@ -30,12 +60,9 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // CORRIGIDO: Imagem do topo separada corretamente dos outros elementos
+              // Imagem do topo
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: Image.network(
                   "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/0kaf4f8w_expires_30_days.png",
                   height: 149,
@@ -44,7 +71,7 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
                 ),
               ),
               
-              // CORRIGIDO: Agora a coluna do formulário segue o fluxo correto do layout
+              // Conteúdo do formulário
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
@@ -52,8 +79,8 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
                   children: [
                     Center(
                       child: Image.asset(
-                        'imagens/titulocadastreempresa.png', // Caminho da sua imagem nos assets
-                        width: 280, // Ajuste a largura ideal para sua tela aqui
+                        'imagens/titulocadastreempresa.png',
+                        width: 280,
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -63,7 +90,6 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
                       label: 'Categoria:',
                       hint: '(escola, barbearia, restaurante...)',
                     ),
-                    // ALTERADO: Campo de telefone agora configurado para apenas números
                     _buildTextField(
                       label: 'Número:',
                       hint: 'Apenas números (ex: 12999999999)',
@@ -73,88 +99,51 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
                     const SizedBox(height: 16),
                     const Text(
                       'Dias/horários de funcionamento:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(height: 8),
                     _buildHorariosGrid(),
                     const SizedBox(height: 16),
-                    _buildTextField(
-                      label: 'Descrição:',
-                      maxLines: 3,
-                    ),
-                    _buildTextField(
-                      label: 'Endereço completo:',
-                    ),
+                    _buildTextField(label: 'Descrição:', maxLines: 3),
+                    _buildTextField(label: 'Endereço completo:'),
                     const SizedBox(height: 16),
                     const Text(
                       'Redes sociais:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(height: 8),
-                    _buildSocialInput(
-                      Icons.camera_alt,
-                      'Instagram (URL ou @)',
-                    ),
-                    _buildSocialInput(
-                      Icons.facebook,
-                      'Facebook (URL)',
-                    ),
-                    _buildSocialInput(
-                      Icons.music_note,
-                      'TikTok',
-                    ),
-                    _buildSocialInput(
-                      Icons.language,
-                      'Website',
-                    ),
+                    _buildSocialInput(Icons.camera_alt, 'Instagram (URL ou @)'),
+                    _buildSocialInput(Icons.facebook, 'Facebook (URL)'),
+                    _buildSocialInput(Icons.music_note, 'TikTok'),
+                    _buildSocialInput(Icons.language, 'Website'),
                     const SizedBox(height: 20),
                     const Text(
                       'Necessita agendamento?',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(height: 8),
                     _buildAgendamentoOptions(),
                     const SizedBox(height: 20),
                     const Text(
                       'Descrição dos profissionais:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(height: 10),
                     _buildProfissionaisSection(),
                     const SizedBox(height: 20),
                     const Text(
                       'Fotos (até 15 fotos)',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(height: 10),
                     _buildFotosGrid(),
                     const SizedBox(height: 20),
                     const Text(
                       'Formas de pagamento:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(height: 8),
-                    _buildPaymentInput(
-                      'Cartão (crédito/débito):',
-                    ),
+                    _buildPaymentInput('Cartão (crédito/débito):'),
                     _buildPaymentInput('Pix:'),
                     _buildPaymentInput('Outros:'),
                     const SizedBox(height: 16),
@@ -171,32 +160,13 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
                     ),
                     const SizedBox(height: 32),
 
-                    // BOTÃO CADASTRAR (Posicionado antes da imagem)
+                    // BOTÃO CADASTRAR (Chamando a função corrigida)
                     Center(
                       child: ElevatedButton(
-                        onPressed: () {
-                          if (_senhaController.text != _confirmarSenhaController.text) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('As senhas não coincidem!'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Processando cadastro...'),
-                            ),
-                          );
-                        },
+                        onPressed: _realizarCadastro,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF76A085),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 40,
-                            vertical: 12,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -214,7 +184,7 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
 
                     const SizedBox(height: 32),
 
-                    // SUA IMAGEM ADICIONADA (Posicionada como rodapé/último elemento)
+                    // Imagem de Rodapé
                     Center(
                       child: SizedBox(
                         width: double.infinity,
@@ -236,6 +206,8 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     );
   }
 
+  // --- Seus métodos auxiliares de Widgets (mantidos iguaizinhos) ---
+
   Widget _buildTextField({
     required String label,
     String? hint,
@@ -248,17 +220,9 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        crossAxisAlignment: maxLines > 1
-            ? CrossAxisAlignment.start
-            : CrossAxisAlignment.center,
+        crossAxisAlignment: maxLines > 1 ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-            ),
-          ),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
@@ -269,25 +233,14 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
               inputFormatters: inputFormatters,
               decoration: InputDecoration(
                 hintText: hint,
-                hintStyle: TextStyle(
-                  color: Colors.grey.shade400,
-                  fontSize: 13,
-                ),
+                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 4,
-                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 4),
                 enabledBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.black45,
-                    width: 1,
-                  ),
+                  borderSide: BorderSide(color: Colors.black45, width: 1),
                 ),
                 focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.blue,
-                    width: 1.5,
-                  ),
+                  borderSide: BorderSide(color: Colors.blue, width: 1.5),
                 ),
               ),
             ),
@@ -298,17 +251,7 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
   }
 
   Widget _buildHorariosGrid() {
-    final dias = [
-      'Segunda:',
-      'Terça:',
-      'Quarta:',
-      'Quinta:',
-      'Sexta:',
-      'Sábado:',
-      'Domingo:',
-      'Feriados:',
-    ];
-
+    final dias = ['Segunda:', 'Terça:', 'Quarta:', 'Quinta:', 'Sexta:', 'Sábado:', 'Domingo:', 'Feriados:'];
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -323,21 +266,11 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
           children: [
             SizedBox(
               width: 65,
-              child: Text(
-                dias[index],
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              child: Text(dias[index], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
             ),
             const Expanded(
               child: TextField(
-                decoration: InputDecoration(
-                  hintText: '__:__ às __:__',
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
+                decoration: InputDecoration(hintText: '__:__ às __:__', isDense: true, contentPadding: EdgeInsets.zero),
                 style: TextStyle(fontSize: 12),
               ),
             ),
@@ -352,21 +285,11 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(
-            icon,
-            size: 24,
-            color: Colors.black54,
-          ),
+          Icon(icon, size: 24, color: Colors.black54),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
-              decoration: InputDecoration(
-                hintText: hint,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 4,
-                ),
-              ),
+              decoration: InputDecoration(hintText: hint, isDense: true, contentPadding: const EdgeInsets.symmetric(vertical: 4)),
             ),
           ),
         ],
@@ -375,41 +298,23 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
   }
 
   Widget _buildAgendamentoOptions() {
-    final opcoes = [
-      'SIM',
-      'NÃO',
-      'OPCIONAL',
-    ];
-
+    final opcoes = ['SIM', 'NÃO', 'OPCIONAL'];
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: opcoes.map((opcao) {
         final isSelected = _necessitaAgendamento == opcao;
-
         return InkWell(
-          onTap: () {
-            setState(() {
-              _necessitaAgendamento = opcao;
-            });
-          },
+          onTap: () => setState(() => _necessitaAgendamento = opcao),
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 8,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             decoration: BoxDecoration(
               color: isSelected ? Colors.grey.shade300 : Colors.white,
-              border: Border.all(
-                color: Colors.black38,
-              ),
+              border: Border.all(color: Colors.black38),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               opcao,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.black : Colors.black54,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.black : Colors.black54),
             ),
           ),
         );
@@ -423,41 +328,21 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
         Expanded(
           child: Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: Colors.black26,
-              ),
-              borderRadius: BorderRadius.circular(15),
-            ),
+            decoration: BoxDecoration(border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(15)),
             child: Row(
               children: [
                 const CircleAvatar(
                   radius: 20,
                   backgroundColor: Colors.black12,
-                  child: Icon(
-                    Icons.person,
-                    color: Colors.black54,
-                  ),
+                  child: Icon(Icons.person, color: Colors.black54),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Nome:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                      Text(
-                        'Especialidade/função',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 10,
-                        ),
-                      ),
+                      const Text('Nome:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      Text('Especialidade/função', style: TextStyle(color: Colors.grey.shade600, fontSize: 10)),
                     ],
                   ),
                 ),
@@ -469,27 +354,12 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
         InkWell(
           onTap: () {},
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: Colors.black26,
-              ),
-              borderRadius: BorderRadius.circular(15),
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(15)),
             child: const Column(
               children: [
                 Icon(Icons.add, size: 24),
-                Text(
-                  'Adicionar\nprofissional',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text('Adicionar\nprofissional', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -510,32 +380,19 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
             decoration: BoxDecoration(
               color: Colors.lightGreen.shade100,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.green.shade300,
-              ),
+              border: Border.all(color: Colors.green.shade300),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Stack(
                 children: [
                   Positioned(
-                    top: 10,
-                    left: 0,
-                    right: 0,
-                    child: Icon(
-                      Icons.cloud_queue,
-                      color: Colors.white.withOpacity(0.9),
-                      size: 30,
-                    ),
+                    top: 10, left: 0, right: 0,
+                    child: Icon(Icons.cloud_queue, color: Colors.white.withOpacity(0.9), size: 30),
                   ),
                   Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: 40,
-                      color: Colors.lightGreen.shade400,
-                    ),
+                    bottom: 0, left: 0, right: 0,
+                    child: Container(height: 40, color: Colors.lightGreen.shade400),
                   ),
                 ],
               ),
@@ -551,22 +408,11 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
           const SizedBox(width: 8),
           const Expanded(
             child: TextField(
-              decoration: InputDecoration(
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(
-                  vertical: 2,
-                ),
-              ),
+              decoration: InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(vertical: 2)),
             ),
           ),
         ],
