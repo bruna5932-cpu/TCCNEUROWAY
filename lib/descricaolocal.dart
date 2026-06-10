@@ -160,7 +160,7 @@ class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
                       child: Row(
                         children: [
                           Expanded(
-                            child: _buildProfessionalAvatar('Alisson Silva', '4 anos de exp.'),
+                            child: _buildProfessionalAvatar('Marcos', '4 anos de exp.'),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
