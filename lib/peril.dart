@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class PerfilPage extends StatefulWidget {
-  const PerfilPage({super.key});
+class Perfil extends StatefulWidget {
+  const Perfil({super.key});
 
   @override
-  State<PerfilPage> createState() => _PerfilPageState();
+  State<Perfil> createState() => _PerfilState();
 }
 
-class _PerfilPageState extends State<PerfilPage> {
+class _PerfilState extends State<Perfil> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
