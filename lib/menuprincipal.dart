@@ -22,7 +22,7 @@ class _MenuprincipalState extends State<Menuprincipal> {
     super.dispose();
   }
 
-  // --- PASSO 1: Criar o método que retorna o conteúdo da sua Home atual ---
+  // Conteúdo da sua aba Home
   Widget _buildHomeContent() {
     return SafeArea(
       child: CustomScrollView(
@@ -58,24 +58,21 @@ class _MenuprincipalState extends State<Menuprincipal> {
 
   @override
   Widget build(BuildContext context) {
-    // --- PASSO 2: Lista de páginas mapeadas para cada ícone do BottomNavigationBar ---
+    // Lista de subpáginas. (Garante que nenhuma delas tenha bottomNavigationBar própria)
     final List<Widget> _paginas = [
       _buildHomeContent(), // Index 0: Home
       const Favoritos(),   // Index 1: Tela de Favoritos
       const Agendamentos(), // Index 2: Tela de Agendamentos
-      const PerfilPage(),      // <-- MODIFICADO AQUI: Agora aponta para a sua tela real de Perfil
+      const Perfil(),    // Index 3: Tela de Perfil
     ];
 
     return Scaffold(
       backgroundColor: Colors.white,
-      
-      // --- PASSO 3: Alterar o body para IndexedStack (mantém o estado das telas ao alternar) ---
       body: IndexedStack(
         index: _currentIndex,
         children: _paginas,
       ),
-
-      // Barra de Navegação Inferior
+      // ESTA é a única barra que vai aparecer no app inteiro
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           border: Border(
@@ -92,7 +89,7 @@ class _MenuprincipalState extends State<Menuprincipal> {
           showUnselectedLabels: false,
           onTap: (index) {
             setState(() {
-              _currentIndex = index; // Isso muda a tela dinamicamente
+              _currentIndex = index; // Alterna suavemente entre as telas
             });
           },
           items: const [
@@ -107,7 +104,6 @@ class _MenuprincipalState extends State<Menuprincipal> {
             BottomNavigationBarItem(
               icon: Icon(Icons.calendar_month, size: 28),
               label: 'Agenda',
-              activeIcon: Icon(Icons.calendar_month, size: 28),
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person, size: 28),
@@ -120,10 +116,10 @@ class _MenuprincipalState extends State<Menuprincipal> {
   }
 }
 
-/// Widget responsável pela barra de busca customizada
+// --- WIDGETS AUXILIARES DE SUPORTE (Mantidos idênticos ao original) ---
+
 class SearchBarWidget extends StatelessWidget {
   final TextEditingController controller;
-
   const SearchBarWidget({super.key, required this.controller});
 
   @override
@@ -133,54 +129,28 @@ class SearchBarWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFF3F3F4),
         borderRadius: BorderRadius.circular(27),
-        border: Border.all(
-          color: const Color(0xFFD0D3D8),
-          width: 1.5,
-        ),
+        border: Border.all(color: const Color(0xFFD0D3D8), width: 1.5),
       ),
       child: Row(
         children: [
           const SizedBox(width: 16),
-          const Icon(
-            Icons.search,
-            color: Color(0xFF9E9E9E),
-            size: 26,
-          ),
+          const Icon(Icons.search, color: Color(0xFF9E9E9E), size: 26),
           const SizedBox(width: 12),
           Expanded(
             child: TextField(
               controller: controller,
               decoration: const InputDecoration(
                 hintText: 'Buscar',
-                hintStyle: TextStyle(
-                  color: Color(0xFF9E9E9E),
-                  fontSize: 18,
-                  fontWeight: FontWeight.w400,
-                ),
+                hintStyle: TextStyle(color: Color(0xFF9E9E9E), fontSize: 18, fontWeight: FontWeight.w400),
                 border: InputBorder.none,
               ),
             ),
           ),
-          Container(
-            height: 24,
-            width: 1,
-            color: const Color(0xFFB0B3B8),
-          ),
+          Container(height: 24, width: 1, color: const Color(0xFFB0B3B8)),
           const SizedBox(width: 12),
-          const Icon(
-            Icons.location_on_outlined,
-            color: Color(0xFF9E9E9E),
-            size: 24,
-          ),
+          const Icon(Icons.location_on_outlined, color: Color(0xFF9E9E9E), size: 24),
           const SizedBox(width: 6),
-          const Text(
-            'SJC',
-            style: TextStyle(
-              color: Color(0xFF7D828A),
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          const Text('SJC', style: TextStyle(color: Color(0xFF7D828A), fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(width: 20),
         ],
       ),
@@ -188,7 +158,6 @@ class SearchBarWidget extends StatelessWidget {
   }
 }
 
-/// Widget do topo com a imagem do Stack
 class PuzzleHeader extends StatelessWidget {
   const PuzzleHeader({super.key});
 
@@ -212,7 +181,6 @@ class PuzzleHeader extends StatelessWidget {
   }
 }
 
-/// Widget do Card da "Barbearia"
 class BarbeariaCard extends StatelessWidget {
   const BarbeariaCard({super.key});
 
@@ -247,9 +215,7 @@ class BarbeariaCard extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const DescricaoLocalScreen(),
-                      ),
+                      MaterialPageRoute(builder: (context) => const DescricaoLocalScreen()),
                     );
                   },
                   child: Column(
@@ -258,20 +224,13 @@ class BarbeariaCard extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Barbearia',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
+                          const Text('Barbearia', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black)),
                           Icon(Icons.favorite_border, color: Colors.grey[400], size: 22),
                         ],
                       ),
                       const SizedBox(height: 4),
                       const Text(
-                        'Barbearia desde 2015 com atendimento specialized há 7 anos.\nAmbiente calmo, organizado e silencioso, trazendo conforto aos nossos clientes.',
+                        'Barbearia desde 2015 com atendimento especializado há 7 anos.\nAmbiente calmo, organizado e silencioso, trazendo conforto aos nossos clientes.',
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 10, color: Colors.black87, height: 1.2),
@@ -287,29 +246,21 @@ class BarbeariaCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
-                children: List.generate(
-                  5,
-                  (index) => const Icon(Icons.star, color: Colors.amber, size: 20),
-                ),
+                children: List.generate(5, (index) => const Icon(Icons.star, color: Colors.amber, size: 20)),
               ),
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const LocalizacaoScreen(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const LocalizacaoScreen()),
                   );
                 },
                 child: const Row(
                   children: [
                     Icon(Icons.location_on, color: Colors.red, size: 14),
                     SizedBox(width: 2),
-                    Text(
-                      'Av. Andrômeda, 1232 - Jardim Satélite',
-                      style: TextStyle(fontSize: 9, color: Colors.black, fontWeight: FontWeight.w500),
-                    ),
+                    Text('Av. Andrômeda, 1232 - Jardim Satélite', style: TextStyle(fontSize: 9, color: Colors.black, fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),
