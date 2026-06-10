@@ -14,33 +14,40 @@ class INICIOState extends State<INICIO> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        // SingleChildScrollView deve ser o pai direto quando o conteúdo pode ser maior que a tela
         child: SingleChildScrollView(
           child: Column(
             children: [
               // Imagem de Topo
-              Image.file(
-                image: Image.file("assets/quebrasuperior.png"),
+              Image.asset(
+                'imagem/quebrasuperior.png', // Se o seu caminho usar assets, mude para 'assets/imagem/quebrasuperior.png'
                 width: double.infinity,
-                height: 150,
-                fit: BoxFit.fill,
+                height: 150, 
+                fit: BoxFit.cover, 
+                errorBuilder: (context, error, stackTrace) {
+                  // Caso a imagem falhe, isso mostrará um aviso visual em vez de sumir
+                  return const SizedBox(
+                    height: 150,
+                    child: Center(child: Text('Erro ao carregar imagem superior', style: TextStyle(color: Colors.red))),
+                  );
+                },
               ),
 
               const SizedBox(height: 20),
-              // Área Central com a Imagem de Fundo e Texto
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 25),
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                      // Alterado de NetworkImage para AssetImage
-                      image: AssetImage("assets/neurologo.png"), 
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  child: Column(
-                    // ... resto do seu código igual
+              
+              // Área Central
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 25),
+                child: Column(
                   children: [
-                    const SizedBox(height: 350), // Espaçamento para o texto ficar abaixo da arte da imagem
+                    Image.asset(
+                      "imagem/neurologo.png",
+                      height: 250, 
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                    ),
+                    
+                    const SizedBox(height: 25), 
+                    
                     const Text(
                       "O caminho mais próximo de você.",
                       style: TextStyle(
@@ -50,6 +57,7 @@ class INICIOState extends State<INICIO> {
                       ),
                       textAlign: TextAlign.center,
                     ),
+                    
                     const SizedBox(height: 30),
                     
                     // Botão de Login
@@ -74,12 +82,12 @@ class INICIOState extends State<INICIO> {
                   ],
                 ),
               ),
-              const SizedBox(height: 50),
-              // Área de Cadastro de Empresa
+              
+              const SizedBox(height: 40),
+              
+              // Área de Cadastro / Continuar sem conta
               Column(
                 children: [
-                  // Usamos o InkWell para dar o efeito de clique (ripple)
-                  // ou GestureDetector se preferir algo mais simples.
                   InkWell(
                     onTap: () {
                       Navigator.push(
@@ -93,7 +101,7 @@ class INICIOState extends State<INICIO> {
                         'Continuar sem conta',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 22,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                           decoration: TextDecoration.underline,
@@ -102,11 +110,21 @@ class INICIOState extends State<INICIO> {
                       ),
                     ),
                   ),
-                  Image(
-                    image: AssetImage("imagem/quebrainferior.png"),
+                  
+                  const SizedBox(height: 10),
+                  
+                  // Imagem Inferior
+                  Image.asset(
+                    "imagem/quebrainferior.png",
                     width: double.infinity,
-                    height: 150,
-                    fit: BoxFit.fill,
+                    height: 300, 
+                    fit: BoxFit.fill, 
+                    errorBuilder: (context, error, stackTrace) {
+                      return const SizedBox(
+                        height: 120,
+                        child: Center(child: Text('Erro ao carregar imagem inferior', style: TextStyle(color: Colors.red))),
+                      );
+                    },
                   ),
                 ],
               ),
