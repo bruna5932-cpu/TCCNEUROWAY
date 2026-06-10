@@ -19,25 +19,26 @@ class INICIOState extends State<INICIO> {
           child: Column(
             children: [
               // Imagem de Topo
-              Image.network(
-                "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/3bnn2jd1_expires_30_days.png",
+              Image.file(
+                image: Image.file("assets/quebrasuperior.png"),
                 width: double.infinity,
                 height: 150,
                 fit: BoxFit.fill,
               ),
 
               const SizedBox(height: 20),
-
               // Área Central com a Imagem de Fundo e Texto
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 25),
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage("https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/hasu6z32_expires_30_days.png"),
-                    fit: BoxFit.contain,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 25),
+                  decoration: const BoxDecoration(
+                    image: DecorationImage(
+                      // Alterado de NetworkImage para AssetImage
+                      image: AssetImage("assets/neurologo.png"), 
+                      fit: BoxFit.contain,
+                    ),
                   ),
-                ),
-                child: Column(
+                  child: Column(
+                    // ... resto do seu código igual
                   children: [
                     const SizedBox(height: 350), // Espaçamento para o texto ficar abaixo da arte da imagem
                     const Text(
@@ -101,8 +102,8 @@ class INICIOState extends State<INICIO> {
                       ),
                     ),
                   ),
-                  Image.network(
-                    "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/mmm5zn7a_expires_30_days.png",
+                  Image(
+                    image: AssetImage("imagem/quebrainferior.png"),
                     width: double.infinity,
                     height: 150,
                     fit: BoxFit.fill,
