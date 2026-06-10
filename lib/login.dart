@@ -3,23 +3,21 @@ import 'package:neuroway/cadastroconta.dart';
 import 'package:neuroway/cadastroempresa.dart';
 import 'package:neuroway/menuprincipal.dart';
 
-
 class LOGIN extends StatefulWidget {
-  const LOGIN({super.key});//
+  const LOGIN({super.key});
 
   @override
-  LOGINState createState() => LOGINState();
+  State<LOGIN> createState() => LOGINState();
 }
 
 class LOGINState extends State<LOGIN> {
-  // Os controllers devem ficar dentro da State para melhor gerenciamento de memória
-   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _senhaController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   @override
   void dispose() {
     _emailController.dispose();
-    _senhaController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -28,7 +26,7 @@ class LOGINState extends State<LOGIN> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
       body: SafeArea(
-        bottom: false, // Permite que a imagem ignore o padding seguro de baixo e cole de fato na tela
+        bottom: false, 
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,126 +51,81 @@ class LOGINState extends State<LOGIN> {
               ),
               const SizedBox(height: 20),
 
-              // --- Campo de E-mail ---
-              Center(
-                child: Container(
-                  width: 300,
-                  padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 10),
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                      image: NetworkImage("https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/6opmdniz_expires_30_days.png"),
-                      fit: BoxFit.fill,
-                    ),
-                  ),
-                  child: TextField(
-                    controller: _emailController,
-                    style: const TextStyle(color: Color(0xFF000000), fontSize: 20),
-                    decoration: const InputDecoration(
-                      hintText: "Digite seu e-mail",
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-              ),
-
-              // --- Campo de Senha ---
-              Center(
-                child: Container(
-                  width: 300,
-                  padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 10),
-                  margin: const EdgeInsets.only(bottom: 40),
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                      image: NetworkImage("https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/6opmdniz_expires_30_days.png"),
-                      fit: BoxFit.fill,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _senhaController,
-                          obscureText: true,
-                          style: const TextStyle(color: Color(0xFF000000), fontSize: 20),
-                          decoration: const InputDecoration(
-                            hintText: "Senha",
-                            border: InputBorder.none,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 42,
-                        height: 31,
-                        child: Image.network("https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/1a8jndzr_expires_30_days.png"),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // --- Rodapé (Login / Cadastrar) ---
+              // --- Formulário (Apenas E-mail e Senha) ---
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Column(
                   children: [
-                    ElevatedButton(
-                      onPressed: () {
-                      Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => Menuprincipal()),
-                      );
-                      },
-                               style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF98B9A6),
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        elevation: 2,
-                      ),
-                      child: const Text(
-                        "Login",
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
-
-                    // Link para Cadastrar
-                      ElevatedButton(
-                      onPressed: () {
-                      Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => CriarConta()),
-                      );
-                      },
-                      // Ação de cadastro
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF98B9A6),
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        elevation: 2,
-                      ),
-                      child: const Text(
-                        "Cadastrar",
-                        style: TextStyle(fontSize: 18),
-                      ),
-                      
-                    ),
+                    _buildTextField("E-mail", _emailController),
+                    const SizedBox(height: 15),
+                    _buildTextField("Senha", _passwordController, isPassword: true),
                   ],
                 ),
               ),
               
-              const SizedBox(height: 20),
-              // Ícone final opcional
+              const SizedBox(height: 30),
+
+              // --- Botões Centrais (Login e Cadastrar juntos ao centro) ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const Menuprincipal()),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF98B9A6),
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: const Text(
+                      "Login",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  
+                  const SizedBox(width: 15), // Espaçamento entre os dois botões centrais
+
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const CriarConta()), 
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF98B9A6),
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: const Text(
+                      "Cadastrar",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 40),
+              
+              // Botão: Quero cadastrar minha empresa
               Center(
                 child: GestureDetector(
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const CadastroEmpresa()), // Substitua por 'CadastrarEmpresa()' ou a tela correta da sua empresa
+                      MaterialPageRoute(builder: (context) => const CadastroEmpresa()),
                     );
                   },
                   child: const Text(
@@ -181,19 +134,20 @@ class LOGINState extends State<LOGIN> {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black, // Se quiser parecer mais com um link da web, experimente Colors.blue[800]
+                      color: Colors.black,
                       decoration: TextDecoration.underline,
                       decorationThickness: 2.0,
                     ),
                   ),
                 ),
-                
               ),
-              const SizedBox(height: 20),
+              
+              const SizedBox(height: 30),
+              
               // --- Quebra-cabeça de baixo colado no fim da tela ---
               Center(
                 child: SizedBox(
-                  width: double. infinity,
+                  width: double.infinity,
                   height: 147,
                   child: Image.network(
                     "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/7gvs027p_expires_30_days.png",
@@ -203,6 +157,29 @@ class LOGINState extends State<LOGIN> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // Método de Input customizado e minimalista
+  Widget _buildTextField(String hint, TextEditingController controller, {bool isPassword = false}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFD1D5D8), 
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: TextFormField(
+        controller: controller,
+        obscureText: isPassword,
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          border: InputBorder.none, 
+          suffixIcon: isPassword 
+              ? const Icon(Icons.visibility_outlined, color: Colors.black) 
+              : null,
         ),
       ),
     );
