@@ -43,7 +43,7 @@ class _AgendamentosState extends State<Agendamentos> {
                     children: [
                       IconButton(
                         onPressed: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => const Menuprincipal()));
+                          Navigator.of(context).pop();
                         },
                         icon: const Icon(
                           Icons.arrow_back_ios,
