@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-
+import 'menuprincipal.dart';
+import 'favoritos.dart';
+import 'agendamentos.dart';
+import 'peril.dart';
 
 class LocalizacaoScreen extends StatefulWidget {
   const LocalizacaoScreen({super.key});
@@ -18,9 +21,9 @@ class _LocalizacaoScreenState extends State<LocalizacaoScreen> {
     // Substitua os 'Center' pelas suas páginas reais (Ex: FavoritosPage(), AgendaPage(), etc.)
     final List<Widget> _pages = [
       _buildInicioTab(), // Índice 0: Sua página atual da Barbearia
-      const Center(child: Text('Sua Página de Favoritos Aqui', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))), // Índice 1
-      const Center(child: Text('Sua Página de Agenda Aqui', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),    // Índice 2
-      const Center(child: Text('Sua Página de Perfil Aqui', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),    // Índice 3
+      const Favoritos(), // Índice 1
+      const Agendamentos(),    // Índice 2
+      const Perfil(),    // Índice 3
     ];
 
     return Scaffold(
@@ -28,26 +31,45 @@ class _LocalizacaoScreenState extends State<LocalizacaoScreen> {
       // 2. O BODY AGORA MUDA DE ACORDO COm O ÍNDICE SELECIONADO
       body: _pages[_currentIndex],
 
-      // 3. Sua Barra de Navegação Inferior (já atualizando o estado do index)
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index; // Alterna entre as páginas da lista acima
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.grey.shade200,
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.grey.shade600,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home, size: 28), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite, size: 28), label: 'Favoritos'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_month, size: 28), label: 'Agenda'),
-          BottomNavigationBarItem(icon: Icon(Icons.person, size: 28), label: 'Perfil'),
-        ],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(
+            top: BorderSide(color: Color(0xFFE0E0E0), width: 1),
+          ),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: Colors.black,
+          unselectedItemColor: const Color(0xFF9E9E9E),
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index; // Isso muda a tela dinamicamente
+            });
+          },
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_filled, size: 28),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.favorite, size: 28),
+              label: 'Favoritos',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_month, size: 28),
+              label: 'Agenda',
+              activeIcon: Icon(Icons.calendar_month, size: 28),
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person, size: 28),
+              label: 'Perfil',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -94,7 +116,9 @@ class _LocalizacaoScreenState extends State<LocalizacaoScreen> {
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             icon: const Icon(Icons.arrow_back_ios, size: 28),
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
                           ),
                           const SizedBox(width: 10),
                           const Text(
