@@ -17,6 +17,21 @@ class INICIOState extends State<INICIO> {
         child: SingleChildScrollView(
           child: Column(
             children: [
+               Image.asset(
+                    "assets/imagem/quebrasuperior.png",
+                    width: double.infinity,
+                    height: 300,
+                    fit: BoxFit.fill,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const SizedBox(
+                        height: 120,
+                        child: Center(
+                          child: Text('Erro ao carregar imagem inferior',
+                              style: TextStyle(color: Colors.red)),
+                        ),
+                      );
+                    },
+                  ),
               const SizedBox(height: 20),
 
               // Área Central
