@@ -1,140 +1,122 @@
 import 'package:flutter/material.dart';
-import 'package:neuroway/menuprincipal.dart';
-import 'package:neuroway/login.dart';
+import 'package:neuroway/login.dart'; // ← importe o login.dart
 
-class INICIO extends StatefulWidget {
-  const INICIO({super.key});
+class Inicio extends StatefulWidget {
+  const Inicio({super.key});
+
   @override
-  INICIOState createState() => INICIOState();
+  InicioState createState() => InicioState();
 }
 
-class INICIOState extends State<INICIO> {
+class InicioState extends State<Inicio> {
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final molduraHeight = screenHeight * 0.25;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-               Image.asset(
-                    "assets/imagem/quebrasuperior.png",
-                    width: double.infinity,
-                    height: 300,
-                    fit: BoxFit.fill,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const SizedBox(
-                        height: 120,
-                        child: Center(
-                          child: Text('Erro ao carregar imagem inferior',
-                              style: TextStyle(color: Colors.red)),
-                        ),
-                      );
-                    },
-                  ),
-              const SizedBox(height: 20),
-
-              // Área Central
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 25),
-                child: Column(
-                  children: [
-                    Image.asset(
-                      "imagem/neurologo.png",
-                      height: 250,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.broken_image, size: 50, color: Colors.grey),
-                    ),
-
-                    const SizedBox(height: 25),
-
-                    const Text(
-                      "O caminho mais próximo de você.",
-                      style: TextStyle(
-                        color: Color(0xFF000000),
-                        fontSize: 24,
-                        fontWeight: FontWeight.w500,
+      body: Stack(
+        children: [
+          // Conteúdo central — logo + botão
+          Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Logo neurologo.png
+                  Container(
+                    width: screenWidth * 0.45,
+                    height: screenWidth * 0.45,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFF98B9A6),
+                        width: 3,
                       ),
-                      textAlign: TextAlign.center,
                     ),
+                    clipBehavior: Clip.hardEdge,
+                    child: Image.asset(
+                      'imagem/neurologo.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
 
-                    const SizedBox(height: 30),
+                  SizedBox(height: screenHeight * 0.04),
 
-                    // Botão de Login
-                    ElevatedButton(
+                  // Botão Login
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
                       onPressed: () {
+                        // Navegação direta para o Login
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const LOGIN()),
+                          MaterialPageRoute(
+                            builder: (context) => const LOGIN(),
+                          ),
                         );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF98B9A6),
                         foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 15),
+                        padding: EdgeInsets.symmetric(vertical: screenHeight * 0.018),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(25),
                         ),
                         elevation: 2,
                       ),
-                      child: const Text("Login", style: TextStyle(fontSize: 18)),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              // Área de Cadastro / Continuar sem conta
-              Column(
-                children: [
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const Menuprincipal()),
-                      );
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
                       child: Text(
-                        'Continuar sem conta',
-                        textAlign: TextAlign.center,
+                        'Login',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: screenWidth * 0.045,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                          decoration: TextDecoration.underline,
-                          decorationThickness: 2.0,
                         ),
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 10),
-
-                  // Imagem Inferior
-                  Image.asset(
-                    "imagem/quebrainferior.png",
-                    width: double.infinity,
-                    height: 300,
-                    fit: BoxFit.fill,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const SizedBox(
-                        height: 120,
-                        child: Center(
-                          child: Text('Erro ao carregar imagem inferior',
-                              style: TextStyle(color: Colors.red)),
-                        ),
-                      );
-                    },
-                  ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
+
+          // Moldura superior
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SizedBox(
+              height: molduraHeight,
+              child: Image.asset(
+                'imagem/quebrasuperior.png',
+                width: double.infinity,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+              ),
+            ),
+          ),
+
+          // Moldura inferior
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: SizedBox(
+              height: molduraHeight,
+              child: Image.asset(
+                'imagem/quebrainferior.png',
+                width: double.infinity,
+                fit: BoxFit.cover,
+                alignment: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

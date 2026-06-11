@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:neuroway/menuprincipal.dart';
- 
+
 // 1. Corrigido o nome da classe de CRIARCONTA para CriarConta (PascalCase)
 class CriarConta extends StatefulWidget {
   const CriarConta({super.key});
@@ -31,7 +31,6 @@ class CriarContaState extends State<CriarConta> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        // Mantido o SingleChildScrollView como pai direto para evitar quebra com o teclado
         child: SingleChildScrollView(
           child: Column(
             children: [
@@ -44,19 +43,36 @@ class CriarContaState extends State<CriarConta> {
               ),
 
               const SizedBox(height: 20),
-
-              // Título como Imagem
-              Center(
-                child: Image.asset(
-                  "imagem/criarconta.png", // ATENÇÃO: Ajuste aqui para o caminho correto do seu asset
-                  width: 224,
-                  height: 147,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Text(
-                      "Criar Conta",
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    );
-                  },
+              
+              // --- SEÇÃO DO TÍTULO COM O BOTÃO DE VOLTAR ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Botão de voltar posicionado à esquerda
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22),
+                        onPressed: () {
+                          Navigator.maybePop(context);
+                        },
+                      ),
+                    ),
+                    // Título centralizado (Imagem ou Texto de fallback)
+                    Image.asset(
+                      "imagem/criarconta.png", // ATENÇÃO: Ajuste aqui para o caminho correto do seu asset
+                      width: 224,
+                      height: 147,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Text(
+                          "Criar Conta",
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
 
@@ -81,8 +97,8 @@ class CriarContaState extends State<CriarConta> {
                     ElevatedButton(
                       onPressed: () {
                         Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => Menuprincipal()),
-                      );
+                          MaterialPageRoute(builder: (context) => const Menuprincipal()),
+                        );
                         print("Usuário: ${_userController.text}");
                         print("E-mail: ${_emailController.text}");
                       },

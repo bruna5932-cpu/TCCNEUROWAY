@@ -1,30 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:neuroway/agendamentos.dart';
 import 'package:neuroway/favoritos.dart';
-import 'package:neuroway/menuprincipal.dart'; 
-import 'package:neuroway/peril.dart'; // Mantido caso use em outro local
-
+import 'package:neuroway/menuprincipal.dart';
+import 'package:neuroway/peril.dart';
 // MARK: - TELA PRINCIPAL (Gerencia o estado e as telas)
 class Descricaoprofi extends StatefulWidget {
-  const Descricaoprofi({super.key});
+  final bool abrirPerfilNaHome; // Novo parâmetro para controlar o conteúdo do index 0
+
+  const Descricaoprofi({
+    super.key, 
+    this.abrirPerfilNaHome = false, // Por padrão, abre o Menu Principal normal
+  });
 
   @override
   State<Descricaoprofi> createState() => _DescricaoprofiState();
 }
 
 class _DescricaoprofiState extends State<Descricaoprofi> {
-  // Começa no index 3 para abrir direto na aba de Perfil do Marcos
-  int _currentIndex = 3; 
+  // Mantém no index 0 para ficar na "casinha"
+  int _currentIndex = 0; 
 
   // Controlador para a barra de pesquisa da Home
   final TextEditingController _searchController = TextEditingController();
 
-  // Lista de páginas correspondentes a cada aba do menu
-  late final List<Widget> _paginas = [
-    const Menuprincipal(),     // Index 0: Seu conteúdo customizado de Home (Menu Principal)
-    const Favoritos(),         // Index 1: Tela de Favoritos real
-    const Agendamentos(),      // Index 2: Tela de Agendamentos real
-    _buildPerfilConteudo(),    // Index 3: CORRIGIDO - Agora exibe o perfil do Marcos/Alisson que você criou abaixo
+  // Alterado de 'late final List' para um 'get' dinâmico
+  List<Widget> get _paginas => [
+    // Se abrirPerfilNaHome for true, mostra o perfil do Marcos no index 0. Caso contrário, mostra a Home normal.
+    widget.abrirPerfilNaHome ? _buildPerfilConteudo() : const Menuprincipal(), 
+    const Favoritos(),         // Index 1
+    const Agendamentos(),      // Index 2
+    const Perfil(),            // Index 3
   ];
 
   @override
@@ -32,6 +37,8 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
     _searchController.dispose();
     super.dispose();
   }
+  
+  // ... Todo o resto do seu código (build, _buildHomeContent, _buildPerfilConteudo, etc.) permanece exatamente igual
 
   @override
   Widget build(BuildContext context) {
