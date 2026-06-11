@@ -17,23 +17,8 @@ class INICIOState extends State<INICIO> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Imagem de Topo
-              Image.asset(
-                'imagem/quebrasuperior.png', // Se o seu caminho usar assets, mude para 'assets/imagem/quebrasuperior.png'
-                width: double.infinity,
-                height: 150, 
-                fit: BoxFit.cover, 
-                errorBuilder: (context, error, stackTrace) {
-                  // Caso a imagem falhe, isso mostrará um aviso visual em vez de sumir
-                  return const SizedBox(
-                    height: 150,
-                    child: Center(child: Text('Erro ao carregar imagem superior', style: TextStyle(color: Colors.red))),
-                  );
-                },
-              ),
-
               const SizedBox(height: 20),
-              
+
               // Área Central
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 25),
@@ -41,13 +26,14 @@ class INICIOState extends State<INICIO> {
                   children: [
                     Image.asset(
                       "imagem/neurologo.png",
-                      height: 250, 
+                      height: 250,
                       fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.broken_image, size: 50, color: Colors.grey),
                     ),
-                    
-                    const SizedBox(height: 25), 
-                    
+
+                    const SizedBox(height: 25),
+
                     const Text(
                       "O caminho mais próximo de você.",
                       style: TextStyle(
@@ -57,9 +43,9 @@ class INICIOState extends State<INICIO> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    
+
                     const SizedBox(height: 30),
-                    
+
                     // Botão de Login
                     ElevatedButton(
                       onPressed: () {
@@ -82,9 +68,9 @@ class INICIOState extends State<INICIO> {
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 40),
-              
+
               // Área de Cadastro / Continuar sem conta
               Column(
                 children: [
@@ -110,19 +96,22 @@ class INICIOState extends State<INICIO> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 10),
-                  
+
                   // Imagem Inferior
                   Image.asset(
                     "imagem/quebrainferior.png",
                     width: double.infinity,
-                    height: 300, 
-                    fit: BoxFit.fill, 
+                    height: 300,
+                    fit: BoxFit.fill,
                     errorBuilder: (context, error, stackTrace) {
                       return const SizedBox(
                         height: 120,
-                        child: Center(child: Text('Erro ao carregar imagem inferior', style: TextStyle(color: Colors.red))),
+                        child: Center(
+                          child: Text('Erro ao carregar imagem inferior',
+                              style: TextStyle(color: Colors.red)),
+                        ),
                       );
                     },
                   ),
