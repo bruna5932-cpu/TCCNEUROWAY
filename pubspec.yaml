@@ -63,6 +63,8 @@ flutter:
     - imagem/quebrasuperior.png
     - imagem/quebrainferior.png
     - imagem/neurologo.png
+    - imagem/login.png
+    - imagem/cadastroempresa.png
   #   - images/a_dot_burr.jpeg'
   #   - images/a_dot_ham.jpeg
 

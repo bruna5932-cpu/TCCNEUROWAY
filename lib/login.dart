@@ -31,17 +31,6 @@ class LOGINState extends State<LOGIN> {
       backgroundColor: const Color(0xFFFFFFFF),
       body: Stack(
         children: [
-          Positioned(
-            top: molduraHeight * 0.5,
-            bottom: molduraHeight * 0.5,
-            left: 0,
-            right: 0,
-            child: Image.asset(
-              'imagem/login.png',
-              width: double.infinity,
-              fit: BoxFit.fill,
-            ),
-          ),
           SafeArea(
             child: SingleChildScrollView(
               child: ConstrainedBox(
@@ -52,19 +41,20 @@ class LOGINState extends State<LOGIN> {
                     bottom: molduraHeight * 0.6,
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
+                      SizedBox(height: screenHeight * 0.03),
                       Center(
                         child: SizedBox(
-                          width: screenWidth * 0.55,
-                          height: screenHeight * 0.18,
-                          child: Image.network(
-                            "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/t552npi8_expires_30_days.png",
+                          width: screenWidth * 0.45,
+                          height: screenHeight * 0.055,
+                          child: Image.asset(
+                            'imagem/login.png',
                             fit: BoxFit.contain,
                           ),
                         ),
                       ),
-                      SizedBox(height: screenHeight * 0.03),
+                      SizedBox(height: screenHeight * 0.015),
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.1),
                         child: Column(

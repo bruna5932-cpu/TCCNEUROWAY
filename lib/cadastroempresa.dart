@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// Certifique-se de que o caminho para o seu MenuPrincipal está correto aqui:
-import 'package:neuroway/menuprincipal.dart'; 
+import 'package:neuroway/menuprincipal.dart';
 
 class CadastroEmpresa extends StatefulWidget {
   const CadastroEmpresa({super.key});
@@ -12,36 +11,23 @@ class CadastroEmpresa extends StatefulWidget {
 
 class _CadastroEmpresaState extends State<CadastroEmpresa> {
   String _necessitaAgendamento = 'NÃO';
-  
-  // Controladores para validação de senha
   final TextEditingController _senhaController = TextEditingController();
   final TextEditingController _confirmarSenhaController = TextEditingController();
 
-  // FUNÇÃO DE CADASTRO CORRIGIDA: Valida as senhas e envia para o MenuPrincipal
   void _realizarCadastro() {
     if (_senhaController.text != _confirmarSenhaController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('As senhas não coincidem!'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text('As senhas não coincidem!'), backgroundColor: Colors.red),
       );
       return;
     }
-
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Cadastro realizado com sucesso!'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 1),
-      ),
+      const SnackBar(content: Text('Cadastro realizado com sucesso!'), backgroundColor: Colors.green, duration: Duration(seconds: 1)),
     );
-
-    // Navega para o Menu Principal após o sucesso
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const Menuprincipal()),
-      (route) => false, // Impede o usuário de voltar para a tela de cadastro ao apertar o botão "Voltar" do celular
+      (route) => false,
     );
   }
 
@@ -54,159 +40,139 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final molduraHeight = screenHeight * 0.25;
+
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Imagem do topo
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                child: Image.network(
-                  "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/0kaf4f8w_expires_30_days.png",
-                  height: 149,
-                  width: double.infinity,
-                  fit: BoxFit.fill,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  top: molduraHeight * 0.75,
+                  bottom: molduraHeight * 0.75,
                 ),
-              ),
-              
-              // Conteúdo do formulário
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Image.asset(
-                        'imagens/titulocadastreempresa.png',
-                        width: 280,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    _buildTextField(label: 'Nome:'),
-                    _buildTextField(
-                      label: 'Categoria:',
-                      hint: '(escola, barbearia, restaurante...)',
-                    ),
-                    _buildTextField(
-                      label: 'Número:',
-                      hint: 'Apenas números (ex: 12999999999)',
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Dias/horários de funcionamento:',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildHorariosGrid(),
-                    const SizedBox(height: 16),
-                    _buildTextField(label: 'Descrição:', maxLines: 3),
-                    _buildTextField(label: 'Endereço completo:'),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Redes sociais:',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildSocialInput(Icons.camera_alt, 'Instagram (URL ou @)'),
-                    _buildSocialInput(Icons.facebook, 'Facebook (URL)'),
-                    _buildSocialInput(Icons.music_note, 'TikTok'),
-                    _buildSocialInput(Icons.language, 'Website'),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Necessita agendamento?',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildAgendamentoOptions(),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Descrição dos profissionais:',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildProfissionaisSection(),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Fotos (até 15 fotos)',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildFotosGrid(),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Formas de pagamento:',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildPaymentInput('Cartão (crédito/débito):'),
-                    _buildPaymentInput('Pix:'),
-                    _buildPaymentInput('Outros:'),
-                    const SizedBox(height: 16),
-                    _buildTextField(label: 'Email:'),
-                    _buildTextField(
-                      label: 'Senha:',
-                      obscureText: true,
-                      controller: _senhaController,
-                    ),
-                    _buildTextField(
-                      label: 'Confirmar senha:',
-                      obscureText: true,
-                      controller: _confirmarSenhaController,
-                    ),
-                    const SizedBox(height: 32),
-
-                    // BOTÃO CADASTRAR (Chamando a função corrigida)
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: _realizarCadastro,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF76A085),
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'Cadastrar',
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Título "Cadastro de Empresa" no lugar da imagem
+                      Center(
+                        child: Text(
+                          'Cadastro de Empresa',
                           style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
+                            fontSize: screenWidth * 0.06,
                             fontWeight: FontWeight.bold,
+                            color: Colors.black,
                           ),
                         ),
                       ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Imagem de Rodapé
-                    Center(
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 147,
-                        child: Image.network(
-                          "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/7gvs027p_expires_30_days.png",
-                          fit: BoxFit.fill,
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildTextField(label: 'Nome:'),
+                            _buildTextField(label: 'Categoria:', hint: '(escola, barbearia, restaurante...)'),
+                            _buildTextField(
+                              label: 'Número:',
+                              hint: 'Apenas números (ex: 12999999999)',
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            ),
+                            const SizedBox(height: 16),
+                            const Text('Dias/horários de funcionamento:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: 8),
+                            _buildHorariosGrid(),
+                            const SizedBox(height: 16),
+                            _buildTextField(label: 'Descrição:', maxLines: 3),
+                            _buildTextField(label: 'Endereço completo:'),
+                            const SizedBox(height: 16),
+                            const Text('Redes sociais:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: 8),
+                            _buildSocialInput(Icons.camera_alt, 'Instagram (URL ou @)'),
+                            _buildSocialInput(Icons.facebook, 'Facebook (URL)'),
+                            _buildSocialInput(Icons.music_note, 'TikTok'),
+                            _buildSocialInput(Icons.language, 'Website'),
+                            const SizedBox(height: 20),
+                            const Text('Necessita agendamento?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: 8),
+                            _buildAgendamentoOptions(),
+                            const SizedBox(height: 20),
+                            const Text('Descrição dos profissionais:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: 10),
+                            _buildProfissionaisSection(),
+                            const SizedBox(height: 20),
+                            const Text('Fotos (até 15 fotos)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: 10),
+                            _buildFotosGrid(),
+                            const SizedBox(height: 20),
+                            const Text('Formas de pagamento:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: 8),
+                            _buildPaymentInput('Cartão (crédito/débito):'),
+                            _buildPaymentInput('Pix:'),
+                            _buildPaymentInput('Outros:'),
+                            const SizedBox(height: 16),
+                            _buildTextField(label: 'Email:'),
+                            _buildTextField(label: 'Senha:', obscureText: true, controller: _senhaController),
+                            _buildTextField(label: 'Confirmar senha:', obscureText: true, controller: _confirmarSenhaController),
+                            const SizedBox(height: 32),
+                            Center(
+                              child: ElevatedButton(
+                                onPressed: _realizarCadastro,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF76A085),
+                                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Cadastrar', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SizedBox(
+              height: molduraHeight,
+              child: Image.asset(
+                'imagem/quebrasuperior.png',
+                width: double.infinity,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: SizedBox(
+              height: molduraHeight,
+              child: Image.asset(
+                'imagem/quebrainferior.png',
+                width: double.infinity,
+                fit: BoxFit.cover,
+                alignment: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
-
-  // --- Seus métodos auxiliares de Widgets (mantidos iguaizinhos) ---
 
   Widget _buildTextField({
     required String label,
@@ -236,12 +202,8 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
                 hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                enabledBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.black45, width: 1),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.blue, width: 1.5),
-                ),
+                enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.black45, width: 1)),
+                focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue, width: 1.5)),
               ),
             ),
           ),
@@ -264,10 +226,7 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
       itemBuilder: (context, index) {
         return Row(
           children: [
-            SizedBox(
-              width: 65,
-              child: Text(dias[index], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-            ),
+            SizedBox(width: 65, child: Text(dias[index], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
             const Expanded(
               child: TextField(
                 decoration: InputDecoration(hintText: '__:__ às __:__', isDense: true, contentPadding: EdgeInsets.zero),
@@ -312,10 +271,7 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
               border: Border.all(color: Colors.black38),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Text(
-              opcao,
-              style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.black : Colors.black54),
-            ),
+            child: Text(opcao, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.black : Colors.black54)),
           ),
         );
       }).toList(),
@@ -331,11 +287,7 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
             decoration: BoxDecoration(border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(15)),
             child: Row(
               children: [
-                const CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.black12,
-                  child: Icon(Icons.person, color: Colors.black54),
-                ),
+                const CircleAvatar(radius: 20, backgroundColor: Colors.black12, child: Icon(Icons.person, color: Colors.black54)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -386,14 +338,8 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
               borderRadius: BorderRadius.circular(12),
               child: Stack(
                 children: [
-                  Positioned(
-                    top: 10, left: 0, right: 0,
-                    child: Icon(Icons.cloud_queue, color: Colors.white.withOpacity(0.9), size: 30),
-                  ),
-                  Positioned(
-                    bottom: 0, left: 0, right: 0,
-                    child: Container(height: 40, color: Colors.lightGreen.shade400),
-                  ),
+                  Positioned(top: 10, left: 0, right: 0, child: Icon(Icons.cloud_queue, color: Colors.white.withOpacity(0.9), size: 30)),
+                  Positioned(bottom: 0, left: 0, right: 0, child: Container(height: 40, color: Colors.lightGreen.shade400)),
                 ],
               ),
             ),

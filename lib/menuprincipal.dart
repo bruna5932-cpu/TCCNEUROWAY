@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:neuroway/agendamentos.dart';
 import 'package:neuroway/descricaolocal.dart';
 import 'package:neuroway/localizacao.dart';
-import 'package:neuroway/favoritos.dart'; 
-import 'package:neuroway/peril.dart'; // Importação do seu arquivo de perfil
+import 'package:neuroway/favoritos.dart';
+import 'package:neuroway/peril.dart';
 
 class Menuprincipal extends StatefulWidget {
   const Menuprincipal({super.key});
@@ -14,7 +14,107 @@ class Menuprincipal extends StatefulWidget {
 
 class _MenuprincipalState extends State<Menuprincipal> {
   final TextEditingController _searchController = TextEditingController();
-  int _currentIndex = 0; // Controla o ícone ativo na barra inferior
+  int _currentIndex = 0;
+  String _cidadeSelecionada = 'SJC';
+
+  void _abrirSelecaoCidade() {
+    final TextEditingController _cidadeController = TextEditingController();
+    final List<Map<String, String>> _cidades = [
+      {'nome': 'São José dos Campos', 'sigla': 'SJC'},
+      {'nome': 'São Paulo', 'sigla': 'SP'},
+      {'nome': 'Campinas', 'sigla': 'CPS'},
+      {'nome': 'Taubaté', 'sigla': 'TBT'},
+      {'nome': 'Jacareí', 'sigla': 'JCR'},
+    ];
+    String? _cidadeEscolhida;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text(
+                'Selecione sua cidade',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ..._cidades.map((cidade) {
+                    final bool selecionada = _cidadeEscolhida == cidade['sigla'];
+                    return GestureDetector(
+                      onTap: () {
+                        setStateDialog(() {
+                          _cidadeEscolhida = cidade['sigla'];
+                        });
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: selecionada ? const Color(0xFF98B9A6) : const Color(0xFFF3F3F4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: selecionada ? const Color(0xFF98B9A6) : const Color(0xFFD0D3D8),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              cidade['nome']!,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: selecionada ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              cidade['sigla']!,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: selecionada ? Colors.white70 : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  onPressed: _cidadeEscolhida == null
+                      ? null
+                      : () {
+                          setState(() {
+                            _cidadeSelecionada = _cidadeEscolhida!;
+                          });
+                          Navigator.pop(context);
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF98B9A6),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Confirmar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   void dispose() {
@@ -22,7 +122,6 @@ class _MenuprincipalState extends State<Menuprincipal> {
     super.dispose();
   }
 
-  // Conteúdo da sua aba Home
   Widget _buildHomeContent() {
     return SafeArea(
       child: CustomScrollView(
@@ -34,7 +133,11 @@ class _MenuprincipalState extends State<Menuprincipal> {
                 const SizedBox(height: 20),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: SearchBarWidget(controller: _searchController),
+                  child: SearchBarWidget(
+                    controller: _searchController,
+                    cidade: _cidadeSelecionada,
+                    onCidadeTap: _abrirSelecaoCidade,
+                  ),
                 ),
                 const SizedBox(height: 20),
               ],
@@ -58,12 +161,11 @@ class _MenuprincipalState extends State<Menuprincipal> {
 
   @override
   Widget build(BuildContext context) {
-    // Lista de subpáginas. (Garante que nenhuma delas tenha bottomNavigationBar própria)
     final List<Widget> _paginas = [
-      _buildHomeContent(), // Index 0: Home
-      const Favoritos(),   // Index 1: Tela de Favoritos
-      const Agendamentos(), // Index 2: Tela de Agendamentos
-      const Perfil(),    // Index 3: Tela de Perfil
+      _buildHomeContent(),
+      const Favoritos(),
+      const Agendamentos(),
+      const Perfil(),
     ];
 
     return Scaffold(
@@ -72,7 +174,6 @@ class _MenuprincipalState extends State<Menuprincipal> {
         index: _currentIndex,
         children: _paginas,
       ),
-      // ESTA é a única barra que vai aparecer no app inteiro
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           border: Border(
@@ -89,26 +190,14 @@ class _MenuprincipalState extends State<Menuprincipal> {
           showUnselectedLabels: false,
           onTap: (index) {
             setState(() {
-              _currentIndex = index; // Alterna suavemente entre as telas
+              _currentIndex = index;
             });
           },
           items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_filled, size: 28),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.favorite, size: 28),
-              label: 'Favoritos',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_month, size: 28),
-              label: 'Agenda',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person, size: 28),
-              label: 'Perfil',
-            ),
+            BottomNavigationBarItem(icon: Icon(Icons.home_filled, size: 28), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.favorite, size: 28), label: 'Favoritos'),
+            BottomNavigationBarItem(icon: Icon(Icons.calendar_month, size: 28), label: 'Agenda'),
+            BottomNavigationBarItem(icon: Icon(Icons.person, size: 28), label: 'Perfil'),
           ],
         ),
       ),
@@ -116,11 +205,17 @@ class _MenuprincipalState extends State<Menuprincipal> {
   }
 }
 
-// --- WIDGETS AUXILIARES DE SUPORTE (Mantidos idênticos ao original) ---
-
 class SearchBarWidget extends StatelessWidget {
   final TextEditingController controller;
-  const SearchBarWidget({super.key, required this.controller});
+  final String cidade;
+  final VoidCallback onCidadeTap;
+
+  const SearchBarWidget({
+    super.key,
+    required this.controller,
+    required this.cidade,
+    required this.onCidadeTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -148,10 +243,21 @@ class SearchBarWidget extends StatelessWidget {
           ),
           Container(height: 24, width: 1, color: const Color(0xFFB0B3B8)),
           const SizedBox(width: 12),
-          const Icon(Icons.location_on_outlined, color: Color(0xFF9E9E9E), size: 24),
-          const SizedBox(width: 6),
-          const Text('SJC', style: TextStyle(color: Color(0xFF7D828A), fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(width: 20),
+          GestureDetector(
+            onTap: onCidadeTap,
+            child: Row(
+              children: [
+                const Icon(Icons.location_on_outlined, color: Color(0xFF9E9E9E), size: 24),
+                const SizedBox(width: 6),
+                Text(
+                  cidade,
+                  style: const TextStyle(color: Color(0xFF7D828A), fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const Icon(Icons.arrow_drop_down, color: Color(0xFF9E9E9E), size: 20),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
         ],
       ),
     );
@@ -163,19 +269,17 @@ class PuzzleHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 120,
+    final screenHeight = MediaQuery.of(context).size.height;
+    final molduraHeight = screenHeight * 0.25;
+
+    return SizedBox(
+      height: molduraHeight,
       width: double.infinity,
-      color: Colors.white,
-      child: Stack(
-        children: [ 
-          Image.network(
-            "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/0kaf4f8w_expires_30_days.png",
-            height: 149,
-            width: double.infinity,
-            fit: BoxFit.fill,
-          ),
-        ],
+      child: Image.asset(
+        'imagem/quebrasuperior.png',
+        width: double.infinity,
+        fit: BoxFit.cover,
+        alignment: Alignment.topCenter,
       ),
     );
   }
@@ -184,7 +288,7 @@ class PuzzleHeader extends StatelessWidget {
 class BarbeariaCard extends StatelessWidget {
   const BarbeariaCard({super.key});
 
-  @override 
+  @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -205,8 +309,8 @@ class BarbeariaCard extends StatelessWidget {
                   width: 110,
                   height: 90,
                   color: Colors.grey[400],
-                  child: const Icon(Icons.store, color: Colors.white, size: 40), 
-                ),  
+                  child: const Icon(Icons.store, color: Colors.white, size: 40),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -265,7 +369,7 @@ class BarbeariaCard extends StatelessWidget {
                 ),
               ),
             ],
-          )
+          ),
         ],
       ),
     );
