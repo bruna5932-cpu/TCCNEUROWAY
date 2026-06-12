@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:neuroway/login.dart'; // ← importe o login.dart
+import 'package:neuroway/menuprincipal.dart'; // ← importe o menuprincipal.dart
 
 class Inicio extends StatefulWidget {
   const Inicio({super.key});
@@ -75,6 +76,39 @@ class InicioState extends State<Inicio> {
                         'Login',
                         style: TextStyle(
                           fontSize: screenWidth * 0.045,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: screenHeight * 0.02),
+
+                  // Botão Continuar sem login
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () {
+                        // Navegação direta para o Menu Principal, sem login
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const Menuprincipal(),
+                          ),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF98B9A6),
+                        padding: EdgeInsets.symmetric(vertical: screenHeight * 0.018),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          side: const BorderSide(color: Color(0xFF98B9A6), width: 1.5),
+                        ),
+                      ),
+                      child: Text(
+                        'Continuar sem login',
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.04,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

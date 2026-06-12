@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:neuroway/menuprincipal.dart';
+import 'package:neuroway/cadastroprofi.dart'; // <-- Importação adicionada aqui
+import 'package:neuroway/agendamentos.dart'; // <-- Importação adicionada aqui
 
 class CadastroEmpresa extends StatefulWidget {
   const CadastroEmpresa({super.key});
@@ -26,7 +28,7 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     );
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (context) => const Menuprincipal()),
+      MaterialPageRoute(builder: (context) => const Agendamentos()),
       (route) => false,
     );
   }
@@ -58,7 +60,6 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Título "Cadastro de Empresa" no lugar da imagem
                       Center(
                         child: Text(
                           'Cadastro de Empresa',
@@ -166,6 +167,30 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
                 width: double.infinity,
                 fit: BoxFit.cover,
                 alignment: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+
+          // --- Seta para voltar ao menu principal ---
+          Positioned(
+            top: 16,
+            left: 16,
+            child: SafeArea(
+              child: InkWell(
+                onTap: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const Menuprincipal()),
+                    );
+                  }
+                },
+                child: const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22),
+                ),
               ),
             ),
           ),
@@ -304,7 +329,13 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
         ),
         const SizedBox(width: 12),
         InkWell(
-          onTap: () {},
+          // Navega para a tela de cadastro de profissional
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const CadastroPage()),
+            );
+          },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(15)),
