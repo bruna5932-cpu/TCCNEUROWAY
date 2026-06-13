@@ -3,6 +3,7 @@ import 'package:neuroway/agendamentos.dart';
 import 'package:neuroway/favoritos.dart';
 import 'package:neuroway/peril.dart';
 import 'descricaoprofi.dart';
+
 class DescricaoLocalScreen extends StatefulWidget {
   const DescricaoLocalScreen({super.key});
 
@@ -12,14 +13,13 @@ class DescricaoLocalScreen extends StatefulWidget {
 
 class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
   bool _isFavorited = false;
-  int _currentIndex = 0; 
+  int _currentIndex = 0;
 
-  // 1. Criamos a lista de páginas igualzinho ao Descricaoprofi
   late final List<Widget> _paginas = [
-    _buildLocalConteudo(), // Index 0: O conteúdo da barbearia
-    const Favoritos(),     // Index 1: Tela de Favoritos real
-    const Agendamentos(),  // Index 2: Tela de Agendamentos real
-    const Perfil(),        // Index 3: Tela de Perfil real
+    _buildLocalConteudo(),
+    const Favoritos(),
+    const Agendamentos(),
+    const Perfil(),
   ];
 
   @override
@@ -27,305 +27,281 @@ class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        top: false, 
-        // 2. O IndexedStack renderiza a tela ativa baseada no clique
+        top: false,
         child: IndexedStack(
           index: _currentIndex,
           children: _paginas,
         ),
       ),
-      // 3. Reutilizamos o SEU CustomBottomNavigationBar já criado no outro arquivo!
       bottomNavigationBar: CustomBottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
-            _currentIndex = index; // Troca a tela atual
+            _currentIndex = index;
           });
         },
       ),
     );
   }
 
-  // 4. Todo o seu layout original da barbearia foi movido para cá
   Widget _buildLocalConteudo() {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Cabeçalho
-          Image.network(
-            "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/0kaf4f8w_expires_30_days.png",
-            height: 149,
-            width: double.infinity,
-            fit: BoxFit.fill,
-          ),
+    final screenHeight = MediaQuery.of(context).size.height;
+    final molduraHeight = screenHeight * 0.25;
 
-          const SizedBox(height: 16),
-
-          // Título, Estrelas e Botão de Favorito
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            key: const Key('header_section'),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-                const Text(
-                  'Barbearia',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Row(
+    return Stack(
+      children: [
+        // Conteúdo rolável com espaço para a moldura
+        SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: molduraHeight * 0.75),
+              const SizedBox(height: 16),
+              // Título, coração ao lado e Estrelas
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
                   children: [
-                    Icon(Icons.star, color: Colors.amber, size: 16),
-                    Icon(Icons.star, color: Colors.amber, size: 16),
-                    Icon(Icons.star, color: Colors.amber, size: 16),
-                    Icon(Icons.star, color: Colors.amber, size: 16),
-                    Icon(Icons.star_half, color: Colors.amber, size: 16),
+                    const Text(
+                      'Barbearia',
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      icon: Icon(
+                        _isFavorited ? Icons.favorite : Icons.favorite_border,
+                        color: _isFavorited ? Colors.red : Colors.black,
+                        size: 26,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isFavorited = !_isFavorited;
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    const Row(
+                      children: [
+                        Icon(Icons.star, color: Colors.amber, size: 16),
+                        Icon(Icons.star, color: Colors.amber, size: 16),
+                        Icon(Icons.star, color: Colors.amber, size: 16),
+                        Icon(Icons.star, color: Colors.amber, size: 16),
+                        Icon(Icons.star_half, color: Colors.amber, size: 16),
+                      ],
+                    ),
                   ],
                 ),
-                const Spacer(),
-                IconButton(
-                  icon: Icon(
-                    _isFavorited ? Icons.favorite : Icons.favorite_border,
-                    color: _isFavorited ? Colors.red : Colors.black,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _isFavorited = !_isFavorited;
-                    });
-                  },
+              ),
+              const SizedBox(height: 16),
+              // Carrossel de Imagens
+              SizedBox(
+                height: 180,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(left: 16.0),
+                  children: [
+                    _buildImageCard('https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=500'),
+                    const SizedBox(width: 12),
+                    _buildImageCard('https://images.unsplash.com/photo-1621605815971-fbc98d665033?q=80&w=500'),
+                    const SizedBox(width: 16),
+                  ],
                 ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Carrossel de Imagens
-          SizedBox(
-            height: 180,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(left: 16.0),
-              children: [
-                _buildImageCard('https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=500'),
-                const SizedBox(width: 12),
-                _buildImageCard('https://images.unsplash.com/photo-1621605815971-fbc98d665033?q=80&w=500'),
-                const SizedBox(width: 16),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 8),
-          Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildDot(isActive: true),
-                _buildDot(isActive: false),
-                _buildDot(isActive: false),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Descrição
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Descrição',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildDot(isActive: true),
+                    _buildDot(isActive: false),
+                    _buildDot(isActive: false),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Barbearia desde 2018 com atendimento especializado por 2 profissionais.\nAmbiente limpo, organizado e silencioso, trazendo conforto aos nossos clientes.',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[700], height: 1.3),
+              ),
+              const SizedBox(height: 16),
+              // Descrição
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Descrição', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Barbearia desde 2018 com atendimento especializado por 2 profissionais.\nAmbiente limpo, organizado e silencioso, trazendo conforto aos nossos clientes.',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700], height: 1.3),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-            child: Divider(thickness: 1),
-          ),
-
-          // Profissionais
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Profissionais',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+                child: Divider(thickness: 1),
+              ),
+              // Profissionais
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Profissionais', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const Descricaoprofi(abrirPerfilNaHome: true),
+                          ),
+                        );
+                      },
+                      child: Row(
+                        children: [
+                          Expanded(child: _buildProfessionalAvatar('Marcos', '4 anos de exp.')),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildProfessionalAvatar('João Souza', '2 anos de exp.')),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    // Mantido com o abrirPerfilNaHome = true da sua última correção
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const Descricaoprofi(abrirPerfilNaHome: true),
-                      ),
-                    );
-                  },
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildProfessionalAvatar('Marcos', '4 anos de exp.'),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildProfessionalAvatar('João Souza', '2 anos de exp.'),
-                      ),
-                    ],
-                  ),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildDot(isActive: true),
+                    _buildDot(isActive: false),
+                    _buildDot(isActive: false),
+                  ],
                 ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 8),
-          Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildDot(isActive: true),
-                _buildDot(isActive: false),
-                _buildDot(isActive: false),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Localização
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.location_on, color: Colors.red, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Localização',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              // Localização
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.location_on, color: Colors.red, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Localização', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Av. Andrômeda, 1.232 - Jardim Satélite, São José dos Campos - SP, 12230-001',
+                            style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Av. Andrômeda, 1.232 - Jardim Satélite, São José dos Campos - SP, 12230-001',
-                        style: TextStyle(fontSize: 13, color: Colors.grey[700]),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Horário de Funcionamento
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.access_time, color: Colors.grey, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Horário de funcionamento',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              // Horário de Funcionamento
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.access_time, color: Colors.grey, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Horário de funcionamento', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Segunda à sexta: 09:00 às 18:00\nSábado, domingo e feriados: 08:30 às 17:00',
+                            style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.3),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Segunda à sexta: 09:00 às 18:00\nSábado, domingo e feriados: 08:30 às 17:00',
-                        style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.3),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Botão Agende seu horário
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: InkWell(
-                onTap: () => print('Botão do WhatsApp / Agendamento clicado!'),
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Agende seu horário',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          decoration: TextDecoration.underline,
-                        ),
+              ),
+              const SizedBox(height: 24),
+              // Botão Agende seu horário
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: InkWell(
+                    onTap: () {},
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Agende seu horário',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, decoration: TextDecoration.underline),
+                          ),
+                          const SizedBox(width: 8),
+                          Image.asset(
+                            'assets/whatsApp.png',
+                            height: 28,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.chat, color: Colors.green, size: 28);
+                            },
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Image.asset(
-                        'assets/whatsApp.png',
-                        height: 28,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(Icons.chat, color: Colors.green, size: 28);
-                        },
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+        // Moldura superior — FIXA, não rola
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: SizedBox(
+            height: molduraHeight,
+            child: Image.asset(
+              'imagem/quebrasuperior.png',
+              width: double.infinity,
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
             ),
           ),
-          const SizedBox(height: 24),
-        ],
-      ),
+        ),
+        // Botão voltar — POR CIMA da moldura
+        Positioned(
+          top: 40,
+          left: 10,
+          child: SafeArea(
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 32),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  // --- Sub-componentes mantidos idênticos ---
   Widget _buildImageCard(String imageUrl) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
-      child: Image.network(
-        imageUrl,
-        width: 200,
-        height: 180,
-        fit: BoxFit.cover,
-      ),
+      child: Image.network(imageUrl, width: 200, height: 180, fit: BoxFit.cover),
     );
   }
 
@@ -355,16 +331,8 @@ class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                name,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                experience,
-                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                overflow: TextOverflow.ellipsis,
-              ),
+              Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+              Text(experience, style: TextStyle(fontSize: 11, color: Colors.grey[600]), overflow: TextOverflow.ellipsis),
             ],
           ),
         ),
