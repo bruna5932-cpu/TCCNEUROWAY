@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:neuroway/menuprincipal.dart';
-import 'package:neuroway/cadastroprofi.dart'; // <-- Importação adicionada aqui
+import 'package:neuroway/cadastroprofi.dart'; //
 
 class CadastroEmpresa extends StatefulWidget {
   const CadastroEmpresa({super.key});
@@ -170,7 +170,7 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
             ),
           ),
 
-          // --- Seta para voltar ao menu principal ---
+          // voltar ao menuprincipal
           Positioned(
             top: 16,
             left: 16,

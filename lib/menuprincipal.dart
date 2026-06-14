@@ -16,9 +16,23 @@ class _MenuprincipalState extends State<Menuprincipal> {
   final TextEditingController _searchController = TextEditingController();
   int _currentIndex = 0;
   String _cidadeSelecionada = 'SJC';
+  String _searchQuery = '';
+
+  final List<Map<String, dynamic>> _allItems = [
+    {'title': 'Barbearia', 'description': 'Barbearia desde 2015 com atendimento especializado há 7 anos.', 'address': 'Av. Andrômeda, 1232 - Jardim Satélite'},
+    {'title': 'Barbearia Premium', 'description': 'Ambiente calmo, organizado e silencioso, trazendo conforto aos nossos clientes.', 'address': 'Av. Andrômeda, 1232 - Jardim Satélite'},
+    {'title': 'Marcos Silva', 'description': 'Profissional especializado com anos de experiência.', 'address': 'Av. Andrômeda, 1232 - Jardim Satélite'},
+  ];
+
+  List<Map<String, dynamic>> get _filteredItems {
+    if (_searchQuery.isEmpty) return _allItems;
+    return _allItems.where((item) {
+      return (item['title'] as String).toLowerCase().contains(_searchQuery.toLowerCase()) ||
+             (item['description'] as String).toLowerCase().contains(_searchQuery.toLowerCase());
+    }).toList();
+  }
 
   void _abrirSelecaoCidade() {
-    final TextEditingController _cidadeController = TextEditingController();
     final List<Map<String, String>> _cidades = [
       {'nome': 'São José dos Campos', 'sigla': 'SJC'},
       {'nome': 'São Paulo', 'sigla': 'SP'},
@@ -123,6 +137,8 @@ class _MenuprincipalState extends State<Menuprincipal> {
   }
 
   Widget _buildHomeContent() {
+    final items = _filteredItems;
+
     return SafeArea(
       child: CustomScrollView(
         slivers: [
@@ -137,23 +153,40 @@ class _MenuprincipalState extends State<Menuprincipal> {
                     controller: _searchController,
                     cidade: _cidadeSelecionada,
                     onCidadeTap: _abrirSelecaoCidade,
+                    onChanged: (query) {
+                      setState(() {
+                        _searchQuery = query;
+                      });
+                    },
                   ),
                 ),
                 const SizedBox(height: 20),
               ],
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  return const BarbeariaCard();
-                },
-                childCount: 3,
-              ),
-            ),
-          ),
+          items.isEmpty
+              ? SliverToBoxAdapter(
+                  child: const Padding(
+                    padding: EdgeInsets.only(top: 40),
+                    child: Center(
+                      child: Text(
+                        'Nenhum resultado encontrado.',
+                        style: TextStyle(color: Colors.grey, fontSize: 16),
+                      ),
+                    ),
+                  ),
+                )
+              : SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        return BarbeariaCard(item: items[index]);
+                      },
+                      childCount: items.length,
+                    ),
+                  ),
+                ),
         ],
       ),
     );
@@ -209,12 +242,14 @@ class SearchBarWidget extends StatelessWidget {
   final TextEditingController controller;
   final String cidade;
   final VoidCallback onCidadeTap;
+  final ValueChanged<String> onChanged;
 
   const SearchBarWidget({
     super.key,
     required this.controller,
     required this.cidade,
     required this.onCidadeTap,
+    required this.onChanged,
   });
 
   @override
@@ -234,6 +269,7 @@ class SearchBarWidget extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
+              onChanged: onChanged,
               decoration: const InputDecoration(
                 hintText: 'Buscar',
                 hintStyle: TextStyle(color: Color(0xFF9E9E9E), fontSize: 18, fontWeight: FontWeight.w400),
@@ -270,7 +306,7 @@ class PuzzleHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final molduraHeight = screenHeight * 0.25;
+    final molduraHeight = screenHeight * 0.15;
 
     return SizedBox(
       height: molduraHeight,
@@ -286,7 +322,9 @@ class PuzzleHeader extends StatelessWidget {
 }
 
 class BarbeariaCard extends StatelessWidget {
-  const BarbeariaCard({super.key});
+  final Map<String, dynamic> item;
+
+  const BarbeariaCard({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -328,16 +366,16 @@ class BarbeariaCard extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Barbearia', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black)),
+                          Text(item['title'], style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black)),
                           Icon(Icons.favorite_border, color: Colors.grey[400], size: 22),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Barbearia desde 2015 com atendimento especializado há 7 anos.\nAmbiente calmo, organizado e silencioso, trazendo conforto aos nossos clientes.',
+                      Text(
+                        item['description'],
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 10, color: Colors.black87, height: 1.2),
+                        style: const TextStyle(fontSize: 10, color: Colors.black87, height: 1.2),
                       ),
                     ],
                   ),
@@ -360,11 +398,11 @@ class BarbeariaCard extends StatelessWidget {
                     MaterialPageRoute(builder: (context) => const LocalizacaoScreen()),
                   );
                 },
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.location_on, color: Colors.red, size: 14),
-                    SizedBox(width: 2),
-                    Text('Av. Andrômeda, 1232 - Jardim Satélite', style: TextStyle(fontSize: 9, color: Colors.black, fontWeight: FontWeight.w500)),
+                    const Icon(Icons.location_on, color: Colors.red, size: 14),
+                    const SizedBox(width: 2),
+                    Text(item['address'], style: const TextStyle(fontSize: 9, color: Colors.black, fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),

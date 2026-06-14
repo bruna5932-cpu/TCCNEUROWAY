@@ -10,11 +10,140 @@ class Favoritos extends StatefulWidget {
 
 class _FavoritosState extends State<Favoritos> {
   final List<bool> _isFavorite = [true, true, true];
+  final TextEditingController _searchController = TextEditingController();
+  String _cidadeSelecionada = 'SJC';
+  List<Map<String, dynamic>> _allItems = [];
+  List<Map<String, dynamic>> _filteredItems = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _allItems = [
+      {'index': 0, 'title': 'Barbearia', 'isAvatar': false, 'imageUrl': 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=500'},
+      {'index': 1, 'title': 'Marcos Silva', 'isAvatar': true, 'imageUrl': ''},
+      {'index': 2, 'title': 'Barbearia Premium', 'isAvatar': false, 'imageUrl': 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=500'},
+    ];
+    _filteredItems = _allItems;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearch(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredItems = _allItems;
+      } else {
+        _filteredItems = _allItems.where((item) {
+          return (item['title'] as String).toLowerCase().contains(query.toLowerCase());
+        }).toList();
+      }
+    });
+  }
+
+  void _abrirSelecaoCidade() {
+    final List<Map<String, String>> _cidades = [
+      {'nome': 'São José dos Campos', 'sigla': 'SJC'},
+      {'nome': 'São Paulo', 'sigla': 'SP'},
+      {'nome': 'Campinas', 'sigla': 'CPS'},
+      {'nome': 'Taubaté', 'sigla': 'TBT'},
+      {'nome': 'Jacareí', 'sigla': 'JCR'},
+    ];
+    String? _cidadeEscolhida;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text(
+                'Selecione sua cidade',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: _cidades.map((cidade) {
+                  final bool selecionada = _cidadeEscolhida == cidade['sigla'];
+                  return GestureDetector(
+                    onTap: () {
+                      setStateDialog(() {
+                        _cidadeEscolhida = cidade['sigla'];
+                      });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: selecionada ? const Color(0xFF98B9A6) : const Color(0xFFF3F3F4),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: selecionada ? const Color(0xFF98B9A6) : const Color(0xFFD0D3D8),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            cidade['nome']!,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: selecionada ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          Text(
+                            cidade['sigla']!,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: selecionada ? Colors.white70 : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  onPressed: _cidadeEscolhida == null
+                      ? null
+                      : () {
+                          setState(() {
+                            _cidadeSelecionada = _cidadeEscolhida!;
+                          });
+                          Navigator.pop(context);
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF98B9A6),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Confirmar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final molduraHeight = screenHeight * 0.25;
+    final molduraHeight = screenHeight * 0.15;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -22,14 +151,11 @@ class _FavoritosState extends State<Favoritos> {
         children: [
           Column(
             children: [
-              SizedBox(height: molduraHeight * 0.75),
+              SizedBox(height: molduraHeight * 1.1),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Row(
                   children: [
-                    // ==========================================
-                    // AQUI ESTÁ O SEU CÓDIGO DO ICON BUTTON
-                    // ==========================================
                     IconButton(
                       icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22),
                       onPressed: () {
@@ -40,7 +166,6 @@ class _FavoritosState extends State<Favoritos> {
                         );
                       },
                     ),
-                    // ==========================================
                     Expanded(
                       child: Container(
                         height: 54,
@@ -54,23 +179,35 @@ class _FavoritosState extends State<Favoritos> {
                           children: [
                             const Icon(Icons.search, color: Color(0xFF9E9E9E), size: 26),
                             const SizedBox(width: 12),
-                            const Expanded(
+                            Expanded(
                               child: TextField(
-                                decoration: InputDecoration(
+                                controller: _searchController,
+                                onChanged: _onSearch,
+                                decoration: const InputDecoration(
                                   hintText: "Buscar nos favoritos",
-                                  hintStyle: TextStyle(color: Color(0xFF9E9E9E), fontSize: 18),
+                                  hintStyle: TextStyle(color: Color(0xFF9E9E9E), fontSize: 16),
                                   border: InputBorder.none,
+                                  isDense: true,
                                 ),
                               ),
                             ),
                             Container(height: 24, width: 1, color: const Color(0xFFB0B3B8)),
                             const SizedBox(width: 12),
-                            const Icon(Icons.location_on_outlined, color: Color(0xFF9E9E9E), size: 24),
-                            const SizedBox(width: 6),
-                            const Text(
-                              "SJC",
-                              style: TextStyle(color: Color(0xFF7D828A), fontWeight: FontWeight.bold, fontSize: 18),
+                            GestureDetector(
+                              onTap: _abrirSelecaoCidade,
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.location_on_outlined, color: Color(0xFF9E9E9E), size: 24),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _cidadeSelecionada,
+                                    style: const TextStyle(color: Color(0xFF7D828A), fontWeight: FontWeight.bold, fontSize: 18),
+                                  ),
+                                  const Icon(Icons.arrow_drop_down, color: Color(0xFF9E9E9E), size: 20),
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 4),
                           ],
                         ),
                       ),
@@ -80,14 +217,24 @@ class _FavoritosState extends State<Favoritos> {
               ),
               const SizedBox(height: 20),
               Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  children: [
-                    _buildBarberCard(index: 0, title: "Barbearia", isAvatar: false, imageUrl: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=500"),
-                    _buildBarberCard(index: 1, title: "Marcos Silva", isAvatar: true, imageUrl: ""),
-                    _buildBarberCard(index: 2, title: "Barbearia Premium", isAvatar: false, imageUrl: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=500"),
-                  ],
-                ),
+                child: _filteredItems.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Nenhum resultado encontrado.',
+                          style: TextStyle(color: Colors.grey, fontSize: 16),
+                        ),
+                      )
+                    : ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        children: _filteredItems.map((item) {
+                          return _buildBarberCard(
+                            index: item['index'],
+                            title: item['title'],
+                            isAvatar: item['isAvatar'],
+                            imageUrl: item['imageUrl'],
+                          );
+                        }).toList(),
+                      ),
               ),
             ],
           ),
@@ -158,7 +305,7 @@ class _FavoritosState extends State<Favoritos> {
                   ),
                 const SizedBox(height: 8),
                 Row(
-                  children: List.generate(5, (index) => const Icon(Icons.star, color: Colors.amber, size: 16)),
+                  children: List.generate(5, (i) => const Icon(Icons.star, color: Colors.amber, size: 16)),
                 ),
               ],
             ),

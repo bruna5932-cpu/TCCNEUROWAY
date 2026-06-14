@@ -33,7 +33,7 @@ class CadastroPage extends StatefulWidget {
 class _CadastroPageState extends State<CadastroPage> {
   final _formKey = GlobalKey<FormState>();
   
-  // Controladores dos campos de texto
+  // campos de texto
   final _nomeController = TextEditingController();
   final _emailController = TextEditingController();
   final _telefoneController = TextEditingController();
@@ -41,14 +41,14 @@ class _CadastroPageState extends State<CadastroPage> {
   final _profissaoController = TextEditingController();
   final _experienciaController = TextEditingController();
 
-  // Função simulada para escolher a foto
+ 
   Future<void> _adicionarFoto() async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Botão Adicionar Foto clicado!')),
     );
   }
 
-  // CORREÇÃO 1: Ajustada a função para validar e depois navegar para a próxima página
+  
   void _cadastrar() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -58,7 +58,7 @@ class _CadastroPageState extends State<CadastroPage> {
       ),
     );
 
-    // Navega para a tela CadastroEmpresa
+    // navegaçao cadastro
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const CadastroEmpresa()),
@@ -84,7 +84,6 @@ class _CadastroPageState extends State<CadastroPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // --- Conteúdo principal (formulário) ---
           Positioned.fill(
             child: SafeArea(
               child: Padding(
@@ -98,7 +97,6 @@ class _CadastroPageState extends State<CadastroPage> {
                     padding: EdgeInsets.zero,
                     clipBehavior: Clip.antiAlias,
                     children: [
-                      // --- Conteúdo Interno do Formulário ---
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24.0),
                         child: Column(
@@ -164,7 +162,7 @@ class _CadastroPageState extends State<CadastroPage> {
                             ),
                             const SizedBox(height: 20),
 
-                            // --- Seção da Foto de Perfil ---
+                            // adicionar foto
                             Center(
                               child: Column(
                                 children: [
@@ -202,7 +200,7 @@ class _CadastroPageState extends State<CadastroPage> {
                             ),
                             const SizedBox(height: 35),
 
-                            // CORREÇÃO 2: Botão agora chama a função _cadastrar()
+                            // boatao cadastrar
                             ElevatedButton(
                               onPressed: _cadastrar,
                               style: ElevatedButton.styleFrom(
@@ -230,7 +228,7 @@ class _CadastroPageState extends State<CadastroPage> {
             ),
           ),
 
-          // --- Moldura superior ---
+          //  Moldura superior 
           Positioned(
             top: 0,
             left: 0,
@@ -246,7 +244,7 @@ class _CadastroPageState extends State<CadastroPage> {
             ),
           ),
 
-          // --- Moldura inferior ---
+          //  Moldura inferior 
           Positioned(
             bottom: 0,
             left: 0,
@@ -262,7 +260,7 @@ class _CadastroPageState extends State<CadastroPage> {
             ),
           ),
 
-          // --- Seta para voltar à tela de Cadastro de Empresa ---
+          // voltar para cadastro de empresa
           Positioned(
             top: 16,
             left: 16,
@@ -318,7 +316,7 @@ class _CadastroPageState extends State<CadastroPage> {
               keyboardType: keyboardType,
               maxLines: maxLines,
               style: const TextStyle(fontSize: 16),
-              // CORREÇÃO 3: Adicionado validador básico para os campos não irem vazios
+              //campo obrigatorio
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Campo obrigatório';

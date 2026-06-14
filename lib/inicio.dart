@@ -20,7 +20,7 @@ class InicioState extends State<Inicio> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Conteúdo central — logo + botão
+          //logo + botão
           Center(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.12),

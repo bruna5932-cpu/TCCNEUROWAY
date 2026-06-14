@@ -25,7 +25,7 @@ class LOGINState extends State<LOGIN> {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
-    final molduraHeight = screenHeight * 0.25;
+    final molduraHeight = screenHeight * 0.15;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
@@ -37,7 +37,7 @@ class LOGINState extends State<LOGIN> {
                 constraints: BoxConstraints(minHeight: screenHeight),
                 child: Padding(
                   padding: EdgeInsets.only(
-                    top: molduraHeight * 0.6,
+                    top: molduraHeight * 1.2,
                     bottom: molduraHeight * 0.6,
                   ),
                   child: Column(

@@ -46,11 +46,10 @@ class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
 
   Widget _buildLocalConteudo() {
     final screenHeight = MediaQuery.of(context).size.height;
-    final molduraHeight = screenHeight * 0.25;
+    final molduraHeight = screenHeight * 0.15; // era 0.25
 
     return Stack(
       children: [
-        // Conteúdo rolável com espaço para a moldura
         SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,7 +265,7 @@ class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
             ],
           ),
         ),
-        // Moldura superior — FIXA, não rola
+        // Moldura superior — 
         Positioned(
           top: 0,
           left: 0,
@@ -281,7 +280,7 @@ class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
             ),
           ),
         ),
-        // Botão voltar — POR CIMA da moldura
+        // Botão voltar 
         Positioned(
           top: 40,
           left: 10,

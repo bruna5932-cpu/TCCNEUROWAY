@@ -12,9 +12,7 @@ class _AgendamentosState extends State<Agendamentos> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final molduraHeight = screenHeight * 0.25;
-
-    // Retiramos o Scaffold e o bottomNavigationBar para não duplicar com o MenuPrincipal
+    final molduraHeight = screenHeight * 0.15;
     return Stack(
       children: [
         SafeArea(
