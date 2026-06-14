@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:neuroway/menuprincipal.dart';
 import 'package:neuroway/cadastroprofi.dart'; // <-- Importação adicionada aqui
-import 'package:neuroway/agendamentos.dart'; // <-- Importação adicionada aqui
 
 class CadastroEmpresa extends StatefulWidget {
   const CadastroEmpresa({super.key});
@@ -28,7 +27,7 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     );
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (context) => const Agendamentos()),
+      MaterialPageRoute(builder: (context) => const Menuprincipal()),
       (route) => false,
     );
   }
