@@ -19,17 +19,7 @@ class _PerfilState extends State<Perfil> {
         top: false,
         child: Column(
           children: [
-            ClipPath(
-              clipper: HeaderWaveClipper(),
-              child: SizedBox(
-                width: double.infinity,
-                height: 200,
-                child: Image.network(
-                  "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wzMjUWejTS/3bnn2jd1_expires_30_days.png",
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
+
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -73,7 +63,12 @@ class _PerfilState extends State<Perfil> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const Favoritos()),
+                        MaterialPageRoute(
+                          builder: (context) => Scaffold(
+                            backgroundColor: Colors.white,
+                            body: const Favoritos(),
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -84,7 +79,12 @@ class _PerfilState extends State<Perfil> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const Agendamentos()),
+                        MaterialPageRoute(
+                          builder: (context) => Scaffold(
+                            backgroundColor: Colors.white,
+                            body: const Agendamentos(),
+                          ),
+                        ),
                       );
                     },
                   ),
