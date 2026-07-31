@@ -1,15 +1,8 @@
 import 'package:flutter/material.dart';
-
 import 'package:neuroway/cadastroconta.dart';
-
 import 'package:neuroway/cadastroempresa.dart';
-
 import 'package:neuroway/menuprincipal.dart';
-
-
-
 class LOGIN extends StatefulWidget {
-
   const LOGIN({super.key});
 
 
