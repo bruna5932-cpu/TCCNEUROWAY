@@ -3,29 +3,19 @@ import 'package:neuroway/agendamentos.dart';
 import 'package:neuroway/favoritos.dart';
 import 'package:neuroway/menuprincipal.dart';
 import 'package:neuroway/peril.dart';
-// MARK: - TELA PRINCIPAL (Gerencia o estado e as telas)
 class Descricaoprofi extends StatefulWidget {
-  final bool abrirPerfilNaHome; // Novo parâmetro para controlar o conteúdo do index 0
-
+  final bool abrirPerfilNaHome; 
   const Descricaoprofi({
     super.key, 
-    this.abrirPerfilNaHome = false, // Por padrão, abre o Menu Principal normal
+    this.abrirPerfilNaHome = false,   
   });
-
   @override
   State<Descricaoprofi> createState() => _DescricaoprofiState();
 }
-
 class _DescricaoprofiState extends State<Descricaoprofi> {
-  // Mantém no index 0 para ficar na "casinha"
   int _currentIndex = 0; 
-
-  // Controlador para a barra de pesquisa da Home
   final TextEditingController _searchController = TextEditingController();
-
-  // Alterado de 'late final List' para um 'get' dinâmico
   List<Widget> get _paginas => [
-    // Se abrirPerfilNaHome for true, mostra o perfil do Marcos no index 0. Caso contrário, mostra a Home normal.
     widget.abrirPerfilNaHome ? _buildPerfilConteudo() : const Menuprincipal(), 
     const Favoritos(),         // Index 1
     const Agendamentos(),      // Index 2
@@ -37,21 +27,16 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
     _searchController.dispose();
     super.dispose();
   }
-  
-  // ... Todo o resto do seu código (build, _buildHomeContent, _buildPerfilConteudo, etc.) permanece exatamente igual
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        // O IndexedStack renderiza apenas a tela ativa, mas mantém o estado delas vivo
         child: IndexedStack(
           index: _currentIndex,
           children: _paginas,
         ),
       ),
-      // A barra customizada fica aqui, enviando os cliques para o pai
       bottomNavigationBar: CustomBottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -108,16 +93,12 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
       ),
     );
   }
-
-  // O layout de perfil criado por você (Index 3)
   Widget _buildPerfilConteudo() {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const ProfileHeaderSection(),
-          
-          // Biografia/Descrição
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
             child: Text(
@@ -151,8 +132,6 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
     );
   }
 }
-
-// MARK: - BARRA DE NAVEGAÇÃO CUSTOMIZADA (Limpa, apenas visual e cliques)
 class CustomBottomNavigationBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -202,9 +181,6 @@ class CustomBottomNavigationBar extends StatelessWidget {
     );
   }
 }
-
-// MARK: - Sub-componentes visuais (Mantidos intactos)
-
 class ProfileHeaderSection extends StatelessWidget {
   const ProfileHeaderSection({super.key});
 
