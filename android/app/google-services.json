@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "769418014315",
+    "project_id": "teste2neuro",
+    "storage_bucket": "teste2neuro.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:769418014315:android:44874f08f808e6fed50b2e",
+        "android_client_info": {
+          "package_name": "com.example.neuroway"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCIWjAuVYdOqYh6RckImD-ZsPk5UmoOpK4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
