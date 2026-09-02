@@ -101,7 +101,7 @@ class LOGINState extends State<LOGIN> {
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => const CriarConta()),
+                                MaterialPageRoute(builder: (context) => const LOGIN()),
                               );
                             },
                             style: ElevatedButton.styleFrom(

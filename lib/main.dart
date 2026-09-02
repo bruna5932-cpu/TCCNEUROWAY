@@ -1,22 +1,56 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:neuroway/inicio.dart';
-void main() {
+import 'firebase_options.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key}); // Adicionado construtor com chave (boa prática)
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: "Neuroway",
-      theme: ThemeData(
-        primarySwatch: Colors.blue, 
-        useMaterial3: true, 
+      home: TesteFirebase(),
+    );
+  }
+}
+
+class TesteFirebase extends StatelessWidget {
+  const TesteFirebase({super.key});
+
+  Future<void> salvarTeste() async {
+    try {
+      await FirebaseFirestore.instance.collection('testes').add({
+        'nome': 'Fabio',
+        'mensagem': 'Teste do Firebase',
+        'data': DateTime.now(),
+      });
+      print('Dados salvos com sucesso!');
+    } catch (e) {
+      print('Erro ao salvar no Firebase: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Teste Firebase'),
       ),
-      home: const Inicio(),
+      body: Center(
+        child: ElevatedButton(
+          onPressed: salvarTeste,
+          child: const Text('Salvar no Firebase'),
+        ),
+      ),
     );
   }
 }
