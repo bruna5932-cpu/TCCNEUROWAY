@@ -41,15 +41,14 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCs2WjWohRrf5jCY907AJ94fmgkpUhMgE8',
-    appId: '1:314873333725:web:8d12309a38c19153989834',
-    messagingSenderId: '314873333725',
-    projectId: 'teste-6005e',
-    authDomain: 'teste-6005e.firebaseapp.com',
-    storageBucket: 'teste-6005e.firebasestorage.app',
-    measurementId: 'G-DCWP5Z5CEL',
+    apiKey: 'AIzaSyAH2Ytoub6WaexiGu_nCUq_LlM_dMFBmCo',
+    appId: '1:840040907500:web:bf93730be96e9a59889bc9',
+    messagingSenderId: '840040907500',
+    projectId: 'neuroway-7c999',
+    authDomain: 'neuroway-7c999.firebaseapp.com',
+    storageBucket: 'neuroway-7c999.firebasestorage.app',
+    measurementId: 'G-4PR54FC0RK',
   );
-
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDt-4uQJbVkLYcWHosIIwgSIWIOWP-FXVU',
     appId: '1:314873333725:android:cdadd13901b0d819989834',
@@ -75,12 +74,12 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCs2WjWohRrf5jCY907AJ94fmgkpUhMgE8',
-    appId: '1:314873333725:web:8d12309a38c19153989834',
-    messagingSenderId: '314873333725',
-    projectId: 'teste-6005e',
-    authDomain: 'teste-6005e.firebaseapp.com',
-    storageBucket: 'teste-6005e.firebasestorage.app',
-    measurementId: 'G-DCWP5Z5CEL',
+    apiKey: 'AIzaSyAH2Ytoub6WaexiGu_nCUq_LlM_dMFBmCo',
+    appId: '1:840040907500:web:8db835c6e3fef44e889bc9',
+    messagingSenderId: '840040907500',
+    projectId: 'neuroway-7c999',
+    authDomain: 'neuroway-7c999.firebaseapp.com',
+    storageBucket: 'neuroway-7c999.firebasestorage.app',
+    measurementId: 'G-25K0EWBLGH',
   );
 }

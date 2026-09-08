@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:neuroway/menuprincipal.dart';
-import 'package:neuroway/cadastroprofi.dart'; //
+import 'package:neuroway/cadastroprofi.dart';
 
 class CadastroEmpresa extends StatefulWidget {
   const CadastroEmpresa({super.key});
@@ -12,30 +12,62 @@ class CadastroEmpresa extends StatefulWidget {
 
 class _CadastroEmpresaState extends State<CadastroEmpresa> {
   String _necessitaAgendamento = 'NÃO';
+
   final TextEditingController _senhaController = TextEditingController();
-  final TextEditingController _confirmarSenhaController = TextEditingController();
+  final TextEditingController _confirmarSenhaController =
+      TextEditingController();
+
+  bool _mostrarSenha = false;
+  bool _mostrarConfirmarSenha = false;
+
+  bool get _senhasNaoCoincidem =>
+      _senhaController.text != _confirmarSenhaController.text &&
+      _confirmarSenhaController.text.isNotEmpty;
 
   void _realizarCadastro() {
+    // Impede o cadastro caso as senhas sejam diferentes
     if (_senhaController.text != _confirmarSenhaController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('As senhas não coincidem!'), backgroundColor: Colors.red),
-      );
+      setState(() {});
       return;
     }
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Cadastro realizado com sucesso!'), backgroundColor: Colors.green, duration: Duration(seconds: 1)),
+      const SnackBar(
+        content: Text('Cadastro realizado com sucesso!'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 1),
+      ),
     );
+
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (context) => const Menuprincipal()),
+      MaterialPageRoute(
+        builder: (context) => const Menuprincipal(),
+      ),
       (route) => false,
     );
   }
 
   @override
+  void initState() {
+    super.initState();
+
+    _senhaController.addListener(_atualizarSenhas);
+    _confirmarSenhaController.addListener(_atualizarSenhas);
+  }
+
+  void _atualizarSenhas() {
+    setState(() {});
+  }
+
+  @override
   void dispose() {
+    _senhaController.removeListener(_atualizarSenhas);
+    _confirmarSenhaController.removeListener(_atualizarSenhas);
+
     _senhaController.dispose();
     _confirmarSenhaController.dispose();
+
     super.dispose();
   }
 
@@ -70,67 +102,247 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
                         ),
                       ),
                       const SizedBox(height: 16),
+
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildTextField(label: 'Nome:'),
-                            _buildTextField(label: 'Categoria:', hint: '(escola, barbearia, restaurante...)'),
+                            // NOME
+                            _buildTextField(
+                              label: 'Nome:',
+                            ),
+
+                            // CNPJ
+                            _buildTextField(
+                              label: 'CNPJ:',
+                              hint: 'Apenas números',
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(14),
+                              ],
+                            ),
+
+                            // CATEGORIA
+                            _buildTextField(
+                              label: 'Categoria:',
+                              hint: '(escola, barbearia, restaurante...)',
+                            ),
+
+                            // NÚMERO
                             _buildTextField(
                               label: 'Número:',
                               hint: 'Apenas números (ex: 12999999999)',
                               keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
                             ),
+
                             const SizedBox(height: 16),
-                            const Text('Dias/horários de funcionamento:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+
+                            const Text(
+                              'Dias/horários de funcionamento:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+
                             const SizedBox(height: 8),
+
                             _buildHorariosGrid(),
+
                             const SizedBox(height: 16),
-                            _buildTextField(label: 'Descrição:', maxLines: 3),
-                            _buildTextField(label: 'Endereço completo:'),
+
+                            // DESCRIÇÃO
+                            _buildTextField(
+                              label: 'Descrição:',
+                              maxLines: 3,
+                            ),
+
+                            // ENDEREÇO
+                            _buildTextField(
+                              label: 'Endereço completo:',
+                            ),
+
                             const SizedBox(height: 16),
-                            const Text('Redes sociais:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+
+                            const Text(
+                              'Redes sociais:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+
                             const SizedBox(height: 8),
-                            _buildSocialInput(Icons.camera_alt, 'Instagram (URL ou @)'),
-                            _buildSocialInput(Icons.facebook, 'Facebook (URL)'),
-                            _buildSocialInput(Icons.music_note, 'TikTok'),
-                            _buildSocialInput(Icons.language, 'Website'),
+
+                            _buildSocialInput(
+                              Icons.camera_alt,
+                              'Instagram (URL ou @)',
+                            ),
+
+                            _buildSocialInput(
+                              Icons.facebook,
+                              'Facebook (URL)',
+                            ),
+
+                            _buildSocialInput(
+                              Icons.music_note,
+                              'TikTok',
+                            ),
+
+                            _buildSocialInput(
+                              Icons.language,
+                              'Website',
+                            ),
+
                             const SizedBox(height: 20),
-                            const Text('Necessita agendamento?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+
+                            const Text(
+                              'Necessita agendamento?',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+
                             const SizedBox(height: 8),
+
                             _buildAgendamentoOptions(),
+
                             const SizedBox(height: 20),
-                            const Text('Descrição dos profissionais:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+
+                            const Text(
+                              'Descrição dos profissionais:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+
                             const SizedBox(height: 10),
+
                             _buildProfissionaisSection(),
+
                             const SizedBox(height: 20),
-                            const Text('Fotos (até 15 fotos)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+
+                            const Text(
+                              'Fotos (até 15 fotos)',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+
                             const SizedBox(height: 10),
+
                             _buildFotosGrid(),
+
                             const SizedBox(height: 20),
-                            const Text('Formas de pagamento:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+
+                            const Text(
+                              'Formas de pagamento:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+
                             const SizedBox(height: 8),
-                            _buildPaymentInput('Cartão (crédito/débito):'),
-                            _buildPaymentInput('Pix:'),
-                            _buildPaymentInput('Outros:'),
+
+                            _buildPaymentInput(
+                              'Cartão (crédito/débito):',
+                            ),
+
+                            _buildPaymentInput(
+                              'Pix:',
+                            ),
+
+                            _buildPaymentInput(
+                              'Outros:',
+                            ),
+
                             const SizedBox(height: 16),
-                            _buildTextField(label: 'Email:'),
-                            _buildTextField(label: 'Senha:', obscureText: true, controller: _senhaController),
-                            _buildTextField(label: 'Confirmar senha:', obscureText: true, controller: _confirmarSenhaController),
+
+                            // EMAIL
+                            _buildTextField(
+                              label: 'Email:',
+                            ),
+
+                            // SENHA
+                            _buildPasswordField(
+                              label: 'Senha:',
+                              controller: _senhaController,
+                              mostrarSenha: _mostrarSenha,
+                              onToggle: () {
+                                setState(() {
+                                  _mostrarSenha = !_mostrarSenha;
+                                });
+                              },
+                            ),
+
+                            // CONFIRMAR SENHA
+                            _buildPasswordField(
+                              label: 'Confirmar senha:',
+                              controller: _confirmarSenhaController,
+                              mostrarSenha: _mostrarConfirmarSenha,
+                              onToggle: () {
+                                setState(() {
+                                  _mostrarConfirmarSenha =
+                                      !_mostrarConfirmarSenha;
+                                });
+                              },
+                            ),
+
+                            // MENSAGEM DE ERRO
+                            if (_senhasNaoCoincidem)
+                              const Padding(
+                                padding: EdgeInsets.only(
+                                  left: 4,
+                                  top: 2,
+                                ),
+                                child: Text(
+                                  'As senhas não coincidem',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+
                             const SizedBox(height: 32),
+
+                            // BOTÃO CADASTRAR
                             Center(
                               child: ElevatedButton(
                                 onPressed: _realizarCadastro,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF76A085),
-                                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  backgroundColor:
+                                      const Color(0xFF76A085),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 40,
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(8),
+                                  ),
                                 ),
-                                child: const Text('Cadastrar', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                child: const Text(
+                                  'Cadastrar',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                             ),
+
                             const SizedBox(height: 32),
                           ],
                         ),
@@ -141,6 +353,8 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
               ),
             ),
           ),
+
+          // MOLDURA SUPERIOR
           Positioned(
             top: 0,
             left: 0,
@@ -155,6 +369,8 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
               ),
             ),
           ),
+
+          // MOLDURA INFERIOR
           Positioned(
             bottom: 0,
             left: 0,
@@ -170,7 +386,7 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
             ),
           ),
 
-          // voltar ao menuprincipal
+          // VOLTAR AO MENU PRINCIPAL
           Positioned(
             top: 16,
             left: 16,
@@ -182,13 +398,20 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
                   } else {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => const Menuprincipal()),
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const Menuprincipal(),
+                      ),
                     );
                   }
                 },
                 child: const Padding(
                   padding: EdgeInsets.all(8.0),
-                  child: Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22),
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    color: Colors.black,
+                    size: 22,
+                  ),
                 ),
               ),
             ),
@@ -198,6 +421,7 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     );
   }
 
+  // CAMPO DE TEXTO PADRÃO
   Widget _buildTextField({
     required String label,
     String? hint,
@@ -210,10 +434,21 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        crossAxisAlignment: maxLines > 1 ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        crossAxisAlignment:
+            maxLines > 1
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.center,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
+
           const SizedBox(width: 8),
+
           Expanded(
             child: TextField(
               controller: controller,
@@ -223,11 +458,27 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
               inputFormatters: inputFormatters,
               decoration: InputDecoration(
                 hintText: hint,
-                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                hintStyle: TextStyle(
+                  color: Colors.grey.shade400,
+                  fontSize: 13,
+                ),
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.black45, width: 1)),
-                focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue, width: 1.5)),
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 4),
+                enabledBorder:
+                    const UnderlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Colors.black45,
+                    width: 1,
+                  ),
+                ),
+                focusedBorder:
+                    const UnderlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Colors.blue,
+                    width: 1.5,
+                  ),
+                ),
               ),
             ),
           ),
@@ -236,12 +487,93 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     );
   }
 
+  // CAMPO DE SENHA COM OLHINHO
+  Widget _buildPasswordField({
+    required String label,
+    required TextEditingController controller,
+    required bool mostrarSenha,
+    required VoidCallback onToggle,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          Expanded(
+            child: TextField(
+              controller: controller,
+              obscureText: !mostrarSenha,
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 4),
+
+                enabledBorder:
+                    const UnderlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Colors.black45,
+                    width: 1,
+                  ),
+                ),
+
+                focusedBorder:
+                    const UnderlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Colors.blue,
+                    width: 1.5,
+                  ),
+                ),
+
+                suffixIcon: IconButton(
+                  onPressed: onToggle,
+                  icon: Icon(
+                    mostrarSenha
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                    color: Colors.black54,
+                    size: 21,
+                  ),
+                  tooltip:
+                      mostrarSenha
+                          ? 'Ocultar senha'
+                          : 'Mostrar senha',
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // HORÁRIOS
   Widget _buildHorariosGrid() {
-    final dias = ['Segunda:', 'Terça:', 'Quarta:', 'Quinta:', 'Sexta:', 'Sábado:', 'Domingo:', 'Feriados:'];
+    final dias = [
+      'Segunda:',
+      'Terça:',
+      'Quarta:',
+      'Quinta:',
+      'Sexta:',
+      'Sábado:',
+      'Domingo:',
+      'Feriados:',
+    ];
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate:
+          const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         childAspectRatio: 3.5,
         crossAxisSpacing: 10,
@@ -250,10 +582,24 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
       itemBuilder: (context, index) {
         return Row(
           children: [
-            SizedBox(width: 65, child: Text(dias[index], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
+            SizedBox(
+              width: 65,
+              child: Text(
+                dias[index],
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+
             const Expanded(
               child: TextField(
-                decoration: InputDecoration(hintText: '__:__ às __:__', isDense: true, contentPadding: EdgeInsets.zero),
+                decoration: InputDecoration(
+                  hintText: '__:__ às __:__',
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
                 style: TextStyle(fontSize: 12),
               ),
             ),
@@ -263,16 +609,31 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     );
   }
 
-  Widget _buildSocialInput(IconData icon, String hint) {
+  // REDES SOCIAIS
+  Widget _buildSocialInput(
+    IconData icon,
+    String hint,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(icon, size: 24, color: Colors.black54),
+          Icon(
+            icon,
+            size: 24,
+            color: Colors.black54,
+          ),
+
           const SizedBox(width: 10),
+
           Expanded(
             child: TextField(
-              decoration: InputDecoration(hintText: hint, isDense: true, contentPadding: const EdgeInsets.symmetric(vertical: 4)),
+              decoration: InputDecoration(
+                hintText: hint,
+                isDense: true,
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 4),
+              ),
             ),
           ),
         ],
@@ -280,45 +641,109 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     );
   }
 
+  // AGENDAMENTO
   Widget _buildAgendamentoOptions() {
-    final opcoes = ['SIM', 'NÃO', 'OPCIONAL'];
+    final opcoes = [
+      'SIM',
+      'NÃO',
+      'OPCIONAL',
+    ];
+
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      mainAxisAlignment:
+          MainAxisAlignment.spaceAround,
       children: opcoes.map((opcao) {
-        final isSelected = _necessitaAgendamento == opcao;
+        final isSelected =
+            _necessitaAgendamento == opcao;
+
         return InkWell(
-          onTap: () => setState(() => _necessitaAgendamento = opcao),
+          onTap: () {
+            setState(() {
+              _necessitaAgendamento = opcao;
+            });
+          },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            decoration: BoxDecoration(
-              color: isSelected ? Colors.grey.shade300 : Colors.white,
-              border: Border.all(color: Colors.black38),
-              borderRadius: BorderRadius.circular(20),
+            padding:
+                const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 8,
             ),
-            child: Text(opcao, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.black : Colors.black54)),
+            decoration: BoxDecoration(
+              color:
+                  isSelected
+                      ? Colors.grey.shade300
+                      : Colors.white,
+              border: Border.all(
+                color: Colors.black38,
+              ),
+              borderRadius:
+                  BorderRadius.circular(20),
+            ),
+            child: Text(
+              opcao,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color:
+                    isSelected
+                        ? Colors.black
+                        : Colors.black54,
+              ),
+            ),
           ),
         );
       }).toList(),
     );
   }
 
+  // PROFISSIONAIS
   Widget _buildProfissionaisSection() {
     return Row(
       children: [
         Expanded(
           child: Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(15)),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Colors.black26,
+              ),
+              borderRadius:
+                  BorderRadius.circular(15),
+            ),
             child: Row(
               children: [
-                const CircleAvatar(radius: 20, backgroundColor: Colors.black12, child: Icon(Icons.person, color: Colors.black54)),
+                const CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.black12,
+                  child: Icon(
+                    Icons.person,
+                    color: Colors.black54,
+                  ),
+                ),
+
                 const SizedBox(width: 8),
+
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
                     children: [
-                      const Text('Nome:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                      Text('Especialidade/função', style: TextStyle(color: Colors.grey.shade600, fontSize: 10)),
+                      const Text(
+                        'Nome:',
+                        style: TextStyle(
+                          fontWeight:
+                              FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+
+                      Text(
+                        'Especialidade/função',
+                        style: TextStyle(
+                          color:
+                              Colors.grey.shade600,
+                          fontSize: 10,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -326,22 +751,46 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
             ),
           ),
         ),
+
         const SizedBox(width: 12),
+
         InkWell(
-          // Navega para a tela de cadastro de profissional
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const CadastroPage()),
+              MaterialPageRoute(
+                builder: (context) =>
+                    const CadastroPage(),
+              ),
             );
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(15)),
+            padding:
+                const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Colors.black26,
+              ),
+              borderRadius:
+                  BorderRadius.circular(15),
+            ),
             child: const Column(
               children: [
-                Icon(Icons.add, size: 24),
-                Text('Adicionar\nprofissional', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                Icon(
+                  Icons.add,
+                  size: 24,
+                ),
+                Text(
+                  'Adicionar\nprofissional',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
@@ -350,26 +799,55 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     );
   }
 
+  // FOTOS
   Widget _buildFotosGrid() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment:
+          MainAxisAlignment.spaceBetween,
       children: List.generate(3, (index) {
         return InkWell(
           onTap: () {},
           child: Container(
-            width: MediaQuery.of(context).size.width * 0.26,
+            width:
+                MediaQuery.of(context).size.width *
+                    0.26,
             height: 90,
             decoration: BoxDecoration(
               color: Colors.lightGreen.shade100,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.green.shade300),
+              borderRadius:
+                  BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.green.shade300,
+              ),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius:
+                  BorderRadius.circular(12),
               child: Stack(
                 children: [
-                  Positioned(top: 10, left: 0, right: 0, child: Icon(Icons.cloud_queue, color: Colors.white.withOpacity(0.9), size: 30)),
-                  Positioned(bottom: 0, left: 0, right: 0, child: Container(height: 40, color: Colors.lightGreen.shade400)),
+                  Positioned(
+                    top: 10,
+                    left: 0,
+                    right: 0,
+                    child: Icon(
+                      Icons.cloud_queue,
+                      color:
+                          Colors.white
+                              .withOpacity(0.9),
+                      size: 30,
+                    ),
+                  ),
+
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 40,
+                      color:
+                          Colors.lightGreen.shade400,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -379,16 +857,32 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     );
   }
 
+  // PAGAMENTO
   Widget _buildPaymentInput(String label) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding:
+          const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+
           const SizedBox(width: 8),
+
           const Expanded(
             child: TextField(
-              decoration: InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(vertical: 2)),
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding:
+                    EdgeInsets.symmetric(
+                  vertical: 2,
+                ),
+              ),
             ),
           ),
         ],
@@ -396,3 +890,4 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     );
   }
 }
+

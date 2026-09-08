@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:neuroway/cadastroempresa.dart'; 
+import 'package:neuroway/cadastroempresa.dart';
 import 'package:neuroway/menuprincipal.dart';
 
 void main() {
@@ -32,8 +32,11 @@ class CadastroPage extends StatefulWidget {
 
 class _CadastroPageState extends State<CadastroPage> {
   final _formKey = GlobalKey<FormState>();
-  
-  // campos de texto
+
+  // ============================================================
+  // CAMPOS DE TEXTO
+  // ============================================================
+
   final _nomeController = TextEditingController();
   final _emailController = TextEditingController();
   final _telefoneController = TextEditingController();
@@ -41,29 +44,49 @@ class _CadastroPageState extends State<CadastroPage> {
   final _profissaoController = TextEditingController();
   final _experienciaController = TextEditingController();
 
- 
+  // ============================================================
+  // ADICIONAR FOTO
+  // ============================================================
+
   Future<void> _adicionarFoto() async {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Botão Adicionar Foto clicado!')),
+      const SnackBar(
+        content: Text('Botão Adicionar Foto clicado!'),
+      ),
     );
   }
 
-  
+  // ============================================================
+  // CADASTRAR
+  // ============================================================
+
   void _cadastrar() {
+    // Verifica todos os campos obrigatórios
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // Se todos os campos estiverem preenchidos
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Cadastro realizado com sucesso!'),
         backgroundColor: Colors.green,
-        duration: Duration(seconds: 1), // Mensagem rápida para não travar a navegação
+        duration: Duration(seconds: 1),
       ),
     );
 
-    // navegaçao cadastro
+    // Navegação para cadastro de empresa
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const CadastroEmpresa()),
+      MaterialPageRoute(
+        builder: (context) => const CadastroEmpresa(),
+      ),
     );
   }
+
+  // ============================================================
+  // DISPOSE
+  // ============================================================
 
   @override
   void dispose() {
@@ -73,17 +96,27 @@ class _CadastroPageState extends State<CadastroPage> {
     _descricaoController.dispose();
     _profissaoController.dispose();
     _experienciaController.dispose();
+
     super.dispose();
   }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+
     final molduraHeight = screenHeight * 0.25;
 
     return Scaffold(
       body: Stack(
         children: [
+          // ======================================================
+          // CONTEÚDO
+          // ======================================================
+
           Positioned.fill(
             child: SafeArea(
               child: Padding(
@@ -98,13 +131,19 @@ class _CadastroPageState extends State<CadastroPage> {
                     clipBehavior: Clip.antiAlias,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24.0,
+                        ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          crossAxisAlignment:
+                              CrossAxisAlignment.stretch,
                           children: [
                             const SizedBox(height: 16),
 
-                            // Título
+                            // ==================================================
+                            // TÍTULO
+                            // ==================================================
+
                             const Text(
                               'Cadastro',
                               textAlign: TextAlign.center,
@@ -115,6 +154,7 @@ class _CadastroPageState extends State<CadastroPage> {
                                 letterSpacing: 1.2,
                               ),
                             ),
+
                             const Text(
                               'de profissionais',
                               textAlign: TextAlign.center,
@@ -124,45 +164,79 @@ class _CadastroPageState extends State<CadastroPage> {
                                 color: Colors.black,
                               ),
                             ),
+
                             const SizedBox(height: 30),
 
-                            // Campos de Texto
+                            // ==================================================
+                            // NOME
+                            // ==================================================
+
                             _buildTextField(
                               label: 'Nome:',
                               controller: _nomeController,
                             ),
 
+                            // ==================================================
+                            // E-MAIL
+                            // ==================================================
+
                             _buildTextField(
                               label: 'E-mail:',
                               controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
+                              keyboardType:
+                                  TextInputType.emailAddress,
                             ),
+
+                            // ==================================================
+                            // TELEFONE
+                            // ==================================================
 
                             _buildTextField(
                               label: 'Telefone:',
                               controller: _telefoneController,
-                              hintText: '+__ (__) ____-____',
-                              keyboardType: TextInputType.phone,
+                              hintText:
+                                  '+__ (__) ____-____',
+                              keyboardType:
+                                  TextInputType.phone,
                             ),
+
+                            // ==================================================
+                            // DESCRIÇÃO
+                            // ==================================================
 
                             _buildTextField(
                               label: 'Descrição:',
-                              controller: _descricaoController,
+                              controller:
+                                  _descricaoController,
                               maxLines: 3,
                             ),
 
+                            // ==================================================
+                            // PROFISSÃO
+                            // ==================================================
+
                             _buildTextField(
                               label: 'Profissão:',
-                              controller: _profissaoController,
+                              controller:
+                                  _profissaoController,
                             ),
+
+                            // ==================================================
+                            // EXPERIÊNCIA
+                            // ==================================================
 
                             _buildTextField(
                               label: 'Tempo de experiência:',
-                              controller: _experienciaController,
+                              controller:
+                                  _experienciaController,
                             ),
+
                             const SizedBox(height: 20),
 
-                            // adicionar foto
+                            // ==================================================
+                            // FOTO
+                            // ==================================================
+
                             Center(
                               child: Column(
                                 children: [
@@ -170,7 +244,8 @@ class _CadastroPageState extends State<CadastroPage> {
                                     onTap: _adicionarFoto,
                                     child: CircleAvatar(
                                       radius: 45,
-                                      backgroundColor: Colors.grey[600],
+                                      backgroundColor:
+                                          Colors.grey[600],
                                       child: const Icon(
                                         Icons.person,
                                         size: 60,
@@ -178,46 +253,75 @@ class _CadastroPageState extends State<CadastroPage> {
                                       ),
                                     ),
                                   ),
+
                                   const SizedBox(height: 8),
+
                                   InkWell(
                                     onTap: _adicionarFoto,
                                     child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisSize:
+                                          MainAxisSize.min,
                                       children: [
                                         Text(
                                           'Adicionar foto ',
                                           style: TextStyle(
-                                            fontWeight: FontWeight.bold,
+                                            fontWeight:
+                                                FontWeight.bold,
                                             fontSize: 14,
                                           ),
                                         ),
-                                        Icon(Icons.add_a_photo_outlined, size: 16),
+                                        Icon(
+                                          Icons
+                                              .add_a_photo_outlined,
+                                          size: 16,
+                                        ),
                                       ],
                                     ),
                                   ),
                                 ],
                               ),
                             ),
+
                             const SizedBox(height: 35),
 
-                            // boatao cadastrar
+                            // ==================================================
+                            // BOTÃO CADASTRAR
+                            // ==================================================
+
                             ElevatedButton(
                               onPressed: _cadastrar,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF98B9A6),
-                                foregroundColor: Colors.black,
-                                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+
+                              style:
+                                  ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    const Color(0xFF98B9A6),
+                                foregroundColor:
+                                    Colors.black,
+
+                                padding:
+                                    const EdgeInsets.symmetric(
+                                  horizontal: 30,
+                                  vertical: 10,
                                 ),
+
+                                shape:
+                                    RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(8),
+                                ),
+
                                 elevation: 2,
                               ),
+
                               child: const Text(
                                 "Cadastrar",
-                                style: TextStyle(fontSize: 18),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 24), 
+
+                            const SizedBox(height: 24),
                           ],
                         ),
                       ),
@@ -228,7 +332,10 @@ class _CadastroPageState extends State<CadastroPage> {
             ),
           ),
 
-          //  Moldura superior 
+          // ======================================================
+          // MOLDURA SUPERIOR
+          // ======================================================
+
           Positioned(
             top: 0,
             left: 0,
@@ -244,7 +351,10 @@ class _CadastroPageState extends State<CadastroPage> {
             ),
           ),
 
-          //  Moldura inferior 
+          // ======================================================
+          // MOLDURA INFERIOR
+          // ======================================================
+
           Positioned(
             bottom: 0,
             left: 0,
@@ -260,7 +370,10 @@ class _CadastroPageState extends State<CadastroPage> {
             ),
           ),
 
-          // voltar para cadastro de empresa
+          // ======================================================
+          // BOTÃO VOLTAR
+          // ======================================================
+
           Positioned(
             top: 16,
             left: 16,
@@ -272,13 +385,20 @@ class _CadastroPageState extends State<CadastroPage> {
                   } else {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => const CadastroEmpresa()),
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const CadastroEmpresa(),
+                      ),
                     );
                   }
                 },
                 child: const Padding(
                   padding: EdgeInsets.all(8.0),
-                  child: Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22),
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    color: Colors.black,
+                    size: 22,
+                  ),
                 ),
               ),
             ),
@@ -288,19 +408,31 @@ class _CadastroPageState extends State<CadastroPage> {
     );
   }
 
+  // ============================================================
+  // CAMPO DE TEXTO
+  // ============================================================
+
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
     String? hintText,
-    TextInputType keyboardType = TextInputType.text,
+    TextInputType keyboardType =
+        TextInputType.text,
     int maxLines = 1,
     Widget? suffixIcon,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      padding: const EdgeInsets.symmetric(
+        vertical: 6.0,
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment:
+            CrossAxisAlignment.center,
         children: [
+          // ==================================================
+          // LABEL
+          // ==================================================
+
           Text(
             label,
             style: const TextStyle(
@@ -309,35 +441,91 @@ class _CadastroPageState extends State<CadastroPage> {
               color: Colors.black,
             ),
           ),
+
           const SizedBox(width: 8),
+
+          // ==================================================
+          // CAMPO
+          // ==================================================
+
           Expanded(
             child: TextFormField(
               controller: controller,
+
               keyboardType: keyboardType,
+
               maxLines: maxLines,
-              style: const TextStyle(fontSize: 16),
-              //campo obrigatorio
+
+              style: const TextStyle(
+                fontSize: 16,
+              ),
+
+              // ==================================================
+              // VALIDAÇÃO
+              // ==================================================
+
               validator: (value) {
-                if (value == null || value.trim().isEmpty) {
+                if (value == null ||
+                    value.trim().isEmpty) {
                   return 'Campo obrigatório';
                 }
+
                 return null;
               },
+
               decoration: InputDecoration(
                 hintText: hintText,
-                hintStyle: TextStyle(color: Colors.grey[400]),
+
+                hintStyle: TextStyle(
+                  color: Colors.grey[400],
+                ),
+
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 4),
+
+                contentPadding:
+                    const EdgeInsets.symmetric(
+                  vertical: 4,
+                ),
+
                 suffixIcon: suffixIcon,
-                suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-                enabledBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey, width: 1),
+
+                suffixIconConstraints:
+                    const BoxConstraints(
+                  minWidth: 0,
+                  minHeight: 0,
                 ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.black, width: 1.5),
+
+                // ==================================================
+                // LINHA NORMAL
+                // ==================================================
+
+                enabledBorder:
+                    const UnderlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Colors.grey,
+                    width: 1,
+                  ),
                 ),
-                // Exibe o erro de validação de forma limpa abaixo da linha
-                errorStyle: const TextStyle(fontSize: 12),
+
+                // ==================================================
+                // LINHA QUANDO SELECIONADO
+                // ==================================================
+
+                focusedBorder:
+                    const UnderlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Colors.black,
+                    width: 1.5,
+                  ),
+                ),
+
+                // ==================================================
+                // MENSAGEM DE ERRO
+                // ==================================================
+
+                errorStyle: const TextStyle(
+                  fontSize: 12,
+                ),
               ),
             ),
           ),

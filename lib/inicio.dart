@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:neuroway/login.dart'; // ← importe o login.dart
-import 'package:neuroway/menuprincipal.dart'; // ← importe o menuprincipal.dart
+import 'package:neuroway/login.dart';
+import 'package:neuroway/menuprincipal.dart';
 
 class Inicio extends StatefulWidget {
   const Inicio({super.key});
