@@ -18,98 +18,156 @@ class InicioState extends State<Inicio> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+
       body: Stack(
         children: [
-          //logo + botão
+          // ======================================================
+          // LOGO + BOTÕES
+          // ======================================================
+
           Center(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.12),
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.12,
+              ),
+
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Logo neurologo.png
+                  // ==================================================
+                  // LOGO NEUROWAY
+                  // ==================================================
+
                   Container(
                     width: screenWidth * 0.45,
                     height: screenWidth * 0.45,
+
+                    // A borda verde foi removida.
+                    // Agora o Container fica transparente.
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0xFF98B9A6),
-                        width: 3,
-                      ),
                     ),
+
                     clipBehavior: Clip.hardEdge,
+
                     child: Image.asset(
                       'imagem/neurologo.png',
+
+                      width: double.infinity,
+                      height: double.infinity,
+
                       fit: BoxFit.cover,
+
                       errorBuilder: (context, error, stackTrace) {
                         return const SizedBox.shrink();
                       },
                     ),
                   ),
 
-                  SizedBox(height: screenHeight * 0.04),
+                  SizedBox(
+                    height: screenHeight * 0.04,
+                  ),
 
-                  // Botão Login
+                  // ==================================================
+                  // BOTÃO LOGIN
+                  // ==================================================
+
                   SizedBox(
                     width: double.infinity,
+
                     child: ElevatedButton(
                       onPressed: () {
-                        // Navegação direta para o Login
                         Navigator.push(
                           context,
+
                           MaterialPageRoute(
                             builder: (context) => const LOGIN(),
                           ),
                         );
                       },
+
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF98B9A6),
-                        foregroundColor: Colors.black,
-                        padding: EdgeInsets.symmetric(vertical: screenHeight * 0.018),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(25),
+                        backgroundColor:
+                            const Color(0xFF98B9A6),
+
+                        foregroundColor:
+                            Colors.black,
+
+                        padding: EdgeInsets.symmetric(
+                          vertical: screenHeight * 0.018,
                         ),
+
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(25),
+                        ),
+
                         elevation: 2,
                       ),
+
                       child: Text(
                         'Login',
+
                         style: TextStyle(
                           fontSize: screenWidth * 0.045,
-                          fontWeight: FontWeight.bold,
+
+                          fontWeight:
+                              FontWeight.bold,
                         ),
                       ),
                     ),
                   ),
 
-                  SizedBox(height: screenHeight * 0.02),
+                  SizedBox(
+                    height: screenHeight * 0.02,
+                  ),
 
-                  // Botão Continuar sem login
+                  // ==================================================
+                  // BOTÃO CONTINUAR SEM LOGIN
+                  // ==================================================
+
                   SizedBox(
                     width: double.infinity,
+
                     child: TextButton(
                       onPressed: () {
-                        // Navegação direta para o Menu Principal, sem login
                         Navigator.push(
                           context,
+
                           MaterialPageRoute(
-                            builder: (context) => const Menuprincipal(),
+                            builder: (context) =>
+                                const Menuprincipal(),
                           ),
                         );
                       },
+
                       style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF98B9A6),
-                        padding: EdgeInsets.symmetric(vertical: screenHeight * 0.018),
+                        foregroundColor:
+                            const Color(0xFF98B9A6),
+
+                        padding: EdgeInsets.symmetric(
+                          vertical: screenHeight * 0.018,
+                        ),
+
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(25),
-                          side: const BorderSide(color: Color(0xFF98B9A6), width: 1.5),
+                          borderRadius:
+                              BorderRadius.circular(25),
+
+                          side: const BorderSide(
+                            color: Color(0xFF98B9A6),
+                            width: 1.5,
+                          ),
                         ),
                       ),
+
                       child: Text(
                         'Continuar sem login',
+
                         style: TextStyle(
                           fontSize: screenWidth * 0.04,
-                          fontWeight: FontWeight.bold,
+
+                          fontWeight:
+                              FontWeight.bold,
                         ),
                       ),
                     ),
@@ -119,33 +177,53 @@ class InicioState extends State<Inicio> {
             ),
           ),
 
-          // Moldura superior
+          // ======================================================
+          // MOLDURA SUPERIOR
+          // ======================================================
+
           Positioned(
             top: 0,
             left: 0,
             right: 0,
+
             child: SizedBox(
+              width: double.infinity,
               height: molduraHeight,
+
               child: Image.asset(
                 'imagem/quebrasuperior.png',
+
                 width: double.infinity,
+                height: double.infinity,
+
                 fit: BoxFit.cover,
+
                 alignment: Alignment.topCenter,
               ),
             ),
           ),
 
-          // Moldura inferior
+          // ======================================================
+          // MOLDURA INFERIOR
+          // ======================================================
+
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
+
             child: SizedBox(
+              width: double.infinity,
               height: molduraHeight,
+
               child: Image.asset(
                 'imagem/quebrainferior.png',
+
                 width: double.infinity,
+                height: double.infinity,
+
                 fit: BoxFit.cover,
+
                 alignment: Alignment.bottomCenter,
               ),
             ),

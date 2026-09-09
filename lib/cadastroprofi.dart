@@ -1,27 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:neuroway/cadastroempresa.dart';
-import 'package:neuroway/menuprincipal.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Cadastro de Profissionais',
-      theme: ThemeData(
-        primarySwatch: Colors.teal,
-        scaffoldBackgroundColor: Colors.white,
-      ),
-      home: const CadastroPage(),
-    );
-  }
-}
 
 class CadastroPage extends StatefulWidget {
   const CadastroPage({super.key});
@@ -33,9 +13,8 @@ class CadastroPage extends StatefulWidget {
 class _CadastroPageState extends State<CadastroPage> {
   final _formKey = GlobalKey<FormState>();
 
-  // ============================================================
-  // CAMPOS DE TEXTO
-  // ============================================================
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   final _nomeController = TextEditingController();
   final _emailController = TextEditingController();
@@ -43,50 +22,223 @@ class _CadastroPageState extends State<CadastroPage> {
   final _descricaoController = TextEditingController();
   final _profissaoController = TextEditingController();
   final _experienciaController = TextEditingController();
+  final _senhaController = TextEditingController();
+  final _confirmarSenhaController = TextEditingController();
 
-  // ============================================================
-  // ADICIONAR FOTO
-  // ============================================================
+  bool _mostrarSenha = false;
+  bool _mostrarConfirmarSenha = false;
+  bool _carregando = false;
 
+  // Adicionar foto
   Future<void> _adicionarFoto() async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Botão Adicionar Foto clicado!'),
+        content: Text(
+          'A função de adicionar foto ainda não foi configurada.',
+        ),
       ),
     );
   }
 
-  // ============================================================
-  // CADASTRAR
-  // ============================================================
+  // Cadastrar profissional
+  Future<void> _cadastrar() async {
+    FocusScope.of(context).unfocus();
 
-  void _cadastrar() {
-    // Verifica todos os campos obrigatórios
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    // Se todos os campos estiverem preenchidos
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Cadastro realizado com sucesso!'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 1),
-      ),
-    );
+    if (_carregando) {
+      return;
+    }
 
-    // Navegação para cadastro de empresa
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const CadastroEmpresa(),
-      ),
-    );
+    final String nome = _nomeController.text.trim();
+    final String email = _emailController.text.trim();
+    final String telefone = _telefoneController.text.trim();
+    final String descricao = _descricaoController.text.trim();
+    final String profissao = _profissaoController.text.trim();
+    final String experiencia = _experienciaController.text.trim();
+    final String senha = _senhaController.text;
+    final String confirmarSenha = _confirmarSenhaController.text;
+
+    if (senha != confirmarSenha) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('As senhas não coincidem.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _carregando = true;
+    });
+
+    try {
+      // Criar conta do profissional
+      final UserCredential credencial =
+          await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: senha,
+      );
+
+      final User? usuarioCriado = credencial.user;
+
+      if (usuarioCriado == null) {
+        throw Exception(
+          'Não foi possível criar a conta do profissional.',
+        );
+      }
+
+      // Salvar nome no Authentication
+      await usuarioCriado.updateDisplayName(nome);
+
+      // Salvar profissional no Firestore
+      await _firestore
+          .collection('profissionais')
+          .doc(usuarioCriado.uid)
+          .set({
+        'uid': usuarioCriado.uid,
+        'nome': nome,
+        'email': email,
+        'telefone': telefone,
+        'descricao': descricao,
+        'profissao': profissao,
+        'experiencia': experiencia,
+        'tipo': 'profissional',
+        'criadoEm': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Profissional cadastrado com sucesso!',
+          ),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      await Future.delayed(
+        const Duration(milliseconds: 700),
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      // Volta para empresa enviando os dados do profissional
+      Navigator.pop(
+        context,
+        {
+          'nome': nome,
+          'especialidade': profissao,
+          'uid': usuarioCriado.uid,
+        },
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      String mensagem;
+
+      switch (e.code) {
+        case 'email-already-in-use':
+          mensagem = 'Este e-mail já está cadastrado.';
+          break;
+
+        case 'invalid-email':
+          mensagem = 'O e-mail informado é inválido.';
+          break;
+
+        case 'weak-password':
+          mensagem =
+              'A senha deve ter pelo menos 6 caracteres.';
+          break;
+
+        case 'operation-not-allowed':
+          mensagem =
+              'O cadastro por e-mail e senha não está habilitado no Firebase.';
+          break;
+
+        case 'network-request-failed':
+          mensagem =
+              'Erro de conexão. Verifique sua internet.';
+          break;
+
+        case 'configuration-not-found':
+          mensagem =
+              'A configuração do Firebase não foi encontrada. Verifique o firebase_options.dart e o projeto Firebase.';
+          break;
+
+        default:
+          mensagem =
+              'Erro ao cadastrar: ${e.message ?? e.code}';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(mensagem),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } on FirebaseException catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      String mensagem;
+
+      switch (e.code) {
+        case 'permission-denied':
+          mensagem =
+              'O Firebase não permitiu salvar os dados. Verifique as regras do Firestore.';
+          break;
+
+        case 'unavailable':
+          mensagem =
+              'O Firestore está indisponível. Verifique sua conexão.';
+          break;
+
+        default:
+          mensagem =
+              'Erro ao salvar os dados: ${e.message ?? e.code}';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(mensagem),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ocorreu um erro: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _carregando = false;
+        });
+      }
+    }
   }
-
-  // ============================================================
-  // DISPOSE
-  // ============================================================
 
   @override
   void dispose() {
@@ -96,27 +248,21 @@ class _CadastroPageState extends State<CadastroPage> {
     _descricaoController.dispose();
     _profissaoController.dispose();
     _experienciaController.dispose();
+    _senhaController.dispose();
+    _confirmarSenhaController.dispose();
 
     super.dispose();
   }
 
-  // ============================================================
-  // BUILD
-  // ============================================================
-
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-
     final molduraHeight = screenHeight * 0.25;
 
     return Scaffold(
       body: Stack(
         children: [
-          // ======================================================
-          // CONTEÚDO
-          // ======================================================
-
+          // Conteúdo
           Positioned.fill(
             child: SafeArea(
               child: Padding(
@@ -128,11 +274,10 @@ class _CadastroPageState extends State<CadastroPage> {
                   key: _formKey,
                   child: ListView(
                     padding: EdgeInsets.zero,
-                    clipBehavior: Clip.antiAlias,
                     children: [
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 24.0,
+                          horizontal: 24,
                         ),
                         child: Column(
                           crossAxisAlignment:
@@ -140,10 +285,7 @@ class _CadastroPageState extends State<CadastroPage> {
                           children: [
                             const SizedBox(height: 16),
 
-                            // ==================================================
-                            // TÍTULO
-                            // ==================================================
-
+                            // Título
                             const Text(
                               'Cadastro',
                               textAlign: TextAlign.center,
@@ -167,76 +309,126 @@ class _CadastroPageState extends State<CadastroPage> {
 
                             const SizedBox(height: 30),
 
-                            // ==================================================
-                            // NOME
-                            // ==================================================
-
+                            // Nome
                             _buildTextField(
                               label: 'Nome:',
                               controller: _nomeController,
                             ),
 
-                            // ==================================================
-                            // E-MAIL
-                            // ==================================================
-
+                            // E-mail
                             _buildTextField(
                               label: 'E-mail:',
                               controller: _emailController,
                               keyboardType:
                                   TextInputType.emailAddress,
+                              validator: _validarEmail,
                             ),
 
-                            // ==================================================
-                            // TELEFONE
-                            // ==================================================
-
+                            // Telefone
                             _buildTextField(
                               label: 'Telefone:',
                               controller: _telefoneController,
-                              hintText:
-                                  '+__ (__) ____-____',
+                              hintText: '(12) 99999-9999',
                               keyboardType:
                                   TextInputType.phone,
                             ),
 
-                            // ==================================================
-                            // DESCRIÇÃO
-                            // ==================================================
-
+                            // Descrição
                             _buildTextField(
                               label: 'Descrição:',
-                              controller:
-                                  _descricaoController,
+                              controller: _descricaoController,
                               maxLines: 3,
                             ),
 
-                            // ==================================================
-                            // PROFISSÃO
-                            // ==================================================
-
+                            // Profissão
                             _buildTextField(
                               label: 'Profissão:',
-                              controller:
-                                  _profissaoController,
+                              controller: _profissaoController,
                             ),
 
-                            // ==================================================
-                            // EXPERIÊNCIA
-                            // ==================================================
-
+                            // Experiência
                             _buildTextField(
                               label: 'Tempo de experiência:',
                               controller:
                                   _experienciaController,
                             ),
 
+                            const SizedBox(height: 8),
+
+                            // Senha
+                            _buildTextField(
+                              label: 'Senha:',
+                              controller: _senhaController,
+                              obscureText: !_mostrarSenha,
+                              suffixIcon: IconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _mostrarSenha =
+                                        !_mostrarSenha;
+                                  });
+                                },
+                                icon: Icon(
+                                  _mostrarSenha
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                  color: Colors.grey[700],
+                                  size: 21,
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value == null ||
+                                    value.isEmpty) {
+                                  return 'Campo obrigatório';
+                                }
+
+                                if (value.length < 6) {
+                                  return 'A senha deve ter pelo menos 6 caracteres';
+                                }
+
+                                return null;
+                              },
+                            ),
+
+                            // Confirmar senha
+                            _buildTextField(
+                              label: 'Confirmar senha:',
+                              controller:
+                                  _confirmarSenhaController,
+                              obscureText:
+                                  !_mostrarConfirmarSenha,
+                              suffixIcon: IconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _mostrarConfirmarSenha =
+                                        !_mostrarConfirmarSenha;
+                                  });
+                                },
+                                icon: Icon(
+                                  _mostrarConfirmarSenha
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                  color: Colors.grey[700],
+                                  size: 21,
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value == null ||
+                                    value.isEmpty) {
+                                  return 'Campo obrigatório';
+                                }
+
+                                if (value !=
+                                    _senhaController.text) {
+                                  return 'As senhas não coincidem';
+                                }
+
+                                return null;
+                              },
+                            ),
+
                             const SizedBox(height: 20),
 
-                            // ==================================================
-                            // FOTO
-                            // ==================================================
-
+                            // Foto
                             Center(
                               child: Column(
                                 children: [
@@ -253,9 +445,7 @@ class _CadastroPageState extends State<CadastroPage> {
                                       ),
                                     ),
                                   ),
-
                                   const SizedBox(height: 8),
-
                                   InkWell(
                                     onTap: _adicionarFoto,
                                     child: const Row(
@@ -284,41 +474,45 @@ class _CadastroPageState extends State<CadastroPage> {
 
                             const SizedBox(height: 35),
 
-                            // ==================================================
-                            // BOTÃO CADASTRAR
-                            // ==================================================
-
+                            // Botão cadastrar
                             ElevatedButton(
-                              onPressed: _cadastrar,
-
-                              style:
-                                  ElevatedButton.styleFrom(
+                              onPressed: _carregando
+                                  ? null
+                                  : _cadastrar,
+                              style: ElevatedButton.styleFrom(
                                 backgroundColor:
                                     const Color(0xFF98B9A6),
-                                foregroundColor:
-                                    Colors.black,
-
+                                foregroundColor: Colors.black,
+                                disabledBackgroundColor:
+                                    Colors.grey[400],
                                 padding:
                                     const EdgeInsets.symmetric(
                                   horizontal: 30,
                                   vertical: 10,
                                 ),
-
                                 shape:
                                     RoundedRectangleBorder(
                                   borderRadius:
                                       BorderRadius.circular(8),
                                 ),
-
                                 elevation: 2,
                               ),
-
-                              child: const Text(
-                                "Cadastrar",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                ),
-                              ),
+                              child: _carregando
+                                  ? const SizedBox(
+                                      height: 24,
+                                      width: 24,
+                                      child:
+                                          CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: Colors.black,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Cadastrar',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                      ),
+                                    ),
                             ),
 
                             const SizedBox(height: 24),
@@ -332,48 +526,43 @@ class _CadastroPageState extends State<CadastroPage> {
             ),
           ),
 
-          // ======================================================
-          // MOLDURA SUPERIOR
-          // ======================================================
-
+          // Moldura superior
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            child: SizedBox(
-              height: molduraHeight,
-              child: Image.asset(
-                'imagem/quebrasuperior.png',
-                width: double.infinity,
-                fit: BoxFit.cover,
-                alignment: Alignment.topCenter,
+            child: IgnorePointer(
+              child: SizedBox(
+                height: molduraHeight,
+                child: Image.asset(
+                  'imagem/quebrasuperior.png',
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                ),
               ),
             ),
           ),
 
-          // ======================================================
-          // MOLDURA INFERIOR
-          // ======================================================
-
+          // Moldura inferior
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            child: SizedBox(
-              height: molduraHeight,
-              child: Image.asset(
-                'imagem/quebrainferior.png',
-                width: double.infinity,
-                fit: BoxFit.cover,
-                alignment: Alignment.bottomCenter,
+            child: IgnorePointer(
+              child: SizedBox(
+                height: molduraHeight,
+                child: Image.asset(
+                  'imagem/quebrainferior.png',
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.bottomCenter,
+                ),
               ),
             ),
           ),
 
-          // ======================================================
-          // BOTÃO VOLTAR
-          // ======================================================
-
+          // Botão voltar
           Positioned(
             top: 16,
             left: 16,
@@ -393,7 +582,7 @@ class _CadastroPageState extends State<CadastroPage> {
                   }
                 },
                 child: const Padding(
-                  padding: EdgeInsets.all(8.0),
+                  padding: EdgeInsets.all(8),
                   child: Icon(
                     Icons.arrow_back_ios_new,
                     color: Colors.black,
@@ -408,31 +597,43 @@ class _CadastroPageState extends State<CadastroPage> {
     );
   }
 
-  // ============================================================
-  // CAMPO DE TEXTO
-  // ============================================================
+  // Validação do e-mail
+  String? _validarEmail(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Campo obrigatório';
+    }
 
+    final email = value.trim();
+
+    final regex = RegExp(
+      r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+    );
+
+    if (!regex.hasMatch(email)) {
+      return 'Digite um e-mail válido';
+    }
+
+    return null;
+  }
+
+  // Campo de texto
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
     String? hintText,
-    TextInputType keyboardType =
-        TextInputType.text,
+    TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
+    bool obscureText = false,
     Widget? suffixIcon,
+    String? Function(String?)? validator,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(
-        vertical: 6.0,
+        vertical: 6,
       ),
       child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // ==================================================
-          // LABEL
-          // ==================================================
-
           Text(
             label,
             style: const TextStyle(
@@ -441,64 +642,41 @@ class _CadastroPageState extends State<CadastroPage> {
               color: Colors.black,
             ),
           ),
-
           const SizedBox(width: 8),
-
-          // ==================================================
-          // CAMPO
-          // ==================================================
-
           Expanded(
             child: TextFormField(
               controller: controller,
-
               keyboardType: keyboardType,
-
-              maxLines: maxLines,
-
+              maxLines: obscureText ? 1 : maxLines,
+              obscureText: obscureText,
               style: const TextStyle(
                 fontSize: 16,
               ),
+              validator: validator ??
+                  (value) {
+                    if (value == null ||
+                        value.trim().isEmpty) {
+                      return 'Campo obrigatório';
+                    }
 
-              // ==================================================
-              // VALIDAÇÃO
-              // ==================================================
-
-              validator: (value) {
-                if (value == null ||
-                    value.trim().isEmpty) {
-                  return 'Campo obrigatório';
-                }
-
-                return null;
-              },
-
+                    return null;
+                  },
               decoration: InputDecoration(
                 hintText: hintText,
-
                 hintStyle: TextStyle(
                   color: Colors.grey[400],
                 ),
-
                 isDense: true,
-
                 contentPadding:
                     const EdgeInsets.symmetric(
                   vertical: 4,
                 ),
-
                 suffixIcon: suffixIcon,
-
                 suffixIconConstraints:
                     const BoxConstraints(
                   minWidth: 0,
                   minHeight: 0,
                 ),
-
-                // ==================================================
-                // LINHA NORMAL
-                // ==================================================
-
                 enabledBorder:
                     const UnderlineInputBorder(
                   borderSide: BorderSide(
@@ -506,11 +684,6 @@ class _CadastroPageState extends State<CadastroPage> {
                     width: 1,
                   ),
                 ),
-
-                // ==================================================
-                // LINHA QUANDO SELECIONADO
-                // ==================================================
-
                 focusedBorder:
                     const UnderlineInputBorder(
                   borderSide: BorderSide(
@@ -518,13 +691,23 @@ class _CadastroPageState extends State<CadastroPage> {
                     width: 1.5,
                   ),
                 ),
-
-                // ==================================================
-                // MENSAGEM DE ERRO
-                // ==================================================
-
+                errorBorder:
+                    const UnderlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Colors.red,
+                    width: 1,
+                  ),
+                ),
+                focusedErrorBorder:
+                    const UnderlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Colors.red,
+                    width: 1.5,
+                  ),
+                ),
                 errorStyle: const TextStyle(
                   fontSize: 12,
+                  color: Colors.red,
                 ),
               ),
             ),
