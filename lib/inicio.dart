@@ -21,10 +21,6 @@ class InicioState extends State<Inicio> {
 
       body: Stack(
         children: [
-          // ======================================================
-          // LOGO + BOTÕES
-          // ======================================================
-
           Center(
             child: Padding(
               padding: EdgeInsets.symmetric(

@@ -7,119 +7,94 @@ import 'package:neuroway/localizacao.dart';
 import 'package:neuroway/favoritos.dart';
 import 'package:neuroway/peril.dart';
 
-class Menuprincipal extends StatefulWidget {
+class Menuprincipal extends StatefulWidget{
   const Menuprincipal({super.key});
-
-  @override
-  State<Menuprincipal> createState() => _MenuprincipalState();
+  @override State<Menuprincipal>createState()=>_MenuprincipalState();
 }
 
-class _MenuprincipalState extends State<Menuprincipal> {
-  final TextEditingController _searchController =
-      TextEditingController();
+class _MenuprincipalState extends State<Menuprincipal>{
+  final TextEditingController _searchController=TextEditingController();
+  int _currentIndex=0;
+  String _cidadeSelecionada='SJC';
+  String _searchQuery='';
 
-  int _currentIndex = 0;
-  String _cidadeSelecionada = 'SJC';
-  String _searchQuery = '';
-
-  void _abrirSelecaoCidade() {
-    final List<Map<String, String>> cidades = [
-      {
-        'nome': 'São José dos Campos',
-        'sigla': 'SJC',
-      },
-      {
-        'nome': 'São Paulo',
-        'sigla': 'SP',
-      },
-      {
-        'nome': 'Campinas',
-        'sigla': 'CPS',
-      },
-      {
-        'nome': 'Taubaté',
-        'sigla': 'TBT',
-      },
-      {
-        'nome': 'Jacareí',
-        'sigla': 'JCR',
-      },
+  void _abrirSelecaoCidade(){
+    final List<Map<String,String>> cidades=[
+      {'nome':'São José dos Campos','sigla':'SJC'},
+      {'nome':'São Paulo','sigla':'SP'},
+      {'nome':'Campinas','sigla':'CPS'},
+      {'nome':'Taubaté','sigla':'TBT'},
+      {'nome':'Jacareí','sigla':'JCR'},
     ];
 
     String? cidadeEscolhida;
 
     showDialog(
-      context: context,
-      builder: (context) {
+      context:context,
+      builder:(context){
         return StatefulBuilder(
-          builder: (context, setStateDialog) {
+          builder:(context,setStateDialog){
             return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+              shape:RoundedRectangleBorder(
+                borderRadius:BorderRadius.circular(20),
               ),
-              title: const Text(
+              title:const Text(
                 'Selecione sua cidade',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
+                style:TextStyle(
+                  fontWeight:FontWeight.bold,
+                  fontSize:18,
                 ),
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: cidades.map((cidade) {
-                  final bool selecionada =
-                      cidadeEscolhida == cidade['sigla'];
+              content:Column(
+                mainAxisSize:MainAxisSize.min,
+                children:cidades.map((cidade){
+                  final bool selecionada=
+                      cidadeEscolhida==cidade['sigla'];
 
                   return GestureDetector(
-                    onTap: () {
-                      setStateDialog(() {
-                        cidadeEscolhida =
-                            cidade['sigla'];
+                    onTap:(){
+                      setStateDialog((){
+                        cidadeEscolhida=cidade['sigla'];
                       });
                     },
-                    child: Container(
-                      margin:
-                          const EdgeInsets.only(bottom: 8),
-                      padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
+                    child:Container(
+                      margin:const EdgeInsets.only(bottom:8),
+                      padding:const EdgeInsets.symmetric(
+                        horizontal:16,
+                        vertical:12,
                       ),
-                      decoration: BoxDecoration(
-                        color: selecionada
+                      decoration:BoxDecoration(
+                        color:selecionada
                             ? const Color(0xFF98B9A6)
                             : const Color(0xFFF3F3F4),
-                        borderRadius:
-                            BorderRadius.circular(12),
-                        border: Border.all(
-                          color: selecionada
+                        borderRadius:BorderRadius.circular(12),
+                        border:Border.all(
+                          color:selecionada
                               ? const Color(0xFF98B9A6)
                               : const Color(0xFFD0D3D8),
-                          width: 1.5,
+                          width:1.5,
                         ),
                       ),
-                      child: Row(
+                      child:Row(
                         mainAxisAlignment:
                             MainAxisAlignment.spaceBetween,
-                        children: [
+                        children:[
                           Text(
                             cidade['nome']!,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight:
-                                  FontWeight.w500,
-                              color: selecionada
+                            style:TextStyle(
+                              fontSize:15,
+                              fontWeight:FontWeight.w500,
+                              color:selecionada
                                   ? Colors.white
                                   : Colors.black87,
                             ),
                           ),
                           Text(
                             cidade['sigla']!,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight:
-                                  FontWeight.bold,
-                              color: selecionada
+                            style:TextStyle(
+                              fontSize:13,
+                              fontWeight:FontWeight.bold,
+                              color:selecionada
                                   ? Colors.white70
                                   : Colors.grey,
                             ),
@@ -130,39 +105,35 @@ class _MenuprincipalState extends State<Menuprincipal> {
                   );
                 }).toList(),
               ),
-              actions: [
+              actions:[
                 TextButton(
-                  onPressed: () {
+                  onPressed:(){
                     Navigator.pop(context);
                   },
-                  child: const Text(
+                  child:const Text(
                     'Cancelar',
-                    style: TextStyle(
-                      color: Colors.grey,
-                    ),
+                    style:TextStyle(color:Colors.grey),
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: cidadeEscolhida == null
+                  onPressed:cidadeEscolhida==null
                       ? null
-                      : () {
-                          setState(() {
-                            _cidadeSelecionada =
+                      : (){
+                          setState((){
+                            _cidadeSelecionada=
                                 cidadeEscolhida!;
                           });
-
                           Navigator.pop(context);
                         },
-                  style: ElevatedButton.styleFrom(
+                  style:ElevatedButton.styleFrom(
                     backgroundColor:
                         const Color(0xFF98B9A6),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(10),
+                    foregroundColor:Colors.white,
+                    shape:RoundedRectangleBorder(
+                      borderRadius:BorderRadius.circular(10),
                     ),
                   ),
-                  child: const Text('Confirmar'),
+                  child:const Text('Confirmar'),
                 ),
               ],
             );
@@ -173,75 +144,69 @@ class _MenuprincipalState extends State<Menuprincipal> {
   }
 
   @override
-  void dispose() {
+  void dispose(){
     _searchController.dispose();
     super.dispose();
   }
 
-  Widget _buildHomeContent() {
+  Widget _buildHomeContent(){
     return SafeArea(
-      child: CustomScrollView(
-        slivers: [
+      child:CustomScrollView(
+        slivers:[
           SliverToBoxAdapter(
-            child: Column(
-              children: [
+            child:Column(
+              children:[
                 const PuzzleHeader(),
-                const SizedBox(height: 20),
+                const SizedBox(height:20),
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(
-                    horizontal: 24,
+                  padding:const EdgeInsets.symmetric(
+                    horizontal:24,
                   ),
-                  child: SearchBarWidget(
-                    controller: _searchController,
-                    cidade: _cidadeSelecionada,
-                    onCidadeTap:
-                        _abrirSelecaoCidade,
-                    onChanged: (query) {
-                      setState(() {
-                        _searchQuery = query;
+                  child:SearchBarWidget(
+                    controller:_searchController,
+                    cidade:_cidadeSelecionada,
+                    onCidadeTap:_abrirSelecaoCidade,
+                    onChanged:(query){
+                      setState((){
+                        _searchQuery=query;
                       });
                     },
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height:20),
               ],
             ),
           ),
-          StreamBuilder<
-              QuerySnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
+          StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+            stream:FirebaseFirestore.instance
                 .collection('empresas')
                 .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState ==
-                  ConnectionState.waiting) {
+            builder:(context,snapshot){
+              if(snapshot.connectionState==
+                  ConnectionState.waiting){
                 return const SliverToBoxAdapter(
-                  child: Padding(
-                    padding:
-                        EdgeInsets.only(top: 50),
-                    child: Center(
-                      child:
-                          CircularProgressIndicator(
-                        color: Color(0xFF98B9A6),
+                  child:Padding(
+                    padding:EdgeInsets.only(top:50),
+                    child:Center(
+                      child:CircularProgressIndicator(
+                        color:Color(0xFF98B9A6),
                       ),
                     ),
                   ),
                 );
               }
 
-              if (snapshot.hasError) {
+              if(snapshot.hasError){
                 return const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.all(30),
-                    child: Center(
-                      child: Text(
+                  child:Padding(
+                    padding:EdgeInsets.all(30),
+                    child:Center(
+                      child:Text(
                         'Não foi possível carregar as empresas.',
-                        textAlign:
-                            TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 16,
+                        textAlign:TextAlign.center,
+                        style:TextStyle(
+                          color:Colors.red,
+                          fontSize:16,
                         ),
                       ),
                     ),
@@ -249,18 +214,17 @@ class _MenuprincipalState extends State<Menuprincipal> {
                 );
               }
 
-              if (!snapshot.hasData ||
-                  snapshot.data!.docs.isEmpty) {
+              if(!snapshot.hasData||
+                  snapshot.data!.docs.isEmpty){
                 return const SliverToBoxAdapter(
-                  child: Padding(
-                    padding:
-                        EdgeInsets.only(top: 40),
-                    child: Center(
-                      child: Text(
+                  child:Padding(
+                    padding:EdgeInsets.only(top:40),
+                    child:Center(
+                      child:Text(
                         'Nenhuma empresa cadastrada.',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 16,
+                        style:TextStyle(
+                          color:Colors.grey,
+                          fontSize:16,
                         ),
                       ),
                     ),
@@ -268,56 +232,49 @@ class _MenuprincipalState extends State<Menuprincipal> {
                 );
               }
 
-              final empresas =
-                  snapshot.data!.docs.where((empresa) {
-                final dados = empresa.data();
+              final empresas=
+                  snapshot.data!.docs.where((empresa){
+                final dados=empresa.data();
 
-                final nome =
-                    (dados['nome'] ?? '')
-                        .toString()
-                        .toLowerCase();
+                final nome=(dados['nome']??'')
+                    .toString()
+                    .toLowerCase();
 
-                final categoria =
-                    (dados['categoria'] ?? '')
-                        .toString()
-                        .toLowerCase();
+                final categoria=(dados['categoria']??'')
+                    .toString()
+                    .toLowerCase();
 
-                final descricao =
-                    (dados['descricao'] ?? '')
-                        .toString()
-                        .toLowerCase();
+                final descricao=(dados['descricao']??'')
+                    .toString()
+                    .toLowerCase();
 
-                final endereco =
-                    (dados['endereco'] ?? '')
-                        .toString()
-                        .toLowerCase();
+                final endereco=(dados['endereco']??'')
+                    .toString()
+                    .toLowerCase();
 
-                final busca =
-                    _searchQuery
-                        .toLowerCase()
-                        .trim();
+                final busca=
+                    _searchQuery.toLowerCase().trim();
 
-                if (busca.isEmpty) {
+                if(busca.isEmpty){
                   return true;
                 }
 
-                return nome.contains(busca) ||
-                    categoria.contains(busca) ||
-                    descricao.contains(busca) ||
+                return nome.contains(busca)||
+                    categoria.contains(busca)||
+                    descricao.contains(busca)||
                     endereco.contains(busca);
               }).toList();
 
-              if (empresas.isEmpty) {
+              if(empresas.isEmpty){
                 return const SliverToBoxAdapter(
-                  child: Padding(
-                    padding:
-                        EdgeInsets.only(top: 40),
-                    child: Center(
-                      child: Text(
+                  child:Padding(
+                    padding:EdgeInsets.only(top:40),
+                    child:Center(
+                      child:Text(
                         'Nenhum resultado encontrado.',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 16,
+                        style:TextStyle(
+                          color:Colors.grey,
+                          fontSize:16,
                         ),
                       ),
                     ),
@@ -326,23 +283,19 @@ class _MenuprincipalState extends State<Menuprincipal> {
               }
 
               return SliverPadding(
-                padding:
-                    const EdgeInsets.symmetric(
-                  horizontal: 24,
+                padding:const EdgeInsets.symmetric(
+                  horizontal:24,
                 ),
-                sliver: SliverList(
-                  delegate:
-                      SliverChildBuilderDelegate(
-                    (context, index) {
-                      final empresa =
-                          empresas[index];
+                sliver:SliverList(
+                  delegate:SliverChildBuilderDelegate(
+                    (context,index){
+                      final empresa=empresas[index];
 
                       return BarbeariaCard(
-                        empresa: empresa,
+                        empresa:empresa,
                       );
                     },
-                    childCount:
-                        empresas.length,
+                    childCount:empresas.length,
                   ),
                 ),
               );
@@ -354,8 +307,8 @@ class _MenuprincipalState extends State<Menuprincipal> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final List<Widget> paginas = [
+  Widget build(BuildContext context){
+    final List<Widget> paginas=[
       _buildHomeContent(),
       const Favoritos(),
       const Agendamentos(),
@@ -363,63 +316,62 @@ class _MenuprincipalState extends State<Menuprincipal> {
     ];
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: paginas,
+      backgroundColor:Colors.white,
+      body:IndexedStack(
+        index:_currentIndex,
+        children:paginas,
       ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: Color(0xFFE0E0E0),
-              width: 1,
+      bottomNavigationBar:Container(
+        decoration:const BoxDecoration(
+          border:Border(
+            top:BorderSide(
+              color:Color(0xFFE0E0E0),
+              width:1,
             ),
           ),
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          type:
-              BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: Colors.black,
+        child:BottomNavigationBar(
+          currentIndex:_currentIndex,
+          type:BottomNavigationBarType.fixed,
+          backgroundColor:Colors.white,
+          selectedItemColor:Colors.black,
           unselectedItemColor:
               Color(0xFF9E9E9E),
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
+          showSelectedLabels:false,
+          showUnselectedLabels:false,
+          onTap:(index){
+            setState((){
+              _currentIndex=index;
             });
           },
-          items: const [
+          items:const[
             BottomNavigationBarItem(
-              icon: Icon(
+              icon:Icon(
                 Icons.home_filled,
-                size: 28,
+                size:28,
               ),
-              label: 'Home',
+              label:'Home',
             ),
             BottomNavigationBarItem(
-              icon: Icon(
+              icon:Icon(
                 Icons.favorite,
-                size: 28,
+                size:28,
               ),
-              label: 'Favoritos',
+              label:'Favoritos',
             ),
             BottomNavigationBarItem(
-              icon: Icon(
+              icon:Icon(
                 Icons.calendar_month,
-                size: 28,
+                size:28,
               ),
-              label: 'Agenda',
+              label:'Agenda',
             ),
             BottomNavigationBarItem(
-              icon: Icon(
+              icon:Icon(
                 Icons.person,
-                size: 28,
+                size:28,
               ),
-              label: 'Perfil',
+              label:'Perfil',
             ),
           ],
         ),
@@ -428,7 +380,7 @@ class _MenuprincipalState extends State<Menuprincipal> {
   }
 }
 
-class SearchBarWidget extends StatelessWidget {
+class SearchBarWidget extends StatelessWidget{
   final TextEditingController controller;
   final String cidade;
   final VoidCallback onCidadeTap;
@@ -443,215 +395,248 @@ class SearchBarWidget extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context){
     return Container(
-      height: 54,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F3F4),
-        borderRadius:
-            BorderRadius.circular(27),
-        border: Border.all(
-          color: const Color(0xFFD0D3D8),
-          width: 1.5,
+      height:54,
+      decoration:BoxDecoration(
+        color:const Color(0xFFF3F3F4),
+        borderRadius:BorderRadius.circular(27),
+        border:Border.all(
+          color:const Color(0xFFD0D3D8),
+          width:1.5,
         ),
       ),
-      child: Row(
-        children: [
-          const SizedBox(width: 16),
+      child:Row(
+        children:[
+          const SizedBox(width:16),
           const Icon(
             Icons.search,
-            color: Color(0xFF9E9E9E),
-            size: 26,
+            color:Color(0xFF9E9E9E),
+            size:26,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width:12),
           Expanded(
-            child: TextField(
-              controller: controller,
-              onChanged: onChanged,
-              decoration:
-                  const InputDecoration(
-                hintText: 'Buscar',
-                hintStyle: TextStyle(
-                  color: Color(0xFF9E9E9E),
-                  fontSize: 18,
+            child:TextField(
+              controller:controller,
+              onChanged:onChanged,
+              decoration:const InputDecoration(
+                hintText:'Buscar',
+                hintStyle:TextStyle(
+                  color:Color(0xFF9E9E9E),
+                  fontSize:18,
                 ),
-                border: InputBorder.none,
+                border:InputBorder.none,
               ),
             ),
           ),
           Container(
-            height: 24,
-            width: 1,
-            color: const Color(0xFFB0B3B8),
+            height:24,
+            width:1,
+            color:const Color(0xFFB0B3B8),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width:12),
           GestureDetector(
-            onTap: onCidadeTap,
-            child: Row(
-              children: [
+            onTap:onCidadeTap,
+            child:Row(
+              children:[
                 const Icon(
                   Icons.location_on_outlined,
-                  color: Color(0xFF9E9E9E),
-                  size: 24,
+                  color:Color(0xFF9E9E9E),
+                  size:24,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width:6),
                 Text(
                   cidade,
-                  style: const TextStyle(
-                    color: Color(0xFF7D828A),
-                    fontSize: 18,
-                    fontWeight:
-                        FontWeight.bold,
+                  style:const TextStyle(
+                    color:Color(0xFF7D828A),
+                    fontSize:18,
+                    fontWeight:FontWeight.bold,
                   ),
                 ),
                 const Icon(
                   Icons.arrow_drop_down,
-                  color: Color(0xFF9E9E9E),
-                  size: 20,
+                  color:Color(0xFF9E9E9E),
+                  size:20,
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width:12),
         ],
       ),
     );
   }
 }
 
-class PuzzleHeader extends StatelessWidget {
+class PuzzleHeader extends StatelessWidget{
   const PuzzleHeader({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final screenHeight =
+  Widget build(BuildContext context){
+    final screenHeight=
         MediaQuery.of(context).size.height;
 
-    final molduraHeight =
-        screenHeight * 0.15;
+    final molduraHeight=
+        screenHeight*0.15;
 
     return SizedBox(
-      height: molduraHeight,
-      width: double.infinity,
-      child: Image.asset(
+      height:molduraHeight,
+      width:double.infinity,
+      child:Image.asset(
         'imagem/quebrasuperior.png',
-        width: double.infinity,
-        fit: BoxFit.cover,
-        alignment: Alignment.topCenter,
+        width:double.infinity,
+        fit:BoxFit.cover,
+        alignment:Alignment.topCenter,
       ),
     );
   }
 }
 
-class BarbeariaCard extends StatelessWidget {
-  final QueryDocumentSnapshot<
-      Map<String, dynamic>> empresa;
+class BarbeariaCard extends StatelessWidget{
+  final QueryDocumentSnapshot<Map<String,dynamic>>
+      empresa;
 
   const BarbeariaCard({
     super.key,
     required this.empresa,
   });
 
-  Future<void> _alternarFavorito() async {
-    final usuario =
+  String _idFavorito(){
+    return 'empresa_${empresa.id}';
+  }
+
+  Future<void> _alternarFavorito() async{
+    final usuario=
         FirebaseAuth.instance.currentUser;
 
-    if (usuario == null) {
+    if(usuario==null){
       return;
     }
 
-    final referencia = FirebaseFirestore
-        .instance
-        .collection('usuarios')
-        .doc(usuario.uid)
-        .collection('favoritos')
-        .doc(empresa.id);
+    final referencia=
+        FirebaseFirestore.instance
+            .collection('favoritos')
+            .doc(
+              '${usuario.uid}_${_idFavorito()}',
+            );
 
-    final favorito =
+    final favorito=
         await referencia.get();
 
-    if (favorito.exists) {
+    if(favorito.exists){
       await referencia.delete();
-    } else {
-      await referencia.set({
-        'empresaId': empresa.id,
-        'criadoEm':
-            FieldValue.serverTimestamp(),
-      });
+      return;
     }
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    final dados = empresa.data();
+    final dados=empresa.data();
 
-    final String nome =
-        (dados['nome'] ?? 'Empresa')
-            .toString();
+    final String nome=
+        (dados['nome']??'Empresa').toString();
 
-    final String categoria =
-        (dados['categoria'] ?? '')
-            .toString();
+    final String categoria=
+        (dados['categoria']??'').toString();
 
-    final String descricao =
-        (dados['descricao'] ??
-                'Sem descrição cadastrada.')
-            .toString();
+    final String descricao=
+        (dados['descricao']??'').toString();
 
-    final String endereco =
-        (dados['endereco'] ??
-                'Endereço não informado.')
-            .toString();
+    final String endereco=
+        (dados['endereco']??'').toString();
 
-    final dynamic fotos =
-        dados['fotos'];
+    String foto='';
 
-    String? fotoUrl;
+    final fotos=dados['fotos'];
 
-    if (fotos is List &&
-        fotos.isNotEmpty) {
-      final primeiraFoto =
-          fotos.first;
+    if(fotos is List&&fotos.isNotEmpty){
+      final primeiraFoto=fotos.first;
 
-      if (primeiraFoto is String &&
-          primeiraFoto.trim().isNotEmpty) {
-        fotoUrl = primeiraFoto;
+      if(primeiraFoto is String&&
+          primeiraFoto.trim().isNotEmpty){
+        foto=primeiraFoto;
       }
     }
 
-    final usuario =
+    await referencia.set({
+      'usuarioId':usuario.uid,
+      'tipo':'empresa',
+      'itemId':empresa.id,
+      'empresaId':empresa.id,
+      'nome':nome,
+      'categoria':categoria,
+      'descricao':descricao,
+      'endereco':endereco,
+      'foto':foto,
+      'criadoEm':
+          FieldValue.serverTimestamp(),
+    });
+  }
+
+  @override
+  Widget build(BuildContext context){
+    final dados=empresa.data();
+
+    final String nome=
+        (dados['nome']??'Empresa').toString();
+
+    final String categoria=
+        (dados['categoria']??'').toString();
+
+    final String descricao=
+        (dados['descricao']??
+                'Sem descrição cadastrada.')
+            .toString();
+
+    final String endereco=
+        (dados['endereco']??
+                'Endereço não informado.')
+            .toString();
+
+    final dynamic fotos=dados['fotos'];
+
+    String? fotoUrl;
+
+    if(fotos is List&&fotos.isNotEmpty){
+      final primeiraFoto=fotos.first;
+
+      if(primeiraFoto is String&&
+          primeiraFoto.trim().isNotEmpty){
+        fotoUrl=primeiraFoto;
+      }
+    }
+
+    final usuario=
         FirebaseAuth.instance.currentUser;
 
     Widget conteudoCoracao;
 
-    if (usuario == null) {
-      conteudoCoracao = const Icon(
+    if(usuario==null){
+      conteudoCoracao=const Icon(
         Icons.favorite_border,
-        color: Colors.grey,
-        size: 24,
+        color:Colors.grey,
+        size:24,
       );
-    } else {
-      conteudoCoracao = StreamBuilder<
-          DocumentSnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore
-            .instance
-            .collection('usuarios')
-            .doc(usuario.uid)
+    }else{
+      conteudoCoracao=
+          StreamBuilder<
+              DocumentSnapshot<
+                  Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance
             .collection('favoritos')
-            .doc(empresa.id)
+            .doc(
+              '${usuario.uid}_${_idFavorito()}',
+            )
             .snapshots(),
-        builder: (context, snapshot) {
-          final favorito =
-              snapshot.data?.exists ?? false;
+        builder:(context,snapshot){
+          final favorito=
+              snapshot.data?.exists??false;
 
           return Icon(
             favorito
                 ? Icons.favorite
                 : Icons.favorite_border,
-            color: favorito
+            color:favorito
                 ? Colors.red
                 : Colors.grey[400],
-            size: 24,
+            size:24,
           );
         },
       );
@@ -659,131 +644,124 @@ class BarbeariaCard extends StatelessWidget {
 
     return Container(
       margin:
-          const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
+          const EdgeInsets.only(bottom:16),
+      padding:
+          const EdgeInsets.all(12),
+      decoration:BoxDecoration(
+        color:const Color(0xFFF5F5F5),
         borderRadius:
             BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFFE0E2E5),
-          width: 1.5,
+        border:Border.all(
+          color:const Color(0xFFE0E2E5),
+          width:1.5,
         ),
       ),
-      child: Column(
-        children: [
+      child:Column(
+        children:[
           Row(
             crossAxisAlignment:
                 CrossAxisAlignment.start,
-            children: [
+            children:[
               ClipRRect(
                 borderRadius:
                     BorderRadius.circular(16),
-                child: Container(
-                  width: 110,
-                  height: 90,
-                  color: Colors.grey[400],
-                  child: fotoUrl != null
+                child:Container(
+                  width:110,
+                  height:90,
+                  color:Colors.grey[400],
+                  child:fotoUrl!=null
                       ? Image.network(
                           fotoUrl,
-                          width: 110,
-                          height: 90,
-                          fit: BoxFit.cover,
+                          width:110,
+                          height:90,
+                          fit:BoxFit.cover,
                           errorBuilder:
-                              (context, error,
-                                  stackTrace) {
+                              (context,error,stackTrace){
                             return const Icon(
                               Icons.store,
-                              color: Colors.white,
-                              size: 40,
+                              color:Colors.white,
+                              size:40,
                             );
                           },
                         )
                       : const Icon(
                           Icons.store,
-                          color: Colors.white,
-                          size: 40,
+                          color:Colors.white,
+                          size:40,
                         ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width:12),
               Expanded(
-                child: Column(
+                child:Column(
                   crossAxisAlignment:
                       CrossAxisAlignment.start,
-                  children: [
+                  children:[
                     Row(
                       crossAxisAlignment:
                           CrossAxisAlignment.start,
-                      children: [
+                      children:[
                         Expanded(
-                          child:
-                              GestureDetector(
-                            onTap: () {
+                          child:GestureDetector(
+                            onTap:(){
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder:
-                                      (context) =>
-                                          DescricaoLocalScreen(
+                                  builder:(context)=>
+                                      DescricaoLocalScreen(
                                     empresaId:
                                         empresa.id,
                                   ),
                                 ),
                               );
                             },
-                            child: Text(
+                            child:Text(
                               nome,
-                              maxLines: 2,
+                              maxLines:2,
                               overflow:
                                   TextOverflow.ellipsis,
-                              style:
-                                  const TextStyle(
-                                fontSize: 20,
+                              style:const TextStyle(
+                                fontSize:20,
                                 fontWeight:
                                     FontWeight.bold,
-                                color: Colors.black,
+                                color:Colors.black,
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 5),
+                        const SizedBox(width:5),
                         GestureDetector(
-                          onTap:
-                              _alternarFavorito,
-                          child: Padding(
+                          onTap:_alternarFavorito,
+                          child:Padding(
                             padding:
-                                const EdgeInsets.all(
-                                    4),
-                            child:
-                                conteudoCoracao,
+                                const EdgeInsets.all(4),
+                            child:conteudoCoracao,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    if (categoria.isNotEmpty)
+                    const SizedBox(height:4),
+                    if(categoria.isNotEmpty)
                       Text(
                         categoria,
-                        maxLines: 1,
+                        maxLines:1,
                         overflow:
                             TextOverflow.ellipsis,
-                        style:
-                            const TextStyle(
-                          fontSize: 11,
+                        style:const TextStyle(
+                          fontSize:11,
                           color:
                               Color(0xFF555555),
                           fontWeight:
                               FontWeight.w500,
                         ),
                       ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height:3),
                     GestureDetector(
-                      onTap: () {
+                      onTap:(){
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
+                            builder:(context)=>
                                 DescricaoLocalScreen(
                               empresaId:
                                   empresa.id,
@@ -791,16 +769,15 @@ class BarbeariaCard extends StatelessWidget {
                           ),
                         );
                       },
-                      child: Text(
+                      child:Text(
                         descricao,
-                        maxLines: 3,
+                        maxLines:3,
                         overflow:
                             TextOverflow.ellipsis,
-                        style:
-                            const TextStyle(
-                          fontSize: 10,
-                          color: Colors.black87,
-                          height: 1.2,
+                        style:const TextStyle(
+                          fontSize:10,
+                          color:Colors.black87,
+                          height:1.2,
                         ),
                       ),
                     ),
@@ -809,54 +786,53 @@ class BarbeariaCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height:8),
           Row(
             mainAxisAlignment:
                 MainAxisAlignment.spaceBetween,
-            children: [
+            children:[
               Row(
-                children: List.generate(
+                children:List.generate(
                   5,
-                  (index) => const Icon(
+                  (index)=>const Icon(
                     Icons.star,
-                    color: Colors.amber,
-                    size: 20,
+                    color:Colors.amber,
+                    size:20,
                   ),
                 ),
               ),
               Flexible(
-                child: GestureDetector(
+                child:GestureDetector(
                   behavior:
                       HitTestBehavior.opaque,
-                  onTap: () {
+                  onTap:(){
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
+                        builder:(context)=>
                             const LocalizacaoScreen(),
                       ),
                     );
                   },
-                  child: Row(
+                  child:Row(
                     mainAxisAlignment:
                         MainAxisAlignment.end,
-                    children: [
+                    children:[
                       const Icon(
                         Icons.location_on,
-                        color: Colors.red,
-                        size: 14,
+                        color:Colors.red,
+                        size:14,
                       ),
-                      const SizedBox(width: 2),
+                      const SizedBox(width:2),
                       Flexible(
-                        child: Text(
+                        child:Text(
                           endereco,
-                          maxLines: 1,
+                          maxLines:1,
                           overflow:
                               TextOverflow.ellipsis,
-                          style:
-                              const TextStyle(
-                            fontSize: 9,
-                            color: Colors.black,
+                          style:const TextStyle(
+                            fontSize:9,
+                            color:Colors.black,
                             fontWeight:
                                 FontWeight.w500,
                           ),

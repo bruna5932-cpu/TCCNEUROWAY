@@ -49,28 +49,29 @@ class DefaultFirebaseOptions {
     storageBucket: 'neuroway-7c999.firebasestorage.app',
     measurementId: 'G-4PR54FC0RK',
   );
+
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDt-4uQJbVkLYcWHosIIwgSIWIOWP-FXVU',
-    appId: '1:314873333725:android:cdadd13901b0d819989834',
-    messagingSenderId: '314873333725',
-    projectId: 'teste-6005e',
-    storageBucket: 'teste-6005e.firebasestorage.app',
+    apiKey: 'AIzaSyA1SmkCAjA_83NletqZBFyEjP1u5llaq-E',
+    appId: '1:840040907500:android:7e2b769ff3d95ac7889bc9',
+    messagingSenderId: '840040907500',
+    projectId: 'neuroway-7c999',
+    storageBucket: 'neuroway-7c999.firebasestorage.app',
   );
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCIzNu5KcchGPmamEsfZ9lmEafJF2DcIyo',
-    appId: '1:314873333725:ios:d275c8737895cfdf989834',
-    messagingSenderId: '314873333725',
-    projectId: 'teste-6005e',
-    storageBucket: 'teste-6005e.firebasestorage.app',
-    iosBundleId: 'com.example.cadastro',
+    apiKey: 'AIzaSyAYxYekqY9qCi9N1vwWXnzkeD9Lpyj7aqw',
+    appId: '1:840040907500:ios:bd60a3c8aac4818b889bc9',
+    messagingSenderId: '840040907500',
+    projectId: 'neuroway-7c999',
+    storageBucket: 'neuroway-7c999.firebasestorage.app',
+    iosBundleId: 'com.example.neuroway',
   );
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCIzNu5KcchGPmamEsfZ9lmEafJF2DcIyo',
-    appId: '1:314873333725:ios:d275c8737895cfdf989834',
-    messagingSenderId: '314873333725',
-    projectId: 'teste-6005e',
-    storageBucket: 'teste-6005e.firebasestorage.app',
-    iosBundleId: 'com.example.cadastro',
+    apiKey: 'AIzaSyAYxYekqY9qCi9N1vwWXnzkeD9Lpyj7aqw',
+    appId: '1:840040907500:ios:bd60a3c8aac4818b889bc9',
+    messagingSenderId: '840040907500',
+    projectId: 'neuroway-7c999',
+    storageBucket: 'neuroway-7c999.firebasestorage.app',
+    iosBundleId: 'com.example.neuroway',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

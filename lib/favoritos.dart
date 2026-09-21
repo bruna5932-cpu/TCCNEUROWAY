@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:neuroway/agendamentos.dart';
-import 'package:neuroway/peril.dart';
 import 'package:neuroway/descricaolocal.dart';
 import 'package:neuroway/descricaoprofi.dart';
+import 'package:neuroway/menuprincipal.dart';
 
 class Favoritos extends StatefulWidget {
   const Favoritos({super.key});
@@ -14,12 +13,8 @@ class Favoritos extends StatefulWidget {
       _FavoritosState();
 }
 
-class _FavoritosState
-    extends State<Favoritos> {
-  int _currentIndex = 1;
-
-  final TextEditingController
-      _pesquisaController =
+class _FavoritosState extends State<Favoritos> {
+  final TextEditingController _pesquisaController =
       TextEditingController();
 
   String _pesquisa = '';
@@ -46,8 +41,7 @@ class _FavoritosState
     super.dispose();
   }
 
-  Stream<QuerySnapshot<
-          Map<String, dynamic>>>
+  Stream<QuerySnapshot<Map<String, dynamic>>>
       _favoritosStream() {
     final usuario =
         FirebaseAuth.instance.currentUser;
@@ -72,8 +66,7 @@ class _FavoritosState
   }
 
   Future<void> _removerFavorito(
-    DocumentSnapshot<
-            Map<String, dynamic>>
+    DocumentSnapshot<Map<String, dynamic>>
         documento,
   ) async {
     try {
@@ -174,11 +167,9 @@ class _FavoritosState
     }
   }
 
-  List<DocumentSnapshot<
-          Map<String, dynamic>>>
+  List<DocumentSnapshot<Map<String, dynamic>>>
       _filtrarFavoritos(
-    List<DocumentSnapshot<
-            Map<String, dynamic>>>
+    List<DocumentSnapshot<Map<String, dynamic>>>
         documentos,
   ) {
     if (_pesquisa.isEmpty) {
@@ -187,8 +178,7 @@ class _FavoritosState
 
     return documentos.where(
       (documento) {
-        final dados =
-            documento.data();
+        final dados = documento.data() ?? {};
 
         final nome =
             (dados['nome'] ?? '')
@@ -196,8 +186,7 @@ class _FavoritosState
                 .toLowerCase();
 
         final categoria =
-            (dados['categoria'] ??
-                    '')
+            (dados['categoria'] ?? '')
                 .toString()
                 .toLowerCase();
 
@@ -223,30 +212,16 @@ class _FavoritosState
       backgroundColor: Colors.white,
       body: SafeArea(
         top: false,
-        child: Stack(
+        child: Column(
           children: [
-            Column(
-              children: [
-                _buildTopo(),
+            _buildTopo(),
 
-                Expanded(
-                  child:
-                      _buildListaFavoritos(),
-                ),
-              ],
+            Expanded(
+              child:
+                  _buildListaFavoritos(),
             ),
           ],
         ),
-      ),
-      bottomNavigationBar:
-          CustomBottomNavigationBarFavoritos(
-        currentIndex:
-            _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
       ),
     );
   }
@@ -285,8 +260,13 @@ class _FavoritosState
                   color: Colors.black,
                 ),
                 onPressed: () {
-                  Navigator.maybePop(
+                  Navigator.pushAndRemoveUntil(
                     context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const Menuprincipal(),
+                    ),
+                    (route) => false,
                   );
                 },
               ),
@@ -316,7 +296,8 @@ class _FavoritosState
                   child: Row(
                     children: [
                       const SizedBox(
-                          width: 18),
+                        width: 18,
+                      ),
 
                       Icon(
                         Icons.search,
@@ -326,17 +307,28 @@ class _FavoritosState
                       ),
 
                       const SizedBox(
-                          width: 10),
+                        width: 10,
+                      ),
 
                       Expanded(
                         child:
                             TextField(
                           controller:
                               _pesquisaController,
+                          textInputAction:
+                              TextInputAction.search,
                           decoration:
                               const InputDecoration(
                             hintText:
                                 'Buscar nos favoritos',
+                            hintStyle:
+                                TextStyle(
+                              color:
+                                  Color(
+                                0xFF757575,
+                              ),
+                              fontSize: 16,
+                            ),
                             border:
                                 InputBorder
                                     .none,
@@ -353,28 +345,26 @@ class _FavoritosState
                       ),
 
                       const SizedBox(
-                          width: 12),
+                        width: 12,
+                      ),
 
-                      Icon(
+                      const Icon(
                         Icons.location_on,
                         color:
-                            Colors.grey[600],
-                        size: 24,
+                            Colors.grey,
+                        size: 22,
                       ),
 
                       const SizedBox(
-                          width: 5),
+                        width: 6,
+                      ),
 
-                      Text(
+                      const Text(
                         'SJC',
-                        style:
-                            TextStyle(
+                        style: TextStyle(
                           color:
-                              Colors.grey[600],
+                              Colors.grey,
                           fontSize: 14,
-                          fontWeight:
-                              FontWeight
-                                  .w500,
                         ),
                       ),
 
@@ -386,7 +376,8 @@ class _FavoritosState
                       ),
 
                       const SizedBox(
-                          width: 10),
+                        width: 10,
+                      ),
                     ],
                   ),
                 ),
@@ -484,8 +475,11 @@ class _FavoritosState
                     color:
                         Colors.grey[400],
                   ),
+
                   const SizedBox(
-                      height: 15),
+                    height: 15,
+                  ),
+
                   Text(
                     _pesquisa.isEmpty
                         ? 'Você ainda não possui favoritos.'
@@ -519,7 +513,8 @@ class _FavoritosState
             final documento =
                 favoritos[index];
 
-            final Map<String, dynamic> dados =
+            final Map<String, dynamic>
+                dados =
                 documento.data() ?? {};
 
             return _buildFavoritoCard(
@@ -613,7 +608,9 @@ class _FavoritosState
               profissional,
             ),
 
-            const SizedBox(width: 14),
+            const SizedBox(
+              width: 14,
+            ),
 
             Expanded(
               child: Column(
@@ -637,7 +634,8 @@ class _FavoritosState
                   ),
 
                   const SizedBox(
-                      height: 4),
+                    height: 4,
+                  ),
 
                   Text(
                     profissional
@@ -655,7 +653,8 @@ class _FavoritosState
                   ),
 
                   const SizedBox(
-                      height: 7),
+                    height: 7,
+                  ),
 
                   Row(
                     children:
@@ -675,7 +674,8 @@ class _FavoritosState
             ),
 
             const SizedBox(
-                width: 8),
+              width: 8,
+            ),
 
             IconButton(
               padding:
@@ -752,82 +752,6 @@ class _FavoritosState
           color: Colors.white,
           size: 42,
         ),
-      ),
-    );
-  }
-}
-
-class CustomBottomNavigationBarFavoritos
-    extends StatelessWidget {
-  final int currentIndex;
-  final ValueChanged<int> onTap;
-
-  const CustomBottomNavigationBarFavoritos({
-    super.key,
-    required this.currentIndex,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration:
-          const BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: Color(0xFFE0E0E0),
-            width: 1,
-          ),
-        ),
-      ),
-      child: BottomNavigationBar(
-        currentIndex:
-            currentIndex,
-        type:
-            BottomNavigationBarType.fixed,
-        backgroundColor:
-            Colors.white,
-        selectedItemColor:
-            Colors.black,
-        unselectedItemColor:
-            const Color(
-          0xFF9E9E9E,
-        ),
-        showSelectedLabels:
-            false,
-        showUnselectedLabels:
-            false,
-        onTap: onTap,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.home_filled,
-              size: 28,
-            ),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.favorite,
-              size: 28,
-            ),
-            label: 'Favoritos',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.calendar_month,
-              size: 28,
-            ),
-            label: 'Agenda',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.person,
-              size: 28,
-            ),
-            label: 'Perfil',
-          ),
-        ],
       ),
     );
   }
