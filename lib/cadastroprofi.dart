@@ -1,11 +1,10 @@
-import 'dart:typed_data';
-
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:neuroway/cadastroempresa.dart';
 
 class CadastroPage extends StatefulWidget {
@@ -22,8 +21,6 @@ class _CadastroPageState extends State<CadastroPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  final ImagePicker _imagePicker = ImagePicker();
-
   final _nomeController = TextEditingController();
   final _emailController = TextEditingController();
   final _telefoneController = TextEditingController();
@@ -36,163 +33,31 @@ class _CadastroPageState extends State<CadastroPage> {
   bool _mostrarSenha = false;
   bool _mostrarConfirmarSenha = false;
   bool _carregando = false;
-  bool _enviandoFoto = false;
 
-  XFile? _fotoSelecionada;
+  File? _fotoSelecionada;
 
-  // ============================================================
-  // ADICIONAR FOTO
-  // ============================================================
+  // Foto
 
   Future<void> _adicionarFoto() async {
-    if (_enviandoFoto || _carregando) {
-      return;
-    }
-
-    FocusScope.of(context).unfocus();
-
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(20),
-        ),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Adicionar foto de perfil',
-                  style: TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Color(0xFF98B9A6),
-                    child: Icon(
-                      Icons.photo_library,
-                      color: Colors.white,
-                    ),
-                  ),
-                  title: const Text(
-                    'Escolher da galeria',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  subtitle: const Text(
-                    'Escolha uma foto já salva no celular',
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _selecionarDaGaleria();
-                  },
-                ),
-
-                const SizedBox(height: 5),
-
-                ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Color(0xFF98B9A6),
-                    child: Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                    ),
-                  ),
-                  title: const Text(
-                    'Tirar uma foto',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  subtitle: const Text(
-                    'Use a câmera do celular',
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _tirarFoto();
-                  },
-                ),
-
-                if (_fotoSelecionada != null) ...[
-                  const SizedBox(height: 5),
-
-                  ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: Colors.redAccent,
-                      child: Icon(
-                        Icons.delete,
-                        color: Colors.white,
-                      ),
-                    ),
-                    title: const Text(
-                      'Remover foto',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-
-                      setState(() {
-                        _fotoSelecionada = null;
-                      });
-                    },
-                  ),
-                ],
-
-                const SizedBox(height: 10),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // ============================================================
-  // GALERIA
-  // ============================================================
-
-  Future<void> _selecionarDaGaleria() async {
     try {
-      final XFile? foto = await _imagePicker.pickImage(
+      final ImagePicker picker = ImagePicker();
+
+      final XFile? imagem = await picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 85,
+        imageQuality: 80,
         maxWidth: 1200,
         maxHeight: 1200,
       );
 
-      if (foto == null) {
-        return;
-      }
-
-      if (!mounted) {
+      if (imagem == null) {
         return;
       }
 
       setState(() {
-        _fotoSelecionada = foto;
+        _fotoSelecionada = File(imagem.path);
       });
     } catch (e) {
-      debugPrint(
-        'Erro ao selecionar foto da galeria: $e',
-      );
-
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -200,106 +65,86 @@ class _CadastroPageState extends State<CadastroPage> {
             'Não foi possível selecionar a foto: $e',
           ),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
         ),
       );
     }
   }
 
-  // ============================================================
-  // CÂMERA
-  // ============================================================
+  // Upload da foto
 
-  Future<void> _tirarFoto() async {
-    try {
-      final XFile? foto = await _imagePicker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-        maxWidth: 1200,
-        maxHeight: 1200,
-      );
-
-      if (foto == null) {
-        return;
-      }
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _fotoSelecionada = foto;
-      });
-    } catch (e) {
-      debugPrint(
-        'Erro ao tirar foto: $e',
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Não foi possível abrir a câmera: $e',
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  // ============================================================
-  // ENVIAR FOTO PARA O FIREBASE STORAGE
-  // ============================================================
-
-  Future<String> _enviarFotoParaFirebase(
-    String profissionalUid,
-  ) async {
-    final foto = _fotoSelecionada;
-
-    if (foto == null) {
-      return '';
+  Future<String?> _enviarFotoParaStorage(String uid) async {
+    if (_fotoSelecionada == null) {
+      return null;
     }
 
-    setState(() {
-      _enviandoFoto = true;
-    });
-
     try {
-      final Uint8List bytes = await foto.readAsBytes();
+      final String caminho = 'profissionais/$uid.jpg';
 
-      final Reference referencia = _storage
-          .ref()
-          .child('profissionais')
-          .child(profissionalUid)
-          .child('foto_perfil.jpg');
+      final Reference referencia = _storage.ref().child(caminho);
 
-      final UploadTask uploadTask = referencia.putData(
-        bytes,
-        SettableMetadata(
-          contentType: 'image/jpeg',
-        ),
+      final SettableMetadata metadata = SettableMetadata(
+        contentType: 'image/jpeg',
       );
 
-      await uploadTask;
+      await referencia.putFile(
+        _fotoSelecionada!,
+        metadata,
+      );
 
-      final String url =
-          await referencia.getDownloadURL();
+      final String url = await referencia.getDownloadURL();
 
       return url;
-    } finally {
-      if (mounted) {
-        setState(() {
-          _enviandoFoto = false;
-        });
+    } on FirebaseException catch (e) {
+      debugPrint(
+        'Erro Firebase Storage ao enviar foto: '
+        '${e.code} - ${e.message}',
+      );
+
+      if (e.code == 'object-not-found') {
+        throw Exception(
+          'O arquivo da foto não foi encontrado no Firebase Storage. '
+          'Verifique se o Storage está ativado no projeto Firebase.',
+        );
       }
+
+      if (e.code == 'unauthorized' ||
+          e.code == 'permission-denied') {
+        throw Exception(
+          'O Firebase Storage não permitiu enviar a foto. '
+          'Verifique as regras do Storage.',
+        );
+      }
+
+      if (e.code == 'canceled') {
+        throw Exception(
+          'O envio da foto foi cancelado.',
+        );
+      }
+
+      if (e.code == 'retry-limit-exceeded') {
+        throw Exception(
+          'O envio da foto demorou demais. '
+          'Verifique sua conexão com a internet.',
+        );
+      }
+
+      throw Exception(
+        'Erro ao enviar a foto: '
+        '${e.message ?? e.code}',
+      );
+    } catch (e) {
+      debugPrint(
+        'Erro inesperado ao enviar foto: $e',
+      );
+
+      throw Exception(
+        'Não foi possível enviar a foto.',
+      );
     }
   }
 
-  // ============================================================
-  // CADASTRAR PROFISSIONAL
-  // ============================================================
+  // Cadastro
 
   Future<void> _cadastrar() async {
     FocusScope.of(context).unfocus();
@@ -312,29 +157,14 @@ class _CadastroPageState extends State<CadastroPage> {
       return;
     }
 
-    final String nome =
-        _nomeController.text.trim();
-
-    final String email =
-        _emailController.text.trim();
-
-    final String telefone =
-        _telefoneController.text.trim();
-
-    final String descricao =
-        _descricaoController.text.trim();
-
-    final String profissao =
-        _profissaoController.text.trim();
-
-    final String experiencia =
-        _experienciaController.text.trim();
-
-    final String senha =
-        _senhaController.text;
-
-    final String confirmarSenha =
-        _confirmarSenhaController.text;
+    final String nome = _nomeController.text.trim();
+    final String email = _emailController.text.trim();
+    final String telefone = _telefoneController.text.trim();
+    final String descricao = _descricaoController.text.trim();
+    final String profissao = _profissaoController.text.trim();
+    final String experiencia = _experienciaController.text.trim();
+    final String senha = _senhaController.text;
+    final String confirmarSenha = _confirmarSenhaController.text;
 
     if (senha != confirmarSenha) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -353,19 +183,16 @@ class _CadastroPageState extends State<CadastroPage> {
       _carregando = true;
     });
 
-    try {
-      // --------------------------------------------------------
-      // CRIAR CONTA
-      // --------------------------------------------------------
+    User? usuarioCriado;
 
+    try {
       final UserCredential credencial =
           await _auth.createUserWithEmailAndPassword(
         email: email,
         password: senha,
       );
 
-      final User? usuarioCriado =
-          credencial.user;
+      usuarioCriado = credencial.user;
 
       if (usuarioCriado == null) {
         throw Exception(
@@ -373,29 +200,15 @@ class _CadastroPageState extends State<CadastroPage> {
         );
       }
 
-      // --------------------------------------------------------
-      // NOME NO FIREBASE AUTH
-      // --------------------------------------------------------
+      await usuarioCriado.updateDisplayName(nome);
 
-      await usuarioCriado.updateDisplayName(
-        nome,
-      );
-
-      // --------------------------------------------------------
-      // ENVIAR FOTO
-      // --------------------------------------------------------
-
-      String fotoUrl = '';
+      String? fotoUrl;
 
       if (_fotoSelecionada != null) {
-        fotoUrl = await _enviarFotoParaFirebase(
+        fotoUrl = await _enviarFotoParaStorage(
           usuarioCriado.uid,
         );
       }
-
-      // --------------------------------------------------------
-      // SALVAR PROFISSIONAL NO FIRESTORE
-      // --------------------------------------------------------
 
       await _firestore
           .collection('profissionais')
@@ -408,9 +221,8 @@ class _CadastroPageState extends State<CadastroPage> {
         'descricao': descricao,
         'profissao': profissao,
         'experiencia': experiencia,
-        'foto': fotoUrl,
-        'fotoUrl': fotoUrl,
         'tipo': 'profissional',
+        'fotoUrl': fotoUrl ?? '',
         'criadoEm': FieldValue.serverTimestamp(),
       });
 
@@ -436,23 +248,13 @@ class _CadastroPageState extends State<CadastroPage> {
         return;
       }
 
-      // --------------------------------------------------------
-      // DEVOLVE OS DADOS PARA CADASTROEMPRESA
-      // --------------------------------------------------------
-
       Navigator.pop(
         context,
         {
           'nome': nome,
           'especialidade': profissao,
-          'profissao': profissao,
-          'experiencia': experiencia,
           'uid': usuarioCriado.uid,
-          'foto': fotoUrl,
-          'fotoUrl': fotoUrl,
-          'descricao': descricao,
-          'telefone': telefone,
-          'email': email,
+          'fotoUrl': fotoUrl ?? '',
         },
       );
     } on FirebaseAuthException catch (e) {
@@ -464,18 +266,15 @@ class _CadastroPageState extends State<CadastroPage> {
 
       switch (e.code) {
         case 'email-already-in-use':
-          mensagem =
-              'Este e-mail já está cadastrado.';
+          mensagem = 'Este e-mail já está cadastrado.';
           break;
 
         case 'invalid-email':
-          mensagem =
-              'O e-mail informado é inválido.';
+          mensagem = 'O e-mail informado é inválido.';
           break;
 
         case 'weak-password':
-          mensagem =
-              'A senha deve ter pelo menos 6 caracteres.';
+          mensagem = 'A senha deve ter pelo menos 6 caracteres.';
           break;
 
         case 'operation-not-allowed':
@@ -484,13 +283,13 @@ class _CadastroPageState extends State<CadastroPage> {
           break;
 
         case 'network-request-failed':
-          mensagem =
-              'Erro de conexão. Verifique sua internet.';
+          mensagem = 'Erro de conexão. Verifique sua internet.';
           break;
 
         case 'configuration-not-found':
           mensagem =
-              'A configuração do Firebase não foi encontrada. Verifique o firebase_options.dart e o projeto Firebase.';
+              'A configuração do Firebase não foi encontrada. '
+              'Verifique o firebase_options.dart e o projeto Firebase.';
           break;
 
         default:
@@ -514,40 +313,38 @@ class _CadastroPageState extends State<CadastroPage> {
 
       switch (e.code) {
         case 'permission-denied':
-          mensagem =
-              'O Firebase não permitiu salvar os dados. Verifique as regras do Firestore.';
-          break;
-
         case 'unauthorized':
           mensagem =
-              'O Firebase Storage não permitiu enviar a foto. Verifique as regras do Storage.';
+              'O Firebase não permitiu acessar o Storage ou Firestore. '
+              'Verifique as regras de segurança.';
           break;
 
         case 'object-not-found':
           mensagem =
-              'Não foi possível encontrar o arquivo no Firebase Storage.';
-          break;
-
-        case 'canceled':
-          mensagem =
-              'O envio da foto foi cancelado.';
+              'O arquivo da foto não foi encontrado no Firebase Storage. '
+              'Verifique se o Storage está configurado corretamente.';
           break;
 
         case 'unavailable':
           mensagem =
-              'O Firebase está indisponível. Verifique sua conexão.';
+              'O Firebase está indisponível. '
+              'Verifique sua conexão com a internet.';
+          break;
+
+        case 'canceled':
+          mensagem = 'O envio da foto foi cancelado.';
           break;
 
         default:
           mensagem =
-              'Erro no Firebase: ${e.message ?? e.code}';
+              'Erro do Firebase: ${e.message ?? e.code}';
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(mensagem),
           backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
+          duration: const Duration(seconds: 6),
         ),
       );
     } catch (e) {
@@ -561,7 +358,7 @@ class _CadastroPageState extends State<CadastroPage> {
             'Ocorreu um erro: $e',
           ),
           backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
+          duration: const Duration(seconds: 6),
         ),
       );
     } finally {
@@ -572,6 +369,8 @@ class _CadastroPageState extends State<CadastroPage> {
       }
     }
   }
+
+  // Dispose
 
   @override
   void dispose() {
@@ -587,540 +386,452 @@ class _CadastroPageState extends State<CadastroPage> {
     super.dispose();
   }
 
+  // Tela
+
   @override
   Widget build(BuildContext context) {
-    final screenHeight =
-        MediaQuery.of(context).size.height;
-
-    final molduraHeight =
-        screenHeight * 0.25;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final molduraHeight = screenHeight * 0.15;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      resizeToAvoidBottomInset: true,
-      body: Stack(
-        children: [
-          // ====================================================
-          // CONTEÚDO
-          // ====================================================
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Quebra-cabeça superior
 
-          Positioned.fill(
-            child: SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  top: molduraHeight * 0.75,
-                  bottom: molduraHeight * 0.75,
+                SizedBox(
+                  height: molduraHeight,
+                  child: Image.asset(
+                    'imagem/quebrasuperior.png',
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
+                  ),
                 ),
-                child: Form(
-                  key: _formKey,
-                  child: ListView(
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior
-                            .onDrag,
-                    padding: EdgeInsets.zero,
+
+                const SizedBox(height: 8),
+
+                // Título
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                  ),
+                  child: Row(
                     children: [
-                      Padding(
-                        padding:
-                            const EdgeInsets.symmetric(
-                          horizontal: 24,
+                      InkWell(
+                        onTap: () {
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          } else {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const CadastroEmpresa(),
+                              ),
+                            );
+                          }
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Colors.black,
+                            size: 22,
+                          ),
                         ),
+                      ),
+
+                      const SizedBox(width: 4),
+
+                      const Expanded(
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Text(
+                                'Cadastro',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 42,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                              Text(
+                                'de profissionais',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 38),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+
+                // Campos
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Nome
+
+                      _buildTextField(
+                        label: 'Nome:',
+                        controller: _nomeController,
+                      ),
+
+                      // E-mail
+
+                      _buildTextField(
+                        label: 'E-mail:',
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: _validarEmail,
+                      ),
+
+                      // Telefone
+
+                      _buildTextField(
+                        label: 'Telefone:',
+                        controller: _telefoneController,
+                        hintText: '(00) 00000-0000',
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          TelefoneInputFormatter(),
+                        ],
+                        validator: (value) {
+                          if (value == null ||
+                              value.trim().isEmpty) {
+                            return 'Campo obrigatório';
+                          }
+
+                          final numeros = value.replaceAll(
+                            RegExp(r'[^0-9]'),
+                            '',
+                          );
+
+                          if (numeros.length != 11) {
+                            return 'Digite um telefone válido';
+                          }
+
+                          return null;
+                        },
+                      ),
+
+                      // Descrição
+
+                      _buildDescricaoField(),
+
+                      // Profissão
+
+                      _buildTextField(
+                        label: 'Profissão:',
+                        controller: _profissaoController,
+                      ),
+
+                      // Experiência
+
+                      _buildTextField(
+                        label: 'Tempo de experiência:',
+                        controller: _experienciaController,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Senha
+
+                      _buildTextField(
+                        label: 'Senha:',
+                        controller: _senhaController,
+                        obscureText: !_mostrarSenha,
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _mostrarSenha = !_mostrarSenha;
+                            });
+                          },
+                          icon: Icon(
+                            _mostrarSenha
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                            color: Colors.grey[700],
+                            size: 21,
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Campo obrigatório';
+                          }
+
+                          if (value.length < 6) {
+                            return 'A senha deve ter pelo menos 6 caracteres';
+                          }
+
+                          return null;
+                        },
+                      ),
+
+                      // Confirmar senha
+
+                      _buildTextField(
+                        label: 'Confirmar senha:',
+                        controller: _confirmarSenhaController,
+                        obscureText: !_mostrarConfirmarSenha,
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _mostrarConfirmarSenha =
+                                  !_mostrarConfirmarSenha;
+                            });
+                          },
+                          icon: Icon(
+                            _mostrarConfirmarSenha
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                            color: Colors.grey[700],
+                            size: 21,
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Campo obrigatório';
+                          }
+
+                          if (value != _senhaController.text) {
+                            return 'As senhas não coincidem';
+                          }
+
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Foto
+
+                      Center(
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.stretch,
                           children: [
-                            const SizedBox(height: 16),
-
-                            // ==================================================
-                            // TÍTULO
-                            // ==================================================
-
-                            const Text(
-                              'Cadastro',
-                              textAlign:
-                                  TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 42,
-                                fontWeight:
-                                    FontWeight.bold,
-                                color: Colors.black,
-                                letterSpacing: 1.2,
+                            GestureDetector(
+                              onTap: _adicionarFoto,
+                              child: CircleAvatar(
+                                radius: 45,
+                                backgroundColor: Colors.grey[600],
+                                backgroundImage:
+                                    _fotoSelecionada != null
+                                        ? FileImage(_fotoSelecionada!)
+                                        : null,
+                                child: _fotoSelecionada == null
+                                    ? const Icon(
+                                        Icons.person,
+                                        size: 60,
+                                        color: Colors.white,
+                                      )
+                                    : null,
                               ),
-                            ),
-
-                            const Text(
-                              'de profissionais',
-                              textAlign:
-                                  TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight:
-                                    FontWeight.w500,
-                                color: Colors.black,
-                              ),
-                            ),
-
-                            const SizedBox(height: 30),
-
-                            // ==================================================
-                            // NOME
-                            // ==================================================
-
-                            _buildTextField(
-                              label: 'Nome:',
-                              controller:
-                                  _nomeController,
-                            ),
-
-                            // ==================================================
-                            // E-MAIL
-                            // ==================================================
-
-                            _buildTextField(
-                              label: 'E-mail:',
-                              controller:
-                                  _emailController,
-                              keyboardType:
-                                  TextInputType.emailAddress,
-                              validator:
-                                  _validarEmail,
-                            ),
-
-                            // ==================================================
-                            // TELEFONE
-                            // ==================================================
-
-                            _buildTextField(
-                              label: 'Telefone:',
-                              controller:
-                                  _telefoneController,
-                              hintText:
-                                  '(12) 99999-9999',
-                              keyboardType:
-                                  TextInputType.phone,
-                            ),
-
-                            // ==================================================
-                            // DESCRIÇÃO
-                            // ==================================================
-
-                            _buildTextField(
-                              label: 'Descrição:',
-                              controller:
-                                  _descricaoController,
-                              maxLines: 3,
-                            ),
-
-                            // ==================================================
-                            // PROFISSÃO
-                            // ==================================================
-
-                            _buildTextField(
-                              label: 'Profissão:',
-                              controller:
-                                  _profissaoController,
-                            ),
-
-                            // ==================================================
-                            // EXPERIÊNCIA
-                            // ==================================================
-
-                            _buildTextField(
-                              label:
-                                  'Tempo de experiência:',
-                              controller:
-                                  _experienciaController,
                             ),
 
                             const SizedBox(height: 8),
 
-                            // ==================================================
-                            // SENHA
-                            // ==================================================
-
-                            _buildTextField(
-                              label: 'Senha:',
-                              controller:
-                                  _senhaController,
-                              obscureText:
-                                  !_mostrarSenha,
-                              suffixIcon:
-                                  IconButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _mostrarSenha =
-                                        !_mostrarSenha;
-                                  });
-                                },
-                                icon: Icon(
-                                  _mostrarSenha
-                                      ? Icons.visibility
-                                      : Icons
-                                          .visibility_off,
-                                  color:
-                                      Colors.grey[700],
-                                  size: 21,
-                                ),
-                              ),
-                              validator: (value) {
-                                if (value == null ||
-                                    value.isEmpty) {
-                                  return 'Campo obrigatório';
-                                }
-
-                                if (value.length < 6) {
-                                  return 'A senha deve ter pelo menos 6 caracteres';
-                                }
-
-                                return null;
-                              },
-                            ),
-
-                            // ==================================================
-                            // CONFIRMAR SENHA
-                            // ==================================================
-
-                            _buildTextField(
-                              label:
-                                  'Confirmar senha:',
-                              controller:
-                                  _confirmarSenhaController,
-                              obscureText:
-                                  !_mostrarConfirmarSenha,
-                              suffixIcon:
-                                  IconButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _mostrarConfirmarSenha =
-                                        !_mostrarConfirmarSenha;
-                                  });
-                                },
-                                icon: Icon(
-                                  _mostrarConfirmarSenha
-                                      ? Icons.visibility
-                                      : Icons
-                                          .visibility_off,
-                                  color:
-                                      Colors.grey[700],
-                                  size: 21,
-                                ),
-                              ),
-                              validator: (value) {
-                                if (value == null ||
-                                    value.isEmpty) {
-                                  return 'Campo obrigatório';
-                                }
-
-                                if (value !=
-                                    _senhaController
-                                        .text) {
-                                  return 'As senhas não coincidem';
-                                }
-
-                                return null;
-                              },
-                            ),
-
-                            const SizedBox(height: 25),
-
-                            // ==================================================
-                            // FOTO DE PERFIL
-                            // ==================================================
-
-                            Center(
-                              child: Column(
+                            InkWell(
+                              onTap: _adicionarFoto,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  GestureDetector(
-                                    onTap:
-                                        _adicionarFoto,
-                                    child:
-                                        Container(
-                                      width: 110,
-                                      height: 110,
-                                      decoration:
-                                          BoxDecoration(
-                                        shape:
-                                            BoxShape.circle,
-                                        color:
-                                            Colors.grey[600],
-                                        border:
-                                            Border.all(
-                                          color:
-                                              Colors.white,
-                                          width: 3,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors
-                                                .black
-                                                .withOpacity(
-                                              0.15,
-                                            ),
-                                            blurRadius: 6,
-                                            offset:
-                                                const Offset(
-                                              0,
-                                              3,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      child:
-                                          ClipOval(
-                                        child:
-                                            _fotoSelecionada !=
-                                                    null
-                                                ? FutureBuilder<
-                                                    Uint8List>(
-                                                    future:
-                                                        _fotoSelecionada!
-                                                            .readAsBytes(),
-                                                    builder:
-                                                        (
-                                                      context,
-                                                      snapshot,
-                                                    ) {
-                                                      if (snapshot
-                                                              .connectionState ==
-                                                          ConnectionState
-                                                              .waiting) {
-                                                        return const Center(
-                                                          child:
-                                                              CircularProgressIndicator(
-                                                            color:
-                                                                Colors.white,
-                                                          ),
-                                                        );
-                                                      }
-
-                                                      if (!snapshot
-                                                          .hasData) {
-                                                        return const Icon(
-                                                          Icons
-                                                              .person,
-                                                          size:
-                                                              65,
-                                                          color:
-                                                              Colors.white,
-                                                        );
-                                                      }
-
-                                                      return Image
-                                                          .memory(
-                                                        snapshot
-                                                            .data!,
-                                                        width:
-                                                            110,
-                                                        height:
-                                                            110,
-                                                        fit: BoxFit
-                                                            .cover,
-                                                      );
-                                                    },
-                                                  )
-                                                : const Icon(
-                                                    Icons.person,
-                                                    size: 65,
-                                                    color:
-                                                        Colors.white,
-                                                  ),
-                                      ),
+                                  const Text(
+                                    'Adicionar foto ',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
                                     ),
                                   ),
-
-                                  const SizedBox(
-                                    height: 10,
+                                  const Icon(
+                                    Icons.add_a_photo_outlined,
+                                    size: 16,
+                                    color: Colors.black,
                                   ),
-
-                                  InkWell(
-                                    onTap:
-                                        _adicionarFoto,
-                                    child:
-                                        const Row(
-                                      mainAxisSize:
-                                          MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          'Adicionar foto',
-                                          style:
-                                              TextStyle(
-                                            fontWeight:
-                                                FontWeight
-                                                    .bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        SizedBox(
-                                            width: 5),
-                                        Icon(
-                                          Icons
-                                              .add_a_photo_outlined,
-                                          size: 17,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  if (_fotoSelecionada !=
-                                      null)
-                                    const Padding(
-                                      padding:
-                                          EdgeInsets.only(
-                                        top: 6,
-                                      ),
-                                      child: Text(
-                                        'Foto selecionada',
-                                        style:
-                                            TextStyle(
-                                          fontSize: 12,
-                                          color: Colors
-                                              .green,
-                                        ),
-                                      ),
-                                    ),
                                 ],
                               ),
                             ),
 
-                            const SizedBox(height: 35),
-
-                            // ==================================================
-                            // BOTÃO CADASTRAR
-                            // ==================================================
-
-                            ElevatedButton(
-                              onPressed:
-                                  _carregando
-                                      ? null
-                                      : _cadastrar,
-                              style:
-                                  ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    const Color(
-                                  0xFF98B9A6,
-                                ),
-                                foregroundColor:
-                                    Colors.black,
-                                disabledBackgroundColor:
-                                    Colors.grey[400],
-                                padding:
-                                    const EdgeInsets
-                                        .symmetric(
-                                  horizontal: 30,
-                                  vertical: 10,
-                                ),
-                                shape:
-                                    RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(
-                                    8,
+                            if (_fotoSelecionada != null)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 8),
+                                child: Text(
+                                  'Foto selecionada',
+                                  style: TextStyle(
+                                    color: Color(0xFF65A56E),
+                                    fontSize: 14,
                                   ),
                                 ),
-                                elevation: 2,
                               ),
-                              child: _carregando
-                                  ? const SizedBox(
-                                      height: 24,
-                                      width: 24,
-                                      child:
-                                          CircularProgressIndicator(
-                                        strokeWidth:
-                                            2.5,
-                                        color:
-                                            Colors.black,
-                                      ),
-                                    )
-                                  : const Text(
-                                      'Cadastrar',
-                                      style:
-                                          TextStyle(
-                                        fontSize: 18,
-                                      ),
-                                    ),
-                            ),
-
-                            const SizedBox(height: 24),
                           ],
                         ),
                       ),
+
+                      const SizedBox(height: 35),
+
+                      // Botão
+
+                      ElevatedButton(
+                        onPressed: _carregando
+                            ? null
+                            : _cadastrar,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              const Color(0xFF98B9A6),
+                          foregroundColor: Colors.black,
+                          disabledBackgroundColor:
+                              Colors.grey[400],
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 30,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: _carregando
+                            ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.black,
+                                ),
+                              )
+                            : const Text(
+                                'Cadastrar',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                ),
+                              ),
+                      ),
+
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
-              ),
-            ),
-          ),
 
-          // ============================================================
-          // MOLDURA SUPERIOR
-          // ============================================================
+                // Quebra-cabeça inferior
 
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: SizedBox(
-                height: molduraHeight,
-                child: Image.asset(
-                  'imagem/quebrasuperior.png',
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
-                ),
-              ),
-            ),
-          ),
-
-          // ============================================================
-          // MOLDURA INFERIOR
-          // ============================================================
-
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: SizedBox(
-                height: molduraHeight,
-                child: Image.asset(
-                  'imagem/quebrainferior.png',
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  alignment: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-          ),
-
-          // ============================================================
-          // BOTÃO VOLTAR
-          // ============================================================
-
-          Positioned(
-            top: 16,
-            left: 16,
-            child: SafeArea(
-              child: InkWell(
-                onTap: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  } else {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const CadastroEmpresa(),
-                      ),
-                    );
-                  }
-                },
-                child: const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Icon(
-                    Icons.arrow_back_ios_new,
-                    color: Colors.black,
-                    size: 22,
+                SizedBox(
+                  height: molduraHeight,
+                  child: Image.asset(
+                    'imagem/quebrainferior.png',
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.bottomCenter,
                   ),
                 ),
+
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Descrição
+
+  Widget _buildDescricaoField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Descrição:',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          TextFormField(
+            controller: _descricaoController,
+            keyboardType: TextInputType.multiline,
+            minLines: 5,
+            maxLines: 5,
+            style: const TextStyle(
+              fontSize: 16,
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Campo obrigatório';
+              }
+
+              return null;
+            },
+            decoration: InputDecoration(
+              hintText:
+                  'Digite uma descrição sobre o profissional...',
+              hintStyle: TextStyle(
+                color: Colors.grey[400],
+                fontSize: 16,
+              ),
+              alignLabelWithHint: true,
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.all(12),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(
+                  color: Colors.grey,
+                  width: 1,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(
+                  color: Colors.black,
+                  width: 1.5,
+                ),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(
+                  color: Colors.red,
+                  width: 1,
+                ),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(
+                  color: Colors.red,
+                  width: 1.5,
+                ),
+              ),
+              errorStyle: const TextStyle(
+                fontSize: 12,
+                color: Colors.red,
               ),
             ),
           ),
@@ -1129,13 +840,10 @@ class _CadastroPageState extends State<CadastroPage> {
     );
   }
 
-  // ============================================================
-  // VALIDAÇÃO DO E-MAIL
-  // ============================================================
+  // Validação do e-mail
 
   String? _validarEmail(String? value) {
-    if (value == null ||
-        value.trim().isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'Campo obrigatório';
     }
 
@@ -1152,36 +860,29 @@ class _CadastroPageState extends State<CadastroPage> {
     return null;
   }
 
-  // ============================================================
-  // CAMPO DE TEXTO
-  // ============================================================
+  // Campo de texto
 
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
     String? hintText,
-    TextInputType keyboardType =
-        TextInputType.text,
+    TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
     bool obscureText = false,
     Widget? suffixIcon,
     String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Padding(
-      padding:
-          const EdgeInsets.symmetric(
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             label,
             style: const TextStyle(
               fontSize: 16,
-              fontWeight:
-                  FontWeight.bold,
+              fontWeight: FontWeight.bold,
               color: Colors.black,
             ),
           ),
@@ -1192,8 +893,8 @@ class _CadastroPageState extends State<CadastroPage> {
             child: TextFormField(
               controller: controller,
               keyboardType: keyboardType,
-              maxLines:
-                  obscureText ? 1 : maxLines,
+              inputFormatters: inputFormatters,
+              maxLines: obscureText ? 1 : maxLines,
               obscureText: obscureText,
               style: const TextStyle(
                 fontSize: 16,
@@ -1207,59 +908,47 @@ class _CadastroPageState extends State<CadastroPage> {
 
                     return null;
                   },
-              decoration:
-                  InputDecoration(
+              decoration: InputDecoration(
                 hintText: hintText,
                 hintStyle: TextStyle(
                   color: Colors.grey[400],
+                  fontSize: 16,
                 ),
                 isDense: true,
-                contentPadding:
-                    const EdgeInsets
-                        .symmetric(
+                contentPadding: const EdgeInsets.symmetric(
                   vertical: 4,
                 ),
-                suffixIcon:
-                    suffixIcon,
-                suffixIconConstraints:
-                    const BoxConstraints(
+                suffixIcon: suffixIcon,
+                suffixIconConstraints: const BoxConstraints(
                   minWidth: 0,
                   minHeight: 0,
                 ),
-                enabledBorder:
-                    const UnderlineInputBorder(
-                  borderSide:
-                      BorderSide(
+                enabledBorder: const UnderlineInputBorder(
+                  borderSide: BorderSide(
                     color: Colors.grey,
                     width: 1,
                   ),
                 ),
-                focusedBorder:
-                    const UnderlineInputBorder(
-                  borderSide:
-                      BorderSide(
+                focusedBorder: const UnderlineInputBorder(
+                  borderSide: BorderSide(
                     color: Colors.black,
                     width: 1.5,
                   ),
                 ),
-                errorBorder:
-                    const UnderlineInputBorder(
-                  borderSide:
-                      BorderSide(
+                errorBorder: const UnderlineInputBorder(
+                  borderSide: BorderSide(
                     color: Colors.red,
                     width: 1,
                   ),
                 ),
                 focusedErrorBorder:
                     const UnderlineInputBorder(
-                  borderSide:
-                      BorderSide(
+                  borderSide: BorderSide(
                     color: Colors.red,
                     width: 1.5,
                   ),
                 ),
-                errorStyle:
-                    const TextStyle(
+                errorStyle: const TextStyle(
                   fontSize: 12,
                   color: Colors.red,
                 ),
@@ -1267,6 +956,49 @@ class _CadastroPageState extends State<CadastroPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// Máscara de telefone
+
+class TelefoneInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    String numeros = newValue.text.replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
+
+    if (numeros.length > 11) {
+      numeros = numeros.substring(0, 11);
+    }
+
+    String formatado = '';
+
+    if (numeros.isNotEmpty) {
+      if (numeros.length <= 2) {
+        formatado = '($numeros';
+      } else {
+        formatado = '(${numeros.substring(0, 2)}) ';
+
+        if (numeros.length <= 7) {
+          formatado += numeros.substring(2);
+        } else {
+          formatado += '${numeros.substring(2, 7)}-';
+          formatado += numeros.substring(7);
+        }
+      }
+    }
+
+    return TextEditingValue(
+      text: formatado,
+      selection: TextSelection.collapsed(
+        offset: formatado.length,
       ),
     );
   }

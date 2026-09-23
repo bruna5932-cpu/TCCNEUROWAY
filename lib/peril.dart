@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:neuroway/favoritos.dart';
 import 'package:neuroway/agendamentos.dart';
 import 'package:neuroway/login.dart';
+import 'package:neuroway/perfilempresa.dart';
 
 class Perfil extends StatefulWidget {
   const Perfil({super.key});
@@ -14,25 +15,203 @@ class Perfil extends StatefulWidget {
 }
 
 class _PerfilState extends State<Perfil> {
+  // ============================================================
+  // CONTROLE DO TIPO DE USUÁRIO
+  // ============================================================
+
+  bool carregandoTipoUsuario = true;
+
+  bool ehEmpresa = false;
+
+  // ============================================================
+  // DADOS DO USUÁRIO NORMAL
+  // ============================================================
+
   String nome = 'Carregando...';
   String email = 'Carregando...';
   String cidade = 'Carregando...';
 
   bool carregando = true;
 
+  // ============================================================
+  // INICIALIZAÇÃO
+  // ============================================================
+
   @override
   void initState() {
     super.initState();
-    _buscarDados();
+
+    _verificarTipoUsuario();
   }
 
   // ============================================================
-  // BUSCAR DADOS DO USUÁRIO
+  // VERIFICAR TIPO DE USUÁRIO
+  // ============================================================
+
+  Future<void> _verificarTipoUsuario() async {
+    try {
+      final User? usuario =
+          FirebaseAuth.instance.currentUser;
+
+      // ==========================================================
+      // NENHUM USUÁRIO LOGADO
+      // ==========================================================
+
+      if (usuario == null) {
+        if (!mounted) return;
+
+        setState(() {
+          ehEmpresa = false;
+          carregandoTipoUsuario = false;
+        });
+
+        _buscarDados();
+
+        return;
+      }
+
+      final String uid = usuario.uid;
+
+      debugPrint('========================================');
+      debugPrint('VERIFICANDO TIPO DE USUÁRIO - PERFIL');
+      debugPrint('UID: $uid');
+      debugPrint('========================================');
+
+      // ==========================================================
+      // PRIMEIRO:
+      // PROCURA EMPRESA PELO ID DO DOCUMENTO
+      // ==========================================================
+
+      final DocumentSnapshot<Map<String, dynamic>>
+          empresaDocumento =
+          await FirebaseFirestore.instance
+              .collection('empresas')
+              .doc(uid)
+              .get();
+
+      if (empresaDocumento.exists) {
+        debugPrint(
+          'USUÁRIO IDENTIFICADO COMO EMPRESA.',
+        );
+
+        if (!mounted) return;
+
+        setState(() {
+          ehEmpresa = true;
+          carregandoTipoUsuario = false;
+        });
+
+        return;
+      }
+
+      // ==========================================================
+      // SEGUNDO:
+      // CASO NÃO ENCONTRE PELO ID,
+      // PROCURA PELO CAMPO uid
+      // ==========================================================
+
+      debugPrint(
+        'Empresa não encontrada pelo ID.',
+      );
+
+      debugPrint(
+        'Procurando pelo campo uid...',
+      );
+
+      final QuerySnapshot<Map<String, dynamic>>
+          resultado =
+          await FirebaseFirestore.instance
+              .collection('empresas')
+              .where(
+                'uid',
+                isEqualTo: uid,
+              )
+              .limit(1)
+              .get();
+
+      if (resultado.docs.isNotEmpty) {
+        debugPrint(
+          'USUÁRIO IDENTIFICADO COMO EMPRESA PELO CAMPO uid.',
+        );
+
+        if (!mounted) return;
+
+        setState(() {
+          ehEmpresa = true;
+          carregandoTipoUsuario = false;
+        });
+
+        return;
+      }
+
+      // ==========================================================
+      // NÃO É EMPRESA
+      // ==========================================================
+
+      debugPrint(
+        'USUÁRIO IDENTIFICADO COMO USUÁRIO NORMAL.',
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        ehEmpresa = false;
+        carregandoTipoUsuario = false;
+      });
+
+      _buscarDados();
+    }
+
+    // ============================================================
+    // ERRO FIREBASE
+    // ============================================================
+
+    on FirebaseException catch (e) {
+      debugPrint('========================================');
+      debugPrint('ERRO AO VERIFICAR TIPO DE USUÁRIO');
+      debugPrint('Código: ${e.code}');
+      debugPrint('Mensagem: ${e.message}');
+      debugPrint('========================================');
+
+      // Se houver erro na verificação,
+      // mantemos o perfil normal como fallback.
+
+      if (!mounted) return;
+
+      setState(() {
+        ehEmpresa = false;
+        carregandoTipoUsuario = false;
+      });
+
+      _buscarDados();
+    }
+
+    // ============================================================
+    // ERRO GERAL
+    // ============================================================
+
+    catch (e) {
+      debugPrint(
+        'ERRO GERAL AO VERIFICAR TIPO DE USUÁRIO: $e',
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        ehEmpresa = false;
+        carregandoTipoUsuario = false;
+      });
+
+      _buscarDados();
+    }
+  }
+
+  // ============================================================
+  // BUSCAR DADOS DO USUÁRIO NORMAL
   // ============================================================
 
   Future<void> _buscarDados() async {
     try {
-      // Usuário atualmente logado
       final User? usuario =
           FirebaseAuth.instance.currentUser;
 
@@ -53,26 +232,26 @@ class _PerfilState extends State<Perfil> {
         return;
       }
 
-      // E-mail vindo do Authentication
       final String? emailAuth = usuario.email;
 
-      // UID vindo do Authentication
       final String uid = usuario.uid;
 
       debugPrint('========================================');
-      debugPrint('PERFIL');
+      debugPrint('PERFIL DO USUÁRIO');
       debugPrint('UID: $uid');
       debugPrint('E-MAIL AUTHENTICATION: $emailAuth');
       debugPrint('========================================');
 
-      DocumentSnapshot<Map<String, dynamic>>? documento;
+      DocumentSnapshot<Map<String, dynamic>>?
+          documento;
 
       // ==========================================================
       // PRIMEIRA TENTATIVA:
       // PROCURAR PELO E-MAIL
       // ==========================================================
 
-      if (emailAuth != null && emailAuth.isNotEmpty) {
+      if (emailAuth != null &&
+          emailAuth.isNotEmpty) {
         debugPrint(
           'Procurando usuário pelo e-mail...',
         );
@@ -135,7 +314,8 @@ class _PerfilState extends State<Perfil> {
       // DOCUMENTO ENCONTRADO
       // ==========================================================
 
-      if (documento != null && documento.exists) {
+      if (documento != null &&
+          documento.exists) {
         final Map<String, dynamic> dados =
             documento.data() ?? {};
 
@@ -149,17 +329,29 @@ class _PerfilState extends State<Perfil> {
         if (!mounted) return;
 
         setState(() {
+          // ======================================================
           // NOME
+          // ======================================================
+
           final nomeBanco =
-              dados['nome']?.toString().trim() ?? '';
+              dados['nome']
+                      ?.toString()
+                      .trim() ??
+                  '';
 
           nome = nomeBanco.isNotEmpty
               ? nomeBanco
               : 'Nome não informado';
 
+          // ======================================================
           // E-MAIL
+          // ======================================================
+
           final emailBanco =
-              dados['email']?.toString().trim() ?? '';
+              dados['email']
+                      ?.toString()
+                      .trim() ??
+                  '';
 
           if (emailBanco.isNotEmpty) {
             email = emailBanco;
@@ -170,9 +362,15 @@ class _PerfilState extends State<Perfil> {
             email = 'E-mail não informado';
           }
 
+          // ======================================================
           // CIDADE
+          // ======================================================
+
           final cidadeBanco =
-              dados['cidade']?.toString().trim() ?? '';
+              dados['cidade']
+                      ?.toString()
+                      .trim() ??
+                  '';
 
           cidade = cidadeBanco.isNotEmpty
               ? cidadeBanco
@@ -189,7 +387,7 @@ class _PerfilState extends State<Perfil> {
       // ==========================================================
 
       debugPrint(
-        'NENHUM DOCUMENTO ENCONTRADO.',
+        'NENHUM DOCUMENTO DE USUÁRIO ENCONTRADO.',
       );
 
       if (!mounted) return;
@@ -207,7 +405,7 @@ class _PerfilState extends State<Perfil> {
     }
 
     // ============================================================
-    // ERRO DO FIREBASE
+    // ERRO FIREBASE
     // ============================================================
 
     on FirebaseException catch (e) {
@@ -218,9 +416,6 @@ class _PerfilState extends State<Perfil> {
       debugPrint('========================================');
 
       if (!mounted) return;
-
-      // Mesmo se o Firestore der erro,
-      // mostramos o e-mail do Authentication.
 
       final User? usuario =
           FirebaseAuth.instance.currentUser;
@@ -257,7 +452,7 @@ class _PerfilState extends State<Perfil> {
         email = usuario?.email ??
             'E-mail não disponível';
 
-        cidade = 'Erro ao carregar';
+        cidade = 'Erro ao carregar cidade';
 
         carregando = false;
       });
@@ -300,6 +495,41 @@ class _PerfilState extends State<Perfil> {
 
   @override
   Widget build(BuildContext context) {
+    // ==========================================================
+    // AINDA VERIFICANDO O TIPO
+    // ==========================================================
+
+    if (carregandoTipoUsuario) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF76A085),
+          ),
+        ),
+      );
+    }
+
+    // ==========================================================
+    // EMPRESA
+    // ==========================================================
+
+    if (ehEmpresa) {
+      return const PerfilEmpresa();
+    }
+
+    // ==========================================================
+    // USUÁRIO NORMAL
+    // ==========================================================
+
+    return _buildPerfilUsuario();
+  }
+
+  // ============================================================
+  // PERFIL DO USUÁRIO NORMAL
+  // ============================================================
+
+  Widget _buildPerfilUsuario() {
     return Scaffold(
       backgroundColor: Colors.white,
 
@@ -315,7 +545,8 @@ class _PerfilState extends State<Perfil> {
 
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(
+                padding:
+                    const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 10,
                 ),

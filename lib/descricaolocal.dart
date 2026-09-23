@@ -20,79 +20,77 @@ class DescricaoLocalScreen extends StatefulWidget {
   });
 
   @override
-  State<DescricaoLocalScreen> createState() =>
-      _DescricaoLocalScreenState();
+  State<DescricaoLocalScreen> createState() => _DescricaoLocalScreenState();
 }
 
-class _DescricaoLocalScreenState
-    extends State<DescricaoLocalScreen> {
+class _DescricaoLocalScreenState extends State<DescricaoLocalScreen> {
   bool _isFavorited = false;
   bool _alterandoFavorito = false;
 
-  StreamSubscription<
-          DocumentSnapshot<Map<String, dynamic>>>?
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
       _favoritoSubscription;
 
-  @override
-  void initState() {
-    super.initState();
-    _acompanharFavorito();
-  }
+  int _minhaAvaliacao = 0;
+  bool _carregandoAvaliacao = true;
+  bool _salvandoAvaliacao = false;
+
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
+      _minhaAvaliacaoSubscription;
 
   String _idFavorito() {
     return 'empresa_${widget.empresaId}';
   }
 
+  String _idAvaliacao() {
+    final usuario = FirebaseAuth.instance.currentUser;
+
+    if (usuario == null) {
+      return '';
+    }
+
+    return '${widget.empresaId}_${usuario.uid}';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _acompanharFavorito();
+    _acompanharMinhaAvaliacao();
+  }
+
+  // Favoritos
+
   void _acompanharFavorito() {
-    final usuario =
-        FirebaseAuth.instance.currentUser;
+    final usuario = FirebaseAuth.instance.currentUser;
 
     if (usuario == null) {
       return;
     }
 
-    final referencia =
-        FirebaseFirestore.instance
-            .collection('favoritos')
-            .doc(
-              '${usuario.uid}_${_idFavorito()}',
-            );
+    final referencia = FirebaseFirestore.instance
+        .collection('favoritos')
+        .doc('${usuario.uid}_${_idFavorito()}');
 
-    _favoritoSubscription =
-        referencia.snapshots().listen(
+    _favoritoSubscription = referencia.snapshots().listen(
       (documento) {
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
 
         setState(() {
-          _isFavorited =
-              documento.exists;
+          _isFavorited = documento.exists;
         });
       },
       onError: (erro) {
-        debugPrint(
-          'Erro ao acompanhar favorito: $erro',
-        );
+        debugPrint('Erro ao acompanhar favorito: $erro');
       },
     );
-  }
-
-  @override
-  void dispose() {
-    _favoritoSubscription?.cancel();
-    super.dispose();
   }
 
   Future<void> _alternarFavorito(
     Map<String, dynamic> dados,
   ) async {
-    if (_alterandoFavorito) {
-      return;
-    }
+    if (_alterandoFavorito) return;
 
-    final usuario =
-        FirebaseAuth.instance.currentUser;
+    final usuario = FirebaseAuth.instance.currentUser;
 
     if (usuario == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -110,12 +108,9 @@ class _DescricaoLocalScreenState
     });
 
     try {
-      final referencia =
-          FirebaseFirestore.instance
-              .collection('favoritos')
-              .doc(
-                '${usuario.uid}_${_idFavorito()}',
-              );
+      final referencia = FirebaseFirestore.instance
+          .collection('favoritos')
+          .doc('${usuario.uid}_${_idFavorito()}');
 
       if (_isFavorited) {
         await referencia.delete();
@@ -127,27 +122,22 @@ class _DescricaoLocalScreenState
         }
       } else {
         final String nome =
-            (dados['nome'] ?? 'Empresa')
-                .toString();
+            (dados['nome'] ?? 'Empresa').toString();
 
         final String categoria =
-            (dados['categoria'] ?? '')
-                .toString();
+            (dados['categoria'] ?? '').toString();
 
         final String descricao =
-            (dados['descricao'] ?? '')
-                .toString();
+            (dados['descricao'] ?? '').toString();
 
         final String endereco =
-            (dados['endereco'] ?? '')
-                .toString();
+            (dados['endereco'] ?? '').toString();
 
         String foto = '';
 
         final fotos = dados['fotos'];
 
-        if (fotos is List &&
-            fotos.isNotEmpty) {
+        if (fotos is List && fotos.isNotEmpty) {
           final primeiraFoto = fotos.first;
 
           if (primeiraFoto is String &&
@@ -166,8 +156,7 @@ class _DescricaoLocalScreenState
           'descricao': descricao,
           'endereco': endereco,
           'foto': foto,
-          'criadoEm':
-              FieldValue.serverTimestamp(),
+          'criadoEm': FieldValue.serverTimestamp(),
         });
 
         if (mounted) {
@@ -177,13 +166,10 @@ class _DescricaoLocalScreenState
         }
       }
     } catch (e) {
-      debugPrint(
-        'Erro ao alterar favorito: $e',
-      );
+      debugPrint('Erro ao alterar favorito: $e');
 
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
               'Não foi possível alterar o favorito.',
@@ -200,6 +186,334 @@ class _DescricaoLocalScreenState
     }
   }
 
+  // Avaliação
+
+  void _acompanharMinhaAvaliacao() {
+    final usuario = FirebaseAuth.instance.currentUser;
+
+    if (usuario == null) {
+      if (mounted) {
+        setState(() {
+          _carregandoAvaliacao = false;
+        });
+      }
+      return;
+    }
+
+    final referencia = FirebaseFirestore.instance
+        .collection('avaliacoes_empresas')
+        .doc(_idAvaliacao());
+
+    _minhaAvaliacaoSubscription = referencia.snapshots().listen(
+      (documento) {
+        if (!mounted) return;
+
+        int nota = 0;
+
+        if (documento.exists) {
+          final dados = documento.data();
+
+          if (dados != null) {
+            final valor = dados['nota'];
+
+            if (valor is num) {
+              nota = valor.toInt();
+            }
+          }
+        }
+
+        setState(() {
+          _minhaAvaliacao = nota;
+          _carregandoAvaliacao = false;
+        });
+      },
+      onError: (erro) {
+        debugPrint('Erro ao acompanhar avaliação: $erro');
+
+        if (mounted) {
+          setState(() {
+            _carregandoAvaliacao = false;
+          });
+        }
+      },
+    );
+  }
+
+  Future<void> _salvarAvaliacao(int novaNota) async {
+    if (_salvandoAvaliacao) return;
+    if (novaNota < 1 || novaNota > 5) return;
+
+    final usuario = FirebaseAuth.instance.currentUser;
+
+    if (usuario == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Faça login para avaliar a empresa.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final avaliacaoAnterior = _minhaAvaliacao;
+
+    setState(() {
+      _salvandoAvaliacao = true;
+      _minhaAvaliacao = novaNota;
+    });
+
+    try {
+      final firestore = FirebaseFirestore.instance;
+
+      final empresaRef = firestore
+          .collection('empresas')
+          .doc(widget.empresaId);
+
+      final avaliacaoRef = firestore
+          .collection('avaliacoes_empresas')
+          .doc('${widget.empresaId}_${usuario.uid}');
+
+      await firestore.runTransaction(
+        (transaction) async {
+          final empresaSnapshot =
+              await transaction.get(empresaRef);
+
+          final avaliacaoSnapshot =
+              await transaction.get(avaliacaoRef);
+
+          double soma = 0;
+          int quantidade = 0;
+
+          if (empresaSnapshot.exists) {
+            final dadosEmpresa = empresaSnapshot.data();
+
+            if (dadosEmpresa != null) {
+              final somaFirestore =
+                  dadosEmpresa['somaAvaliacoes'];
+
+              final quantidadeFirestore =
+                  dadosEmpresa['quantidadeAvaliacoes'];
+
+              if (somaFirestore is num) {
+                soma = somaFirestore.toDouble();
+              }
+
+              if (quantidadeFirestore is num) {
+                quantidade = quantidadeFirestore.toInt();
+              }
+            }
+          }
+
+          int notaAnterior = 0;
+
+          if (avaliacaoSnapshot.exists) {
+            final dadosAvaliacao =
+                avaliacaoSnapshot.data();
+
+            if (dadosAvaliacao != null) {
+              final valor = dadosAvaliacao['nota'];
+
+              if (valor is num) {
+                notaAnterior = valor.toInt();
+              }
+            }
+          }
+
+          if (notaAnterior > 0) {
+            soma = soma - notaAnterior + novaNota;
+          } else {
+            soma += novaNota;
+            quantidade++;
+          }
+
+          if (quantidade < 0) {
+            quantidade = 0;
+          }
+
+          final double media =
+              quantidade > 0 ? soma / quantidade : 0;
+
+          transaction.set(
+            avaliacaoRef,
+            {
+              'empresaId': widget.empresaId,
+              'usuarioId': usuario.uid,
+              'nota': novaNota,
+              'atualizadoEm': FieldValue.serverTimestamp(),
+              if (!avaliacaoSnapshot.exists)
+                'criadoEm': FieldValue.serverTimestamp(),
+            },
+            SetOptions(merge: true),
+          );
+
+          transaction.set(
+            empresaRef,
+            {
+              'somaAvaliacoes': soma,
+              'quantidadeAvaliacoes': quantidade,
+              'mediaAvaliacao': media,
+            },
+            SetOptions(merge: true),
+          );
+        },
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            avaliacaoAnterior == 0
+                ? 'Avaliação enviada com sucesso!'
+                : 'Avaliação atualizada com sucesso!',
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Erro ao salvar avaliação: $e');
+
+      if (mounted) {
+        setState(() {
+          _minhaAvaliacao = avaliacaoAnterior;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Não foi possível salvar sua avaliação.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _salvandoAvaliacao = false;
+        });
+      }
+    }
+  }
+
+  void _abrirAvaliacao() {
+    int notaSelecionada = _minhaAvaliacao;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(22),
+        ),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(
+                24,
+                22,
+                24,
+                30,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Avalie esta empresa',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    notaSelecionada == 0
+                        ? 'Escolha de 1 a 5 estrelas'
+                        : 'Sua avaliação: $notaSelecionada de 5',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      5,
+                      (index) {
+                        final numero = index + 1;
+
+                        return IconButton(
+                          onPressed: _salvandoAvaliacao
+                              ? null
+                              : () {
+                                  setModalState(() {
+                                    notaSelecionada = numero;
+                                  });
+                                },
+                          icon: Icon(
+                            numero <= notaSelecionada
+                                ? Icons.star
+                                : Icons.star_border,
+                            color: Colors.amber,
+                            size: 42,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed:
+                          notaSelecionada == 0 ||
+                                  _salvandoAvaliacao
+                              ? null
+                              : () async {
+                                  Navigator.pop(context);
+                                  await _salvarAvaliacao(
+                                    notaSelecionada,
+                                  );
+                                },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            const Color(0xFF76A085),
+                        disabledBackgroundColor:
+                            Colors.grey[300],
+                        padding:
+                            const EdgeInsets.symmetric(
+                          vertical: 13,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        _minhaAvaliacao == 0
+                            ? 'Enviar avaliação'
+                            : 'Atualizar avaliação',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Agendamento
+
   void _abrirAgendarVisita(
     String nome,
     List<Map<String, dynamic>> profissionais,
@@ -207,8 +521,7 @@ class _DescricaoLocalScreenState
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            AgendarVisita(
+        builder: (context) => AgendarVisita(
           empresaId: widget.empresaId,
           empresaNome: nome,
           profissionais: profissionais,
@@ -217,852 +530,701 @@ class _DescricaoLocalScreenState
     );
   }
 
-  void _abrirAgendamentos() {
-    Navigator.pushReplacement(
+  // Navegação
+
+  void _selecionarNavegacao(int index) {
+    Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            const Agendamentos(),
+        builder: (context) => Menuprincipal(
+          initialIndex: index,
+        ),
       ),
+      (route) => false,
     );
   }
+
+  // Conteúdo
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
-      // A barra inferior continua fixa.
-      bottomNavigationBar:
-          _buildBottomNavigationBar(),
-
-      body: SafeArea(
-        top: false,
-        child: _buildLocalConteudo(),
-      ),
+      bottomNavigationBar: _buildBottomNavigationBar(),
+      body: _buildLocalConteudo(),
     );
   }
 
-  // ============================================================
-  // CONTEÚDO PRINCIPAL
-  // ============================================================
-
   Widget _buildLocalConteudo() {
-    return Stack(
-      children: [
-        // ======================================================
-        // PARTE ROLÁVEL
-        // ======================================================
-        Positioned.fill(
-          child: StreamBuilder<
-              DocumentSnapshot<
-                  Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
-                .collection('empresas')
-                .doc(widget.empresaId)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState ==
-                  ConnectionState.waiting) {
-                return SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      top: 140,
-                    ),
-                    child: SizedBox(
-                      height: 400,
-                      child: const Center(
-                        child:
-                            CircularProgressIndicator(
-                          color:
-                              Color(0xFF76A085),
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final molduraHeight = screenHeight * 0.15;
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('empresas')
+          .doc(widget.empresaId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildMensagemCarregamento(
+            const CircularProgressIndicator(
+              color: Color(0xFF76A085),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return _buildMensagemCarregamento(
+            Text(
+              'Erro ao carregar os dados.',
+              style: TextStyle(
+                color: Colors.grey[700],
+              ),
+            ),
+          );
+        }
+
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return _buildMensagemCarregamento(
+            Text(
+              'Empresa não encontrada.',
+              style: TextStyle(
+                color: Colors.grey[700],
+              ),
+            ),
+          );
+        }
+
+        final dados = snapshot.data!.data()!;
+
+        final String nome =
+            (dados['nome'] ?? 'Empresa').toString();
+
+        final String categoria =
+            (dados['categoria'] ?? '').toString();
+
+        final String descricao =
+            (dados['descricao'] ?? '').toString();
+
+        final String endereco =
+            (dados['endereco'] ?? '').toString();
+
+        final String telefone =
+            (dados['telefone'] ?? '').toString();
+
+        final String necessitaAgendamento =
+            (dados['necessitaAgendamento'] ?? 'NÃO').toString();
+
+        final dynamic valorMedia =
+            dados['mediaAvaliacao'];
+
+        final dynamic valorQuantidade =
+            dados['quantidadeAvaliacoes'];
+
+        final double media =
+            valorMedia is num
+                ? valorMedia.toDouble()
+                : 0;
+
+        final int quantidade =
+            valorQuantidade is num
+                ? valorQuantidade.toInt()
+                : 0;
+
+        final Map<String, dynamic> redesSociais =
+            dados['redesSociais'] is Map
+                ? Map<String, dynamic>.from(
+                    dados['redesSociais'],
+                  )
+                : {};
+
+        final String instagram =
+            (redesSociais['instagram'] ?? '').toString();
+
+        final String facebook =
+            (redesSociais['facebook'] ?? '').toString();
+
+        final String tiktok =
+            (redesSociais['tiktok'] ?? '').toString();
+
+        final String website =
+            (redesSociais['website'] ?? '').toString();
+
+        final Map<String, dynamic> formasPagamento =
+            dados['formasPagamento'] is Map
+                ? Map<String, dynamic>.from(
+                    dados['formasPagamento'],
+                  )
+                : {};
+
+        final String cartao =
+            (formasPagamento['cartao'] ?? '').toString();
+
+        final String pix =
+            (formasPagamento['pix'] ?? '').toString();
+
+        final String outros =
+            (formasPagamento['outros'] ?? '').toString();
+
+        final List<String> fotos = [];
+
+        final fotosFirestore = dados['fotos'];
+
+        if (fotosFirestore is List) {
+          for (final foto in fotosFirestore) {
+            if (foto is String && foto.trim().isNotEmpty) {
+              fotos.add(foto);
+            }
+          }
+        }
+
+        final List<Map<String, dynamic>> profissionais = [];
+
+        final profissionaisFirestore =
+            dados['profissionais'];
+
+        if (profissionaisFirestore is List) {
+          for (final profissional
+              in profissionaisFirestore) {
+            if (profissional is Map) {
+              profissionais.add(
+                Map<String, dynamic>.from(
+                  profissional,
+                ),
+              );
+            }
+          }
+        }
+
+        final Map<String, dynamic> horarios =
+            dados['horarios'] is Map
+                ? Map<String, dynamic>.from(
+                    dados['horarios'],
+                  )
+                : {};
+
+        final bool possuiPagamento =
+            cartao.trim().isNotEmpty ||
+                pix.trim().isNotEmpty ||
+                outros.trim().isNotEmpty;
+
+        final bool possuiRedesSociais =
+            instagram.trim().isNotEmpty ||
+                facebook.trim().isNotEmpty ||
+                tiktok.trim().isNotEmpty ||
+                website.trim().isNotEmpty;
+
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Quebra-cabeça superior
+
+              SizedBox(
+                height: molduraHeight,
+                width: double.infinity,
+                child: Image.asset(
+                  'imagem/quebrasuperior.png',
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // Cabeçalho
+
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                ),
+                child: Row(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.center,
+                  children: [
+                    InkWell(
+                      onTap: () {
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        } else {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const Menuprincipal(),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Colors.black,
+                          size: 22,
                         ),
                       ),
                     ),
-                  ),
-                );
-              }
-
-              if (snapshot.hasError) {
-                return SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      top: 140,
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        nome,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.06,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
                     ),
-                    child: SizedBox(
-                      height: 400,
-                      child: Center(
-                        child: Text(
-                          'Erro ao carregar os dados.',
-                          style: TextStyle(
-                            color: Colors.grey[700],
+                    const SizedBox(width: 8),
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(),
+                      icon: _alterandoFavorito
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child:
+                                  CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.grey,
+                              ),
+                            )
+                          : Icon(
+                              _isFavorited
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              color: _isFavorited
+                                  ? Colors.red
+                                  : Colors.black,
+                              size: 26,
+                            ),
+                      onPressed: _alterandoFavorito
+                          ? null
+                          : () {
+                              _alternarFavorito(dados);
+                            },
+                    ),
+                  ],
+                ),
+              ),
+
+              if (categoria.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: 56,
+                    right: 16,
+                    top: 2,
+                  ),
+                  child: Text(
+                    categoria,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 8),
+
+              // Avaliação
+
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                ),
+                child: InkWell(
+                  onTap: _abrirAvaliacao,
+                  borderRadius:
+                      BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 5,
+                    ),
+                    child: Row(
+                      children: [
+                        _buildEstrelasMedia(
+                          media,
+                          tamanho: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          media > 0
+                              ? media.toStringAsFixed(1)
+                              : 'Sem avaliações',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                );
-              }
-
-              if (!snapshot.hasData ||
-                  !snapshot.data!.exists) {
-                return SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      top: 140,
-                    ),
-                    child: SizedBox(
-                      height: 400,
-                      child: Center(
-                        child: Text(
-                          'Empresa não encontrada.',
-                          style: TextStyle(
-                            color: Colors.grey[700],
+                        if (quantidade > 0) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            '($quantidade)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(width: 8),
+                        Text(
+                          _minhaAvaliacao > 0
+                              ? 'Editar avaliação'
+                              : 'Avaliar',
+                          style: const TextStyle(
+                            color: Color(0xFF76A085),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
-                );
-              }
+                ),
+              ),
 
-              final dados =
-                  snapshot.data!.data()!;
+              const SizedBox(height: 16),
 
-              final String nome =
-                  (dados['nome'] ?? 'Empresa')
-                      .toString();
+              // Fotos
 
-              final String categoria =
-                  (dados['categoria'] ?? '')
-                      .toString();
+              _buildFotos(fotos),
 
-              final String descricao =
-                  (dados['descricao'] ?? '')
-                      .toString();
+              const SizedBox(height: 20),
 
-              final String endereco =
-                  (dados['endereco'] ?? '')
-                      .toString();
+              // Descrição
 
-              final String telefone =
-                  (dados['telefone'] ?? '')
-                      .toString();
-
-              final String necessitaAgendamento =
-                  (dados['necessitaAgendamento'] ??
-                          'NÃO')
-                      .toString();
-
-              // ------------------------------------------------
-              // REDES SOCIAIS
-              // ------------------------------------------------
-
-              final Map<String, dynamic>
-                  redesSociais =
-                  dados['redesSociais']
-                          is Map
-                      ? Map<String, dynamic>.from(
-                          dados['redesSociais'],
-                        )
-                      : {};
-
-              final String instagram =
-                  (redesSociais['instagram'] ??
-                          '')
-                      .toString();
-
-              final String facebook =
-                  (redesSociais['facebook'] ??
-                          '')
-                      .toString();
-
-              final String tiktok =
-                  (redesSociais['tiktok'] ??
-                          '')
-                      .toString();
-
-              final String website =
-                  (redesSociais['website'] ??
-                          '')
-                      .toString();
-
-              // ------------------------------------------------
-              // FORMAS DE PAGAMENTO
-              // ------------------------------------------------
-
-              final Map<String, dynamic>
-                  formasPagamento =
-                  dados['formasPagamento']
-                          is Map
-                      ? Map<String, dynamic>.from(
-                          dados['formasPagamento'],
-                        )
-                      : {};
-
-              final String cartao =
-                  (formasPagamento['cartao'] ??
-                          '')
-                      .toString();
-
-              final String pix =
-                  (formasPagamento['pix'] ?? '')
-                      .toString();
-
-              final String outros =
-                  (formasPagamento['outros'] ??
-                          '')
-                      .toString();
-
-              // ------------------------------------------------
-              // FOTOS
-              // ------------------------------------------------
-
-              final List<String> fotos = [];
-
-              final fotosFirestore =
-                  dados['fotos'];
-
-              if (fotosFirestore is List) {
-                for (final foto
-                    in fotosFirestore) {
-                  if (foto is String &&
-                      foto.trim().isNotEmpty) {
-                    fotos.add(foto);
-                  }
-                }
-              }
-
-              // ------------------------------------------------
-              // PROFISSIONAIS
-              // ------------------------------------------------
-
-              final List<
-                      Map<String, dynamic>>
-                  profissionais = [];
-
-              final profissionaisFirestore =
-                  dados['profissionais'];
-
-              if (profissionaisFirestore
-                  is List) {
-                for (final profissional
-                    in profissionaisFirestore) {
-                  if (profissional is Map) {
-                    profissionais.add(
-                      Map<String, dynamic>.from(
-                        profissional,
+              if (descricao.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                  ),
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Sobre o local',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    );
-                  }
-                }
-              }
+                      const SizedBox(height: 8),
+                      Text(
+                        descricao,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[700],
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
-              // ------------------------------------------------
-              // HORÁRIOS
-              // ------------------------------------------------
+              const SizedBox(height: 24),
 
-              final Map<String, dynamic>
-                  horarios =
-                  dados['horarios'] is Map
-                      ? Map<String, dynamic>.from(
-                          dados['horarios'],
-                        )
-                      : {};
+              // Profissionais
 
-              final bool possuiPagamento =
-                  cartao.trim().isNotEmpty ||
-                      pix.trim().isNotEmpty ||
-                      outros.trim().isNotEmpty;
-
-              final bool possuiRedesSociais =
-                  instagram.trim().isNotEmpty ||
-                      facebook.trim().isNotEmpty ||
-                      tiktok.trim().isNotEmpty ||
-                      website.trim().isNotEmpty;
-
-              // =================================================
-              // TODO ESTE CONTEÚDO É ROLÁVEL
-              // =================================================
-
-              return SingleChildScrollView(
-                physics:
-                    const BouncingScrollPhysics(),
-                padding: const EdgeInsets.only(
-                  top: 140,
-                  bottom: 30,
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
                 ),
                 child: Column(
                   crossAxisAlignment:
                       CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 16),
-
-                    // =================================================
-                    // NOME + FAVORITO + ESTRELAS
-                    // =================================================
-
-                    Padding(
-                      padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 16,
+                    const Text(
+                      'Profissionais',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
-                      child: Row(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              nome,
-                              maxLines: 2,
-                              overflow:
-                                  TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight:
-                                    FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildProfissionais(
+                      profissionais,
+                    ),
+                  ],
+                ),
+              ),
 
-                          const SizedBox(width: 6),
+              const SizedBox(height: 20),
 
-                          IconButton(
-                            padding:
-                                EdgeInsets.zero,
-                            constraints:
-                                const BoxConstraints(),
-                            icon:
-                                _alterandoFavorito
-                                    ? const SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child:
-                                            CircularProgressIndicator(
-                                          strokeWidth:
-                                              2,
-                                          color:
-                                              Colors.grey,
-                                        ),
-                                      )
-                                    : Icon(
-                                        _isFavorited
-                                            ? Icons
-                                                .favorite
-                                            : Icons
-                                                .favorite_border,
-                                        color:
-                                            _isFavorited
-                                                ? Colors
-                                                    .red
-                                                : Colors
-                                                    .black,
-                                        size: 26,
-                                      ),
-                            onPressed:
-                                _alterandoFavorito
-                                    ? null
-                                    : () {
-                                        _alternarFavorito(
-                                          dados,
-                                        );
-                                      },
-                          ),
+              // Indicadores
 
-                          const SizedBox(width: 6),
+              Row(
+                mainAxisAlignment:
+                    MainAxisAlignment.center,
+                children: [
+                  _buildDot(isActive: true),
+                  _buildDot(isActive: false),
+                  _buildDot(isActive: false),
+                ],
+              ),
 
-                          const Row(
+              const SizedBox(height: 24),
+
+              // Localização
+
+              if (endereco.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Colors.grey.shade300,
+                      ),
+                      borderRadius:
+                          BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.location_on,
+                          color: Color(0xFF76A085),
+                          size: 24,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.star,
-                                color:
-                                    Colors.amber,
-                                size: 16,
+                              const Text(
+                                'Localização',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight:
+                                      FontWeight.bold,
+                                ),
                               ),
-                              Icon(
-                                Icons.star,
-                                color:
-                                    Colors.amber,
-                                size: 16,
-                              ),
-                              Icon(
-                                Icons.star,
-                                color:
-                                    Colors.amber,
-                                size: 16,
-                              ),
-                              Icon(
-                                Icons.star,
-                                color:
-                                    Colors.amber,
-                                size: 16,
-                              ),
-                              Icon(
-                                Icons.star_half,
-                                color:
-                                    Colors.amber,
-                                size: 16,
+                              const SizedBox(height: 4),
+                              Text(
+                                endereco,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color:
+                                      Colors.grey[700],
+                                  height: 1.3,
+                                ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-
-                    // =================================================
-                    // CATEGORIA
-                    // =================================================
-
-                    if (categoria.isNotEmpty)
-                      Padding(
-                        padding:
-                            const EdgeInsets.only(
-                          left: 16,
-                          right: 16,
-                          top: 3,
-                        ),
-                        child: Text(
-                          categoria,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color:
-                                Colors.grey[600],
-                            fontWeight:
-                                FontWeight.w500,
-                          ),
-                        ),
-                      ),
-
-                    const SizedBox(height: 16),
-
-                    // =================================================
-                    // FOTOS
-                    // =================================================
-
-                    _buildFotos(fotos),
-
-                    const SizedBox(height: 20),
-
-                    // =================================================
-                    // DESCRIÇÃO
-                    // =================================================
-
-                    if (descricao
-                        .trim()
-                        .isNotEmpty)
-                      Padding(
-                        padding:
-                            const EdgeInsets.symmetric(
-                          horizontal: 16,
-                        ),
-                        child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Sobre o local',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(
-                              height: 8,
-                            ),
-                            Text(
-                              descricao,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color:
-                                    Colors.grey[700],
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                    const SizedBox(height: 24),
-
-                    // =================================================
-                    // PROFISSIONAIS
-                    // =================================================
-
-                    Padding(
-                      padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 16,
-                      ),
-                      child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Profissionais',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight:
-                                  FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildProfissionais(
-                            profissionais,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // =================================================
-                    // PONTOS
-                    // =================================================
-
-                    Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.center,
-                      children: [
-                        _buildDot(
-                          isActive: true,
-                        ),
-                        _buildDot(
-                          isActive: false,
-                        ),
-                        _buildDot(
-                          isActive: false,
                         ),
                       ],
                     ),
+                  ),
+                ),
 
-                    const SizedBox(height: 24),
+              // Telefone
 
-                    // =================================================
-                    // LOCALIZAÇÃO
-                    // =================================================
-
-                    if (endereco.trim().isNotEmpty)
-                      Padding(
-                        padding:
-                            const EdgeInsets.symmetric(
-                          horizontal: 16,
+              if (telefone.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    top: 14,
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Colors.grey.shade300,
+                      ),
+                      borderRadius:
+                          BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.phone,
+                          color: Color(0xFF76A085),
+                          size: 23,
                         ),
-                        child: Container(
-                          width: double.infinity,
-                          padding:
-                              const EdgeInsets.all(
-                            14,
-                          ),
-                          decoration:
-                              BoxDecoration(
-                            border: Border.all(
-                              color:
-                                  Colors.grey.shade300,
-                            ),
-                            borderRadius:
-                                BorderRadius.circular(
-                              12,
-                            ),
-                          ),
-                          child: Row(
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
                             crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start,
+                                CrossAxisAlignment.start,
                             children: [
-                              const Icon(
-                                Icons.location_on,
-                                color: Color(
-                                  0xFF76A085,
+                              const Text(
+                                'Telefone',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight:
+                                      FontWeight.bold,
                                 ),
-                                size: 24,
                               ),
-                              const SizedBox(
-                                width: 10,
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment
-                                          .start,
-                                  children: [
-                                    const Text(
-                                      'Localização',
-                                      style:
-                                          TextStyle(
-                                        fontSize: 15,
-                                        fontWeight:
-                                            FontWeight
-                                                .bold,
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      height: 4,
-                                    ),
-                                    Text(
-                                      endereco,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors
-                                            .grey[700],
-                                        height: 1.3,
-                                      ),
-                                    ),
-                                  ],
+                              const SizedBox(height: 4),
+                              Text(
+                                telefone,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color:
+                                      Colors.grey[700],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ),
+                      ],
+                    ),
+                  ),
+                ),
 
-                    // =================================================
-                    // TELEFONE
-                    // =================================================
+              const SizedBox(height: 20),
 
-                    if (telefone.trim().isNotEmpty)
-                      Padding(
-                        padding:
-                            const EdgeInsets.only(
-                          left: 16,
-                          right: 16,
-                          top: 14,
-                        ),
-                        child: Container(
-                          width: double.infinity,
-                          padding:
-                              const EdgeInsets.all(
-                            14,
-                          ),
-                          decoration:
-                              BoxDecoration(
-                            border: Border.all(
-                              color:
-                                  Colors.grey.shade300,
-                            ),
-                            borderRadius:
-                                BorderRadius.circular(
-                              12,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.phone,
-                                color: Color(
-                                  0xFF76A085,
-                                ),
-                                size: 23,
-                              ),
-                              const SizedBox(
-                                width: 10,
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment
-                                          .start,
-                                  children: [
-                                    const Text(
-                                      'Telefone',
-                                      style:
-                                          TextStyle(
-                                        fontSize: 15,
-                                        fontWeight:
-                                            FontWeight
-                                                .bold,
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      height: 4,
-                                    ),
-                                    Text(
-                                      telefone,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors
-                                            .grey[700],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+              // Horários
 
-                    const SizedBox(height: 20),
-
-                    // =================================================
-                    // HORÁRIOS
-                    // =================================================
-
-                    Padding(
-                      padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 16,
-                      ),
-                      child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Horários',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight:
-                                  FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          _buildHorarios(
-                            horarios,
-                          ),
-                        ],
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                ),
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Horários',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-
-                    // =================================================
-                    // FORMAS DE PAGAMENTO
-                    // =================================================
-
-                    if (possuiPagamento) ...[
-                      const SizedBox(height: 24),
-                      Padding(
-                        padding:
-                            const EdgeInsets.symmetric(
-                          horizontal: 16,
-                        ),
-                        child:
-                            _buildFormasPagamento(
-                          cartao: cartao,
-                          pix: pix,
-                          outros: outros,
-                        ),
-                      ),
-                    ],
-
-                    // =================================================
-                    // REDES SOCIAIS
-                    // =================================================
-
-                    if (possuiRedesSociais) ...[
-                      const SizedBox(height: 24),
-                      Padding(
-                        padding:
-                            const EdgeInsets.symmetric(
-                          horizontal: 16,
-                        ),
-                        child: _buildRedesSociais(
-                          instagram: instagram,
-                          facebook: facebook,
-                          tiktok: tiktok,
-                          website: website,
-                        ),
-                      ),
-                    ],
-
-                    // =================================================
-                    // AGENDAMENTO
-                    // =================================================
-
-                    const SizedBox(height: 24),
-
-                    Padding(
-                      padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 16,
-                      ),
-                      child:
-                          _buildInformacaoAgendamento(
-                        necessitaAgendamento:
-                            necessitaAgendamento,
-                        nome: nome,
-                        profissionais:
-                            profissionais,
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 10),
+                    _buildHorarios(horarios),
                   ],
                 ),
-              );
-            },
+              ),
+
+              // Pagamento
+
+              if (possuiPagamento) ...[
+                const SizedBox(height: 24),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(
+                    horizontal: 16,
+                  ),
+                  child: _buildFormasPagamento(
+                    cartao: cartao,
+                    pix: pix,
+                    outros: outros,
+                  ),
+                ),
+              ],
+
+              // Redes sociais
+
+              if (possuiRedesSociais) ...[
+                const SizedBox(height: 24),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(
+                    horizontal: 16,
+                  ),
+                  child: _buildRedesSociais(
+                    instagram: instagram,
+                    facebook: facebook,
+                    tiktok: tiktok,
+                    website: website,
+                  ),
+                ),
+              ],
+
+              // Agendamento
+
+              const SizedBox(height: 24),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                ),
+                child: _buildInformacaoAgendamento(
+                  necessitaAgendamento:
+                      necessitaAgendamento,
+                  nome: nome,
+                  profissionais: profissionais,
+                ),
+              ),
+
+              const SizedBox(height: 30),
+              
+            ],
           ),
-        ),
-
-        // ==========================================================
-        // QUEBRA-CABEÇA FIXO
-        // ==========================================================
-        _buildMolduraSuperior(),
-
-        // ==========================================================
-        // SETA FIXA
-        // ==========================================================
-        _buildBotaoVoltar(),
-      ],
+        );
+      },
     );
   }
 
-  // ============================================================
-  // QUEBRA-CABEÇA FIXO NO TOPO
-  // ============================================================
-
-  Widget _buildMolduraSuperior() {
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: SizedBox(
-        height: 140,
-        width: double.infinity,
-        child: Image.asset(
-          'imagem/quebrasuperior.png',
-          width: double.infinity,
-          height: 140,
-          fit: BoxFit.cover,
-          alignment: Alignment.topCenter,
+  Widget _buildMensagemCarregamento(
+    Widget child,
+  ) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.only(
+          top: 180,
+        ),
+        child: SizedBox(
+          height: 400,
+          child: Center(
+            child: child,
+          ),
         ),
       ),
     );
   }
 
-  // ============================================================
-  // SETA FIXA
-  // MESMA CONFIGURAÇÃO DO FAVORITOS
-  // ============================================================
+  // Estrelas
 
-  Widget _buildBotaoVoltar() {
-    return Positioned(
-      top: 40,
-      left: 10,
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
-        icon: const Icon(
-          Icons.arrow_back_ios,
-          size: 26,
-          color: Colors.black,
-        ),
-        onPressed: () {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  const Menuprincipal(),
-            ),
-            (route) => false,
+  Widget _buildEstrelasMedia(
+    double media, {
+    double tamanho = 18,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(
+        5,
+        (index) {
+          final numero = index + 1;
+
+          IconData icone;
+
+          if (media >= numero) {
+            icone = Icons.star;
+          } else if (media >= numero - 0.5) {
+            icone = Icons.star_half;
+          } else {
+            icone = Icons.star_border;
+          }
+
+          return Icon(
+            icone,
+            color: Colors.amber,
+            size: tamanho,
           );
         },
       ),
     );
   }
 
-  // ============================================================
-  // FOTOS
-  // ============================================================
+  // Fotos
 
   Widget _buildFotos(List<String> fotos) {
     if (fotos.isEmpty) {
@@ -1103,13 +1265,13 @@ class _DescricaoLocalScreenState
           borderRadius:
               BorderRadius.circular(16),
           child: PageView.builder(
-            scrollDirection:
-                Axis.horizontal,
             itemCount: fotos.length,
             physics:
                 const BouncingScrollPhysics(),
-            itemBuilder:
-                (context, index) {
+            itemBuilder: (
+              context,
+              index,
+            ) {
               return _buildFoto(
                 fotos[index],
               );
@@ -1126,21 +1288,26 @@ class _DescricaoLocalScreenState
       width: double.infinity,
       height: 200,
       fit: BoxFit.cover,
-      loadingBuilder:
-          (context, child, progress) {
+      loadingBuilder: (
+        context,
+        child,
+        progress,
+      ) {
         if (progress == null) {
           return child;
         }
 
         return const Center(
-          child:
-              CircularProgressIndicator(
+          child: CircularProgressIndicator(
             color: Color(0xFF76A085),
           ),
         );
       },
-      errorBuilder:
-          (context, error, stackTrace) {
+      errorBuilder: (
+        context,
+        error,
+        stackTrace,
+      ) {
         return Container(
           color: Colors.grey[300],
           child: const Center(
@@ -1155,13 +1322,10 @@ class _DescricaoLocalScreenState
     );
   }
 
-  // ============================================================
-  // PROFISSIONAIS
-  // ============================================================
+  // Profissionais
 
   Widget _buildProfissionais(
-    List<Map<String, dynamic>>
-        profissionais,
+    List<Map<String, dynamic>> profissionais,
   ) {
     if (profissionais.isEmpty) {
       return const Text(
@@ -1176,26 +1340,27 @@ class _DescricaoLocalScreenState
     return SizedBox(
       height: 60,
       child: ListView.separated(
-        scrollDirection:
-            Axis.horizontal,
+        scrollDirection: Axis.horizontal,
         itemCount: profissionais.length,
-        separatorBuilder:
-            (context, index) =>
-                const SizedBox(width: 24),
-        itemBuilder:
-            (context, index) {
+        separatorBuilder: (
+          context,
+          index,
+        ) {
+          return const SizedBox(width: 24);
+        },
+        itemBuilder: (
+          context,
+          index,
+        ) {
           final profissional =
               profissionais[index];
 
           final String nome =
-              (profissional['nome'] ?? '')
-                  .toString();
+              (profissional['nome'] ?? '').toString();
 
           final String especialidade =
-              (profissional[
-                          'especialidade'] ??
-                      profissional[
-                          'profissao'] ??
+              (profissional['especialidade'] ??
+                      profissional['profissao'] ??
                       '')
                   .toString();
 
@@ -1216,8 +1381,7 @@ class _DescricaoLocalScreenState
             },
             child: SizedBox(
               width: 145,
-              child:
-                  _buildProfessionalAvatar(
+              child: _buildProfessionalAvatar(
                 nome,
                 especialidade,
               ),
@@ -1236,8 +1400,7 @@ class _DescricaoLocalScreenState
       children: [
         CircleAvatar(
           radius: 24,
-          backgroundColor:
-              Colors.grey[300],
+          backgroundColor: Colors.grey[300],
           child: const Icon(
             Icons.person,
             color: Colors.white,
@@ -1275,8 +1438,7 @@ class _DescricaoLocalScreenState
                     TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 11,
-                  color:
-                      Colors.grey[600],
+                  color: Colors.grey[600],
                 ),
               ),
             ],
@@ -1286,9 +1448,7 @@ class _DescricaoLocalScreenState
     );
   }
 
-  // ============================================================
-  // HORÁRIOS
-  // ============================================================
+  // Horários
 
   Widget _buildHorarios(
     Map<String, dynamic> horarios,
@@ -1304,8 +1464,7 @@ class _DescricaoLocalScreenState
       'Feriados',
     ];
 
-    final List<Widget> linhas =
-        [];
+    final List<Widget> linhas = [];
 
     for (final dia in dias) {
       final horario =
@@ -1344,9 +1503,7 @@ class _DescricaoLocalScreenState
     );
   }
 
-  // ============================================================
-  // FORMAS DE PAGAMENTO
-  // ============================================================
+  // Pagamento
 
   Widget _buildFormasPagamento({
     required String cartao,
@@ -1379,28 +1536,24 @@ class _DescricaoLocalScreenState
                 'Formas de pagamento',
                 style: TextStyle(
                   fontSize: 15,
-                  fontWeight:
-                      FontWeight.bold,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-
           if (cartao.trim().isNotEmpty)
             _buildPagamentoLinha(
               Icons.credit_card,
               'Cartão',
               cartao,
             ),
-
           if (pix.trim().isNotEmpty)
             _buildPagamentoLinha(
               Icons.pix,
               'Pix',
               pix,
             ),
-
           if (outros.trim().isNotEmpty)
             _buildPagamentoLinha(
               Icons.payments,
@@ -1419,9 +1572,7 @@ class _DescricaoLocalScreenState
   ) {
     return Padding(
       padding:
-          const EdgeInsets.only(
-        top: 7,
-      ),
+          const EdgeInsets.only(top: 7),
       child: Row(
         crossAxisAlignment:
             CrossAxisAlignment.start,
@@ -1446,9 +1597,7 @@ class _DescricaoLocalScreenState
     );
   }
 
-  // ============================================================
-  // REDES SOCIAIS
-  // ============================================================
+  // Redes sociais
 
   Widget _buildRedesSociais({
     required String instagram,
@@ -1482,35 +1631,30 @@ class _DescricaoLocalScreenState
                 'Redes sociais',
                 style: TextStyle(
                   fontSize: 15,
-                  fontWeight:
-                      FontWeight.bold,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-
           if (instagram.trim().isNotEmpty)
             _buildRedeSocialLinha(
               Icons.camera_alt_outlined,
               'Instagram',
               instagram,
             ),
-
           if (facebook.trim().isNotEmpty)
             _buildRedeSocialLinha(
               Icons.facebook,
               'Facebook',
               facebook,
             ),
-
           if (tiktok.trim().isNotEmpty)
             _buildRedeSocialLinha(
               Icons.music_note,
               'TikTok',
               tiktok,
             ),
-
           if (website.trim().isNotEmpty)
             _buildRedeSocialLinha(
               Icons.language,
@@ -1529,9 +1673,7 @@ class _DescricaoLocalScreenState
   ) {
     return Padding(
       padding:
-          const EdgeInsets.only(
-        top: 7,
-      ),
+          const EdgeInsets.only(top: 7),
       child: Row(
         crossAxisAlignment:
             CrossAxisAlignment.start,
@@ -1556,9 +1698,7 @@ class _DescricaoLocalScreenState
     );
   }
 
-  // ============================================================
-  // AGENDAMENTO
-  // ============================================================
+  // Agendamento
 
   Widget _buildInformacaoAgendamento({
     required String necessitaAgendamento,
@@ -1605,23 +1745,19 @@ class _DescricaoLocalScreenState
                         ? Icons.event_available
                         : Icons.event_busy,
                 size: 21,
-                color:
-                    const Color(0xFF76A085),
+                color: const Color(0xFF76A085),
               ),
               const SizedBox(width: 8),
               const Text(
                 'Agendamento',
                 style: TextStyle(
                   fontSize: 15,
-                  fontWeight:
-                      FontWeight.bold,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-
           const SizedBox(height: 8),
-
           Text(
             texto,
             style: TextStyle(
@@ -1629,13 +1765,10 @@ class _DescricaoLocalScreenState
               color: Colors.grey[700],
             ),
           ),
-
           if (status == 'SIM') ...[
             const SizedBox(height: 10),
-
             Align(
-              alignment:
-                  Alignment.centerRight,
+              alignment: Alignment.centerRight,
               child: InkWell(
                 onTap: () {
                   _abrirAgendarVisita(
@@ -1651,14 +1784,10 @@ class _DescricaoLocalScreenState
                     horizontal: 12,
                     vertical: 8,
                   ),
-                  decoration:
-                      BoxDecoration(
-                    color:
-                        const Color(0xFF76A085),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF76A085),
                     borderRadius:
-                        BorderRadius.circular(
-                      8,
-                    ),
+                        BorderRadius.circular(8),
                   ),
                   child: Row(
                     mainAxisSize:
@@ -1669,26 +1798,21 @@ class _DescricaoLocalScreenState
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 13,
-                          fontWeight:
-                              FontWeight.bold,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(
-                        width: 8,
-                      ),
+                      const SizedBox(width: 8),
                       Image.asset(
                         'assets/whatsApp.png',
                         height: 24,
-                        errorBuilder:
-                            (
+                        errorBuilder: (
                           context,
                           error,
                           stackTrace,
                         ) {
                           return const Icon(
                             Icons.chat,
-                            color:
-                                Colors.white,
+                            color: Colors.white,
                             size: 24,
                           );
                         },
@@ -1704,9 +1828,7 @@ class _DescricaoLocalScreenState
     );
   }
 
-  // ============================================================
-  // PONTOS
-  // ============================================================
+  // Indicadores
 
   Widget _buildDot({
     required bool isActive,
@@ -1727,9 +1849,7 @@ class _DescricaoLocalScreenState
     );
   }
 
-  // ============================================================
-  // BARRA INFERIOR
-  // ============================================================
+  // Barra inferior
 
   Widget _buildBottomNavigationBar() {
     return Container(
@@ -1743,8 +1863,7 @@ class _DescricaoLocalScreenState
       ),
       child: BottomNavigationBar(
         currentIndex: 0,
-        type:
-            BottomNavigationBarType.fixed,
+        type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
         selectedItemColor: Colors.black,
         unselectedItemColor:
@@ -1752,43 +1871,7 @@ class _DescricaoLocalScreenState
         showSelectedLabels: false,
         showUnselectedLabels: false,
         elevation: 0,
-
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    const Menuprincipal(),
-              ),
-            );
-          }
-
-          if (index == 1) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    const Favoritos(),
-              ),
-            );
-          }
-
-          if (index == 2) {
-            _abrirAgendamentos();
-          }
-
-          if (index == 3) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    const Perfil(),
-              ),
-            );
-          }
-        },
-
+        onTap: _selecionarNavegacao,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(
@@ -1821,5 +1904,12 @@ class _DescricaoLocalScreenState
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _favoritoSubscription?.cancel();
+    _minhaAvaliacaoSubscription?.cancel();
+    super.dispose();
   }
 }

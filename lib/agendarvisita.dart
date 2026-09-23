@@ -253,9 +253,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
               ),
             ],
           ),
-
           const SizedBox(height: 7),
-
           Row(
             children: _diasSemana.map((dia) {
               return Expanded(
@@ -271,9 +269,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
               );
             }).toList(),
           ),
-
           const SizedBox(height: 3),
-
           ...List.generate(
             quantidadeLinhas,
             (linha) {
@@ -456,6 +452,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
                 setState(() {
                   _profissionalSelecionado =
                       valor;
+                  _horarioSelecionado = null;
                 });
               },
             ),
@@ -514,6 +511,28 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     );
   }
 
+  String _gerarIdHorario() {
+    final data = _dataSelecionada!;
+
+    final dataFormatada =
+        '${data.year.toString().padLeft(4, '0')}-'
+        '${data.month.toString().padLeft(2, '0')}-'
+        '${data.day.toString().padLeft(2, '0')}';
+
+    final profissional = _profissionalSelecionado!
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_');
+
+    final horario = _horarioSelecionado!
+        .replaceAll(':', '');
+
+    final empresa =
+        (widget.empresaId ?? 'empresa').trim();
+
+    return '${empresa}_${profissional}_${dataFormatada}_$horario';
+  }
+
   Future<void> _agendar() async {
     if (_dataSelecionada == null) {
       _mostrarMensagem(
@@ -551,27 +570,59 @@ class _AgendarVisitaState extends State<AgendarVisita> {
       return;
     }
 
+    if (widget.empresaId == null ||
+        widget.empresaId!.trim().isEmpty) {
+      _mostrarMensagem(
+        'Não foi possível identificar a empresa.',
+        vermelho: true,
+      );
+      return;
+    }
+
     setState(() {
       _agendando = true;
     });
 
     try {
-      await FirebaseFirestore.instance
+      final firestore =
+          FirebaseFirestore.instance;
+
+      final agendamentoRef = firestore
           .collection('agendamentos')
-          .add({
-        'usuarioId': usuario.uid,
-        'empresaId': widget.empresaId,
-        'empresaNome': widget.empresaNome,
-        'profissional':
-            _profissionalSelecionado ?? '',
-        'horario': _horarioSelecionado,
-        'data': Timestamp.fromDate(
-          _dataSelecionada!,
-        ),
-        'status': 'pendente',
-        'criadoEm':
-            FieldValue.serverTimestamp(),
-      });
+          .doc(_gerarIdHorario());
+
+      await firestore.runTransaction(
+        (transaction) async {
+          final agendamentoSnapshot =
+              await transaction.get(
+            agendamentoRef,
+          );
+
+          if (agendamentoSnapshot.exists) {
+            throw Exception(
+              'HORARIO_JA_AGENDADO',
+            );
+          }
+
+          transaction.set(
+            agendamentoRef,
+            {
+              'usuarioId': usuario.uid,
+              'empresaId': widget.empresaId,
+              'empresaNome': widget.empresaNome,
+              'profissional':
+                  _profissionalSelecionado ?? '',
+              'horario': _horarioSelecionado,
+              'data': Timestamp.fromDate(
+                _dataSelecionada!,
+              ),
+              'status': 'pendente',
+              'criadoEm':
+                  FieldValue.serverTimestamp(),
+            },
+          );
+        },
+      );
 
       if (!mounted) {
         return;
@@ -589,10 +640,19 @@ class _AgendarVisitaState extends State<AgendarVisita> {
         return;
       }
 
-      _mostrarMensagem(
-        'Não foi possível realizar o agendamento.',
-        vermelho: true,
-      );
+      if (e.toString().contains(
+            'HORARIO_JA_AGENDADO',
+          )) {
+        _mostrarMensagem(
+          'Este profissional já possui um agendamento neste dia e horário. Escolha outro horário.',
+          vermelho: true,
+        );
+      } else {
+        _mostrarMensagem(
+          'Já possui um agendamento neste dia e horário. Escolha outro horário.',
+          vermelho: true,
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -635,7 +695,6 @@ class _AgendarVisitaState extends State<AgendarVisita> {
                   SizedBox(
                     height: molduraHeight * 0.75,
                   ),
-
                   Padding(
                     padding:
                         const EdgeInsets.symmetric(
@@ -670,13 +729,9 @@ class _AgendarVisitaState extends State<AgendarVisita> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 3),
-
                   _buildCalendario(),
-
                   const SizedBox(height: 7),
-
                   Padding(
                     padding:
                         const EdgeInsets.symmetric(
@@ -685,13 +740,9 @@ class _AgendarVisitaState extends State<AgendarVisita> {
                     child: Column(
                       children: [
                         _buildProfissional(),
-
                         const SizedBox(height: 2),
-
                         _buildHorario(),
-
                         const SizedBox(height: 16),
-
                         if (_dataSelecionada != null)
                           Text(
                             'Data: '
@@ -703,9 +754,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
                               color: Colors.grey,
                             ),
                           ),
-
                         const SizedBox(height: 15),
-
                         SizedBox(
                           width: 80,
                           height: 38,
@@ -758,12 +807,10 @@ class _AgendarVisitaState extends State<AgendarVisita> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 30),
                 ],
               ),
             ),
-
             Positioned(
               top: 0,
               left: 0,
