@@ -1,11 +1,12 @@
+
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:neuroway/cadastroempresa.dart';
 
 class CadastroPage extends StatefulWidget {
   const CadastroPage({super.key});
@@ -15,12 +16,6 @@ class CadastroPage extends StatefulWidget {
 }
 
 class _CadastroPageState extends State<CadastroPage> {
-  final _formKey = GlobalKey<FormState>();
-
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
-
   final _nomeController = TextEditingController();
   final _emailController = TextEditingController();
   final _telefoneController = TextEditingController();
@@ -36,135 +31,125 @@ class _CadastroPageState extends State<CadastroPage> {
 
   File? _fotoSelecionada;
 
-  // Foto
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    _emailController.dispose();
+    _telefoneController.dispose();
+    _descricaoController.dispose();
+    _profissaoController.dispose();
+    _experienciaController.dispose();
+    _senhaController.dispose();
+    _confirmarSenhaController.dispose();
 
-  Future<void> _adicionarFoto() async {
+    super.dispose();
+  }
+
+  // ============================================================
+  // SELECIONAR FOTO
+  // ============================================================
+
+  Future<void> _selecionarFoto() async {
     try {
       final ImagePicker picker = ImagePicker();
 
       final XFile? imagem = await picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 80,
-        maxWidth: 1200,
-        maxHeight: 1200,
       );
 
-      if (imagem == null) {
-        return;
+      if (imagem != null) {
+        setState(() {
+          _fotoSelecionada = File(imagem.path);
+        });
       }
-
-      setState(() {
-        _fotoSelecionada = File(imagem.path);
-      });
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Não foi possível selecionar a foto: $e',
+            'Erro ao selecionar imagem: $e',
           ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
         ),
       );
     }
   }
 
-  // Upload da foto
+  // ============================================================
+  // FORMATAR TELEFONE
+  // ============================================================
 
-  Future<String?> _enviarFotoParaStorage(String uid) async {
-    if (_fotoSelecionada == null) {
-      return null;
+  String _formatarTelefone(String valor) {
+    String numeros = valor.replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
+
+    if (numeros.length > 11) {
+      numeros = numeros.substring(0, 11);
     }
 
-    try {
-      final String caminho = 'profissionais/$uid.jpg';
-
-      final Reference referencia = _storage.ref().child(caminho);
-
-      final SettableMetadata metadata = SettableMetadata(
-        contentType: 'image/jpeg',
-      );
-
-      await referencia.putFile(
-        _fotoSelecionada!,
-        metadata,
-      );
-
-      final String url = await referencia.getDownloadURL();
-
-      return url;
-    } on FirebaseException catch (e) {
-      debugPrint(
-        'Erro Firebase Storage ao enviar foto: '
-        '${e.code} - ${e.message}',
-      );
-
-      if (e.code == 'object-not-found') {
-        throw Exception(
-          'O arquivo da foto não foi encontrado no Firebase Storage. '
-          'Verifique se o Storage está ativado no projeto Firebase.',
-        );
-      }
-
-      if (e.code == 'unauthorized' ||
-          e.code == 'permission-denied') {
-        throw Exception(
-          'O Firebase Storage não permitiu enviar a foto. '
-          'Verifique as regras do Storage.',
-        );
-      }
-
-      if (e.code == 'canceled') {
-        throw Exception(
-          'O envio da foto foi cancelado.',
-        );
-      }
-
-      if (e.code == 'retry-limit-exceeded') {
-        throw Exception(
-          'O envio da foto demorou demais. '
-          'Verifique sua conexão com a internet.',
-        );
-      }
-
-      throw Exception(
-        'Erro ao enviar a foto: '
-        '${e.message ?? e.code}',
-      );
-    } catch (e) {
-      debugPrint(
-        'Erro inesperado ao enviar foto: $e',
-      );
-
-      throw Exception(
-        'Não foi possível enviar a foto.',
-      );
+    if (numeros.length <= 2) {
+      return '($numeros';
     }
+
+    if (numeros.length <= 7) {
+      return '(${numeros.substring(0, 2)}) '
+          '${numeros.substring(2)}';
+    }
+
+    if (numeros.length <= 11) {
+      return '(${numeros.substring(0, 2)}) '
+          '${numeros.substring(2, 7)}-'
+          '${numeros.substring(7)}';
+    }
+
+    return valor;
   }
 
-  // Cadastro
+  // ============================================================
+  // CADASTRAR PROFISSIONAL
+  // ============================================================
 
   Future<void> _cadastrar() async {
-    FocusScope.of(context).unfocus();
+    final nome = _nomeController.text.trim();
+    final email = _emailController.text.trim();
+    final telefone = _telefoneController.text.trim();
+    final descricao = _descricaoController.text.trim();
+    final profissao = _profissaoController.text.trim();
+    final experiencia = _experienciaController.text.trim();
+    final senha = _senhaController.text;
+    final confirmarSenha = _confirmarSenhaController.text;
 
-    if (!_formKey.currentState!.validate()) {
+    if (nome.isEmpty ||
+        email.isEmpty ||
+        telefone.isEmpty ||
+        profissao.isEmpty ||
+        senha.isEmpty ||
+        confirmarSenha.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Preencha todos os campos obrigatórios.',
+          ),
+        ),
+      );
+
       return;
     }
 
-    if (_carregando) {
+    if (senha.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'A senha deve ter pelo menos 6 caracteres.',
+          ),
+        ),
+      );
+
       return;
     }
-
-    final String nome = _nomeController.text.trim();
-    final String email = _emailController.text.trim();
-    final String telefone = _telefoneController.text.trim();
-    final String descricao = _descricaoController.text.trim();
-    final String profissao = _profissaoController.text.trim();
-    final String experiencia = _experienciaController.text.trim();
-    final String senha = _senhaController.text;
-    final String confirmarSenha = _confirmarSenhaController.text;
 
     if (senha != confirmarSenha) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -172,7 +157,6 @@ class _CadastroPageState extends State<CadastroPage> {
           content: Text(
             'As senhas não coincidem.',
           ),
-          backgroundColor: Colors.red,
         ),
       );
 
@@ -183,34 +167,49 @@ class _CadastroPageState extends State<CadastroPage> {
       _carregando = true;
     });
 
-    User? usuarioCriado;
-
     try {
-      final UserCredential credencial =
-          await _auth.createUserWithEmailAndPassword(
+      // --------------------------------------------------------
+      // CRIAR USUÁRIO NO FIREBASE AUTH
+      // --------------------------------------------------------
+
+      final credencial =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: senha,
       );
 
-      usuarioCriado = credencial.user;
+      final usuarioCriado = credencial.user;
 
       if (usuarioCriado == null) {
         throw Exception(
-          'Não foi possível criar a conta do profissional.',
+          'Não foi possível criar o usuário.',
         );
       }
-
-      await usuarioCriado.updateDisplayName(nome);
 
       String? fotoUrl;
 
+      // --------------------------------------------------------
+      // ENVIAR FOTO PARA O FIREBASE STORAGE
+      // --------------------------------------------------------
+
       if (_fotoSelecionada != null) {
-        fotoUrl = await _enviarFotoParaStorage(
-          usuarioCriado.uid,
+        final referencia = FirebaseStorage.instance
+            .ref()
+            .child('profissionais')
+            .child('${usuarioCriado.uid}.jpg');
+
+        await referencia.putFile(
+          _fotoSelecionada!,
         );
+
+        fotoUrl = await referencia.getDownloadURL();
       }
 
-      await _firestore
+      // --------------------------------------------------------
+      // SALVAR PROFISSIONAL NO FIRESTORE
+      // --------------------------------------------------------
+
+      await FirebaseFirestore.instance
           .collection('profissionais')
           .doc(usuarioCriado.uid)
           .set({
@@ -226,27 +225,11 @@ class _CadastroPageState extends State<CadastroPage> {
         'criadoEm': FieldValue.serverTimestamp(),
       });
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Profissional cadastrado com sucesso!',
-          ),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
-
-      await Future.delayed(
-        const Duration(milliseconds: 700),
-      );
-
-      if (!mounted) {
-        return;
-      }
+      // --------------------------------------------------------
+      // DEVOLVER DADOS PARA A TELA DE CADASTRO DA EMPRESA
+      // --------------------------------------------------------
 
       Navigator.pop(
         context,
@@ -258,107 +241,31 @@ class _CadastroPageState extends State<CadastroPage> {
         },
       );
     } on FirebaseAuthException catch (e) {
-      if (!mounted) {
-        return;
+      String mensagem = 'Erro ao cadastrar profissional.';
+
+      if (e.code == 'email-already-in-use') {
+        mensagem = 'Este e-mail já está cadastrado.';
+      } else if (e.code == 'invalid-email') {
+        mensagem = 'Digite um e-mail válido.';
+      } else if (e.code == 'weak-password') {
+        mensagem = 'A senha é muito fraca.';
       }
 
-      String mensagem;
-
-      switch (e.code) {
-        case 'email-already-in-use':
-          mensagem = 'Este e-mail já está cadastrado.';
-          break;
-
-        case 'invalid-email':
-          mensagem = 'O e-mail informado é inválido.';
-          break;
-
-        case 'weak-password':
-          mensagem = 'A senha deve ter pelo menos 6 caracteres.';
-          break;
-
-        case 'operation-not-allowed':
-          mensagem =
-              'O cadastro por e-mail e senha não está habilitado no Firebase.';
-          break;
-
-        case 'network-request-failed':
-          mensagem = 'Erro de conexão. Verifique sua internet.';
-          break;
-
-        case 'configuration-not-found':
-          mensagem =
-              'A configuração do Firebase não foi encontrada. '
-              'Verifique o firebase_options.dart e o projeto Firebase.';
-          break;
-
-        default:
-          mensagem =
-              'Erro ao cadastrar: ${e.message ?? e.code}';
-      }
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(mensagem),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
-        ),
-      );
-    } on FirebaseException catch (e) {
-      if (!mounted) {
-        return;
-      }
-
-      String mensagem;
-
-      switch (e.code) {
-        case 'permission-denied':
-        case 'unauthorized':
-          mensagem =
-              'O Firebase não permitiu acessar o Storage ou Firestore. '
-              'Verifique as regras de segurança.';
-          break;
-
-        case 'object-not-found':
-          mensagem =
-              'O arquivo da foto não foi encontrado no Firebase Storage. '
-              'Verifique se o Storage está configurado corretamente.';
-          break;
-
-        case 'unavailable':
-          mensagem =
-              'O Firebase está indisponível. '
-              'Verifique sua conexão com a internet.';
-          break;
-
-        case 'canceled':
-          mensagem = 'O envio da foto foi cancelado.';
-          break;
-
-        default:
-          mensagem =
-              'Erro do Firebase: ${e.message ?? e.code}';
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(mensagem),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 6),
         ),
       );
     } catch (e) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Ocorreu um erro: $e',
+            'Erro ao cadastrar: $e',
           ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 6),
         ),
       );
     } finally {
@@ -370,385 +277,46 @@ class _CadastroPageState extends State<CadastroPage> {
     }
   }
 
-  // Dispose
+  // ============================================================
+  // CAMPO DE TEXTO
+  // ============================================================
 
-  @override
-  void dispose() {
-    _nomeController.dispose();
-    _emailController.dispose();
-    _telefoneController.dispose();
-    _descricaoController.dispose();
-    _profissaoController.dispose();
-    _experienciaController.dispose();
-    _senhaController.dispose();
-    _confirmarSenhaController.dispose();
-
-    super.dispose();
-  }
-
-  // Tela
-
-  @override
-  Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final molduraHeight = screenHeight * 0.15;
-
-    return Scaffold(
-      body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Quebra-cabeça superior
-
-                SizedBox(
-                  height: molduraHeight,
-                  child: Image.asset(
-                    'imagem/quebrasuperior.png',
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    alignment: Alignment.topCenter,
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                // Título
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                  ),
-                  child: Row(
-                    children: [
-                      InkWell(
-                        onTap: () {
-                          if (Navigator.canPop(context)) {
-                            Navigator.pop(context);
-                          } else {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const CadastroEmpresa(),
-                              ),
-                            );
-                          }
-                        },
-                        child: const Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Icon(
-                            Icons.arrow_back_ios_new,
-                            color: Colors.black,
-                            size: 22,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(width: 4),
-
-                      const Expanded(
-                        child: Center(
-                          child: Column(
-                            children: [
-                              Text(
-                                'Cadastro',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 42,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                              Text(
-                                'de profissionais',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(width: 38),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // Campos
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Nome
-
-                      _buildTextField(
-                        label: 'Nome:',
-                        controller: _nomeController,
-                      ),
-
-                      // E-mail
-
-                      _buildTextField(
-                        label: 'E-mail:',
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        validator: _validarEmail,
-                      ),
-
-                      // Telefone
-
-                      _buildTextField(
-                        label: 'Telefone:',
-                        controller: _telefoneController,
-                        hintText: '(00) 00000-0000',
-                        keyboardType: TextInputType.phone,
-                        inputFormatters: [
-                          TelefoneInputFormatter(),
-                        ],
-                        validator: (value) {
-                          if (value == null ||
-                              value.trim().isEmpty) {
-                            return 'Campo obrigatório';
-                          }
-
-                          final numeros = value.replaceAll(
-                            RegExp(r'[^0-9]'),
-                            '',
-                          );
-
-                          if (numeros.length != 11) {
-                            return 'Digite um telefone válido';
-                          }
-
-                          return null;
-                        },
-                      ),
-
-                      // Descrição
-
-                      _buildDescricaoField(),
-
-                      // Profissão
-
-                      _buildTextField(
-                        label: 'Profissão:',
-                        controller: _profissaoController,
-                      ),
-
-                      // Experiência
-
-                      _buildTextField(
-                        label: 'Tempo de experiência:',
-                        controller: _experienciaController,
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      // Senha
-
-                      _buildTextField(
-                        label: 'Senha:',
-                        controller: _senhaController,
-                        obscureText: !_mostrarSenha,
-                        suffixIcon: IconButton(
-                          onPressed: () {
-                            setState(() {
-                              _mostrarSenha = !_mostrarSenha;
-                            });
-                          },
-                          icon: Icon(
-                            _mostrarSenha
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                            color: Colors.grey[700],
-                            size: 21,
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Campo obrigatório';
-                          }
-
-                          if (value.length < 6) {
-                            return 'A senha deve ter pelo menos 6 caracteres';
-                          }
-
-                          return null;
-                        },
-                      ),
-
-                      // Confirmar senha
-
-                      _buildTextField(
-                        label: 'Confirmar senha:',
-                        controller: _confirmarSenhaController,
-                        obscureText: !_mostrarConfirmarSenha,
-                        suffixIcon: IconButton(
-                          onPressed: () {
-                            setState(() {
-                              _mostrarConfirmarSenha =
-                                  !_mostrarConfirmarSenha;
-                            });
-                          },
-                          icon: Icon(
-                            _mostrarConfirmarSenha
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                            color: Colors.grey[700],
-                            size: 21,
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Campo obrigatório';
-                          }
-
-                          if (value != _senhaController.text) {
-                            return 'As senhas não coincidem';
-                          }
-
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Foto
-
-                      Center(
-                        child: Column(
-                          children: [
-                            GestureDetector(
-                              onTap: _adicionarFoto,
-                              child: CircleAvatar(
-                                radius: 45,
-                                backgroundColor: Colors.grey[600],
-                                backgroundImage:
-                                    _fotoSelecionada != null
-                                        ? FileImage(_fotoSelecionada!)
-                                        : null,
-                                child: _fotoSelecionada == null
-                                    ? const Icon(
-                                        Icons.person,
-                                        size: 60,
-                                        color: Colors.white,
-                                      )
-                                    : null,
-                              ),
-                            ),
-
-                            const SizedBox(height: 8),
-
-                            InkWell(
-                              onTap: _adicionarFoto,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text(
-                                    'Adicionar foto ',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  const Icon(
-                                    Icons.add_a_photo_outlined,
-                                    size: 16,
-                                    color: Colors.black,
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            if (_fotoSelecionada != null)
-                              const Padding(
-                                padding: EdgeInsets.only(top: 8),
-                                child: Text(
-                                  'Foto selecionada',
-                                  style: TextStyle(
-                                    color: Color(0xFF65A56E),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 35),
-
-                      // Botão
-
-                      ElevatedButton(
-                        onPressed: _carregando
-                            ? null
-                            : _cadastrar,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color(0xFF98B9A6),
-                          foregroundColor: Colors.black,
-                          disabledBackgroundColor:
-                              Colors.grey[400],
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 30,
-                            vertical: 10,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: _carregando
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                  color: Colors.black,
-                                ),
-                              )
-                            : const Text(
-                                'Cadastrar',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                ),
-                              ),
-                      ),
-
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
-
-                // Quebra-cabeça inferior
-
-                SizedBox(
-                  height: molduraHeight,
-                  child: Image.asset(
-                    'imagem/quebrainferior.png',
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    alignment: Alignment.bottomCenter,
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-              ],
+  Widget _campoTexto({
+    required String label,
+    required TextEditingController controller,
+    TextInputType? keyboardType,
+    int maxLines = 1,
+    bool obscureText = false,
+    Widget? suffixIcon,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(
+        bottom: 16,
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        maxLines: obscureText ? 1 : maxLines,
+        obscureText: obscureText,
+        inputFormatters: inputFormatters,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(
+            color: Colors.black,
+          ),
+          floatingLabelStyle: const TextStyle(
+            color: Colors.black,
+          ),
+          suffixIcon: suffixIcon,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(
+              color: Colors.black,
+              width: 1.5,
             ),
           ),
         ),
@@ -756,250 +324,355 @@ class _CadastroPageState extends State<CadastroPage> {
     );
   }
 
-  // Descrição
+  // ============================================================
+  // DESCRIÇÃO
+  // ============================================================
 
-  Widget _buildDescricaoField() {
+  Widget _campoDescricao() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Descrição:',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+      padding: const EdgeInsets.only(
+        bottom: 16,
+      ),
+      child: TextField(
+        controller: _descricaoController,
+        maxLines: 4,
+        decoration: InputDecoration(
+          labelText: 'Descrição',
+          labelStyle: const TextStyle(
+            color: Colors.black,
+          ),
+          floatingLabelStyle: const TextStyle(
+            color: Colors.black,
+          ),
+          alignLabelWithHint: true,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(
               color: Colors.black,
+              width: 1.5,
             ),
           ),
-
-          const SizedBox(height: 8),
-
-          TextFormField(
-            controller: _descricaoController,
-            keyboardType: TextInputType.multiline,
-            minLines: 5,
-            maxLines: 5,
-            style: const TextStyle(
-              fontSize: 16,
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Campo obrigatório';
-              }
-
-              return null;
-            },
-            decoration: InputDecoration(
-              hintText:
-                  'Digite uma descrição sobre o profissional...',
-              hintStyle: TextStyle(
-                color: Colors.grey[400],
-                fontSize: 16,
-              ),
-              alignLabelWithHint: true,
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding: const EdgeInsets.all(12),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(
-                  color: Colors.grey,
-                  width: 1,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(
-                  color: Colors.black,
-                  width: 1.5,
-                ),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(
-                  color: Colors.red,
-                  width: 1,
-                ),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(
-                  color: Colors.red,
-                  width: 1.5,
-                ),
-              ),
-              errorStyle: const TextStyle(
-                fontSize: 12,
-                color: Colors.red,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  // Validação do e-mail
-
-  String? _validarEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Campo obrigatório';
-    }
-
-    final email = value.trim();
-
-    final regex = RegExp(
-      r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-    );
-
-    if (!regex.hasMatch(email)) {
-      return 'Digite um e-mail válido';
-    }
-
-    return null;
-  }
-
-  // Campo de texto
-
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    String? hintText,
-    TextInputType keyboardType = TextInputType.text,
-    int maxLines = 1,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    String? Function(String?)? validator,
-    List<TextInputFormatter>? inputFormatters,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-          ),
-
-          const SizedBox(width: 8),
-
-          Expanded(
-            child: TextFormField(
-              controller: controller,
-              keyboardType: keyboardType,
-              inputFormatters: inputFormatters,
-              maxLines: obscureText ? 1 : maxLines,
-              obscureText: obscureText,
-              style: const TextStyle(
-                fontSize: 16,
-              ),
-              validator: validator ??
-                  (value) {
-                    if (value == null ||
-                        value.trim().isEmpty) {
-                      return 'Campo obrigatório';
-                    }
-
-                    return null;
-                  },
-              decoration: InputDecoration(
-                hintText: hintText,
-                hintStyle: TextStyle(
-                  color: Colors.grey[400],
-                  fontSize: 16,
-                ),
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 4,
-                ),
-                suffixIcon: suffixIcon,
-                suffixIconConstraints: const BoxConstraints(
-                  minWidth: 0,
-                  minHeight: 0,
-                ),
-                enabledBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.grey,
-                    width: 1,
-                  ),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.black,
-                    width: 1.5,
-                  ),
-                ),
-                errorBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.red,
-                    width: 1,
-                  ),
-                ),
-                focusedErrorBorder:
-                    const UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.red,
-                    width: 1.5,
-                  ),
-                ),
-                errorStyle: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.red,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Máscara de telefone
-
-class TelefoneInputFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    String numeros = newValue.text.replaceAll(
-      RegExp(r'[^0-9]'),
-      '',
-    );
+  Widget build(BuildContext context) {
+    final double screenHeight =
+        MediaQuery.of(context).size.height;
 
-    if (numeros.length > 11) {
-      numeros = numeros.substring(0, 11);
-    }
+    final double molduraHeight =
+        screenHeight * 0.15;
 
-    String formatado = '';
+    return Scaffold(
+      backgroundColor: Colors.white,
 
-    if (numeros.isNotEmpty) {
-      if (numeros.length <= 2) {
-        formatado = '($numeros';
-      } else {
-        formatado = '(${numeros.substring(0, 2)}) ';
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ==================================================
+              // QUEBRA-CABEÇA SUPERIOR
+              // ==================================================
 
-        if (numeros.length <= 7) {
-          formatado += numeros.substring(2);
-        } else {
-          formatado += '${numeros.substring(2, 7)}-';
-          formatado += numeros.substring(7);
-        }
-      }
-    }
+              // QUEBRA-CABEÇA SUPERIOR
+              SizedBox(
+                height: molduraHeight,
+                width: double.infinity,
+                child: Image.asset(
+                  'imagem/quebrasuperior.png',
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                ),
+              ),
 
-    return TextEditingValue(
-      text: formatado,
-      selection: TextSelection.collapsed(
-        offset: formatado.length,
+              // MESMO ESPAÇO NAS DUAS TELAS
+              const SizedBox(
+                height: 10,
+              ),
+
+              // CABEÇALHO
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: 32,
+                  right: 16,
+                ),
+                child: SizedBox(
+                  height: 150,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Positioned(
+                        left: 0,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 0,
+                            minHeight: 0,
+                          ),
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Colors.black,
+                            size: 22,
+                          ),
+                          onPressed: _carregando
+                              ? null
+                              : () {
+                                  Navigator.maybePop(context);
+                                },
+                        ),
+                      ),
+
+                      Center(
+                        child: Image.asset(
+                          'imagem/Cadastro_profissionais.png',
+                          height: 150,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+
+              // ==================================================
+              // CONTEÚDO
+              // ==================================================
+
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                ),
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.stretch,
+                  children: [
+                    // FOTO
+                    Center(
+                      child: GestureDetector(
+                        onTap: _carregando
+                            ? null
+                            : _selecionarFoto,
+                        child: Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.black,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: ClipOval(
+                            child: _fotoSelecionada != null
+                                ? Image.file(
+                                    _fotoSelecionada!,
+                                    fit: BoxFit.cover,
+                                  )
+                                : const Icon(
+                                    Icons.person,
+                                    size: 60,
+                                    color: Colors.black,
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(
+                      height: 10,
+                    ),
+
+                    Center(
+                      child: TextButton(
+                        onPressed: _carregando
+                            ? null
+                            : _selecionarFoto,
+                        child: const Text(
+                          'Adicionar foto',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(
+                      height: 10,
+                    ),
+
+                    // NOME
+                    _campoTexto(
+                      label: 'Nome',
+                      controller: _nomeController,
+                      keyboardType: TextInputType.name,
+                    ),
+
+                    // E-MAIL
+                    _campoTexto(
+                      label: 'E-mail',
+                      controller: _emailController,
+                      keyboardType:
+                          TextInputType.emailAddress,
+                    ),
+
+                    // TELEFONE
+                    _campoTexto(
+                      label: 'Telefone',
+                      controller: _telefoneController,
+                      keyboardType:
+                          TextInputType.phone,
+                      inputFormatters: [
+                        FilteringTextInputFormatter
+                            .digitsOnly,
+                        LengthLimitingTextInputFormatter(
+                          11,
+                        ),
+                      ],
+                    ),
+
+                    // PROFISSÃO
+                    _campoTexto(
+                      label: 'Profissão / Especialidade',
+                      controller: _profissaoController,
+                      keyboardType: TextInputType.text,
+                    ),
+
+                    // EXPERIÊNCIA
+                    _campoTexto(
+                      label: 'Experiência',
+                      controller:
+                          _experienciaController,
+                      keyboardType: TextInputType.text,
+                    ),
+
+                    // DESCRIÇÃO
+                    _campoDescricao(),
+
+                    // SENHA
+                    _campoTexto(
+                      label: 'Senha',
+                      controller: _senhaController,
+                      obscureText: !_mostrarSenha,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _mostrarSenha
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: Colors.black,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _mostrarSenha =
+                                !_mostrarSenha;
+                          });
+                        },
+                      ),
+                    ),
+
+                    // CONFIRMAR SENHA
+                    _campoTexto(
+                      label: 'Confirmar senha',
+                      controller:
+                          _confirmarSenhaController,
+                      obscureText:
+                          !_mostrarConfirmarSenha,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _mostrarConfirmarSenha
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: Colors.black,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _mostrarConfirmarSenha =
+                                !_mostrarConfirmarSenha;
+                          });
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(
+                      height: 10,
+                    ),
+
+                    // BOTÃO CADASTRAR
+                    SizedBox(
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed:
+                            _carregando
+                                ? null
+                                : _cadastrar,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              const Color(0xFF76A085),
+                          foregroundColor:
+                              Colors.white,
+                          shape:
+                              RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(
+                              10,
+                            ),
+                          ),
+                        ),
+                        child: _carregando
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child:
+                                    CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Cadastrar profissional',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight:
+                                      FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+
+                    const SizedBox(
+                      height: 30,
+                    ),
+                  ],
+                ),
+              ),
+
+              // ==================================================
+              // QUEBRA-CABEÇA INFERIOR
+              // ==================================================
+
+              SizedBox(
+                height: molduraHeight,
+                width: double.infinity,
+                child: Image.asset(
+                  'imagem/quebrainferior.png',
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.bottomCenter,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
+

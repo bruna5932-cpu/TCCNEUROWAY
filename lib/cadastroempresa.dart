@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,6 +14,8 @@ class CadastroEmpresa extends StatefulWidget {
 }
 
 class _CadastroEmpresaState extends State<CadastroEmpresa> {
+  final _formKey = GlobalKey<FormState>();
+
   String _necessitaAgendamento = 'NÃO';
 
   bool _mostrarSenha = false;
@@ -22,7 +25,7 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
   final TextEditingController _nomeController =
       TextEditingController();
 
-  final TextEditingController _categoriaController =
+  final TextEditingController _cnpjController =
       TextEditingController();
 
   final TextEditingController _telefoneController =
@@ -43,6 +46,48 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
   final TextEditingController _confirmarSenhaController =
       TextEditingController();
 
+  String _categoriaSelecionada = 'Saúde';
+
+  final List<String> _categorias = [
+    'Saúde',
+    'Educação',
+    'Estética',
+    'Cuidados Pessoais',
+  ];
+
+  final Map<String, bool> _diasSelecionados = {
+    'Segunda': false,
+    'Terça': false,
+    'Quarta': false,
+    'Quinta': false,
+    'Sexta': false,
+    'Sábado': false,
+    'Domingo': false,
+    'Feriados': false,
+  };
+
+  final Map<String, TimeOfDay?> _horarioAbertura = {
+    'Segunda': null,
+    'Terça': null,
+    'Quarta': null,
+    'Quinta': null,
+    'Sexta': null,
+    'Sábado': null,
+    'Domingo': null,
+    'Feriados': null,
+  };
+
+  final Map<String, TimeOfDay?> _horarioFechamento = {
+    'Segunda': null,
+    'Terça': null,
+    'Quarta': null,
+    'Quinta': null,
+    'Sexta': null,
+    'Sábado': null,
+    'Domingo': null,
+    'Feriados': null,
+  };
+
   final TextEditingController _instagramController =
       TextEditingController();
 
@@ -55,55 +100,36 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
   final TextEditingController _websiteController =
       TextEditingController();
 
-  final TextEditingController _cartaoController =
-      TextEditingController();
-
-  final TextEditingController _pixController =
-      TextEditingController();
-
-  final TextEditingController _outrosPagamentoController =
-      TextEditingController();
-
-  final Map<String, TextEditingController> _horariosControllers =
-      {};
+  final Map<String, bool> _formasPagamento = {
+    'Cartão': false,
+    'Pix': false,
+    'Dinheiro': false,
+    'Outros': false,
+  };
 
   final List<Map<String, String>> _profissionais = [];
 
-  bool get _senhasNaoCoincidem {
-    return _senhaController.text !=
-            _confirmarSenhaController.text &&
-        _confirmarSenhaController.text.isNotEmpty;
-  }
-
   @override
-  void initState() {
-    super.initState();
+  void dispose() {
+    _nomeController.dispose();
+    _cnpjController.dispose();
+    _telefoneController.dispose();
+    _descricaoController.dispose();
+    _enderecoController.dispose();
+    _emailController.dispose();
+    _senhaController.dispose();
+    _confirmarSenhaController.dispose();
+    _instagramController.dispose();
+    _facebookController.dispose();
+    _tiktokController.dispose();
+    _websiteController.dispose();
 
-    final dias = [
-      'Segunda',
-      'Terça',
-      'Quarta',
-      'Quinta',
-      'Sexta',
-      'Sábado',
-      'Domingo',
-      'Feriados',
-    ];
-
-    for (final dia in dias) {
-      _horariosControllers[dia] =
-          TextEditingController();
-    }
-
-    _senhaController.addListener(_atualizarSenhas);
-    _confirmarSenhaController.addListener(_atualizarSenhas);
+    super.dispose();
   }
 
-  void _atualizarSenhas() {
-    if (mounted) {
-      setState(() {});
-    }
-  }
+  // ============================================================
+  // ADICIONAR PROFISSIONAL
+  // ============================================================
 
   Future<void> _adicionarProfissional() async {
     final resultado = await Navigator.push(
@@ -113,21 +139,17 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
       ),
     );
 
-    if (!mounted) {
-      return;
-    }
-
     if (resultado != null && resultado is Map) {
-      final String nome =
+      final nome =
           resultado['nome']?.toString() ?? '';
 
-      final String especialidade =
+      final especialidade =
           resultado['especialidade']?.toString() ?? '';
 
-      final String uid =
+      final uid =
           resultado['uid']?.toString() ?? '';
 
-      if (nome.isNotEmpty) {
+      if (nome.trim().isNotEmpty) {
         setState(() {
           _profissionais.add({
             'uid': uid,
@@ -139,36 +161,186 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     }
   }
 
-  Future<void> _realizarCadastro() async {
-    if (_senhaController.text.isEmpty ||
-        _confirmarSenhaController.text.isEmpty) {
+  // ============================================================
+  // EXCLUIR PROFISSIONAL
+  // ============================================================
+
+  Future<void> _removerProfissional(int index) async {
+    if (index < 0 || index >= _profissionais.length) {
+      return;
+    }
+
+    final profissional = _profissionais[index];
+
+    final nome =
+        profissional['nome']?.trim().isNotEmpty == true
+            ? profissional['nome']!.trim()
+            : 'este profissional';
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text(
+            'Excluir profissional',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            'Tem certeza que deseja excluir esse profissional?\n\n'
+            '$nome',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(
+                  color: Color(0xFF76A085),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Excluir'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmar != true) {
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _profissionais.removeAt(index);
+    });
+
+    try {
+      final usuario =
+          FirebaseAuth.instance.currentUser;
+
+      if (usuario != null) {
+        final empresaRef = FirebaseFirestore.instance
+            .collection('empresas')
+            .doc(usuario.uid);
+
+        final empresaDoc =
+            await empresaRef.get();
+
+        if (empresaDoc.exists) {
+          await empresaRef.update({
+            'profissionais': _profissionais,
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint(
+        'Erro ao atualizar profissionais no Firestore: $e',
+      );
+    }
+
+    _mostrarMensagem(
+      'Profissional excluído com sucesso.',
+    );
+  }
+
+  // ============================================================
+  // MENSAGEM
+  // ============================================================
+
+  void _mostrarMensagem(String mensagem) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // ============================================================
+  // HORÁRIOS
+  // ============================================================
+
+  Future<void> _selecionarHorario(
+    String dia,
+    bool abertura,
+  ) async {
+    final horarioAtual = abertura
+        ? _horarioAbertura[dia]
+        : _horarioFechamento[dia];
+
+    final selecionado = await showTimePicker(
+      context: context,
+      initialTime: horarioAtual ??
+          const TimeOfDay(
+            hour: 8,
+            minute: 0,
+          ),
+    );
+
+    if (selecionado == null) {
+      return;
+    }
+
+    setState(() {
+      if (abertura) {
+        _horarioAbertura[dia] = selecionado;
+      } else {
+        _horarioFechamento[dia] = selecionado;
+      }
+    });
+  }
+
+  String _formatarHorario(TimeOfDay? horario) {
+    if (horario == null) {
+      return '--:--';
+    }
+
+    return horario.format(context);
+  }
+
+  // ============================================================
+  // CADASTRAR EMPRESA
+  // ============================================================
+
+  Future<void> _cadastrarEmpresa() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_senhaController.text !=
+        _confirmarSenhaController.text) {
       _mostrarMensagem(
-        'Preencha a senha e a confirmação de senha.',
+        'As senhas não coincidem.',
       );
       return;
     }
 
     if (_senhaController.text.length < 6) {
       _mostrarMensagem(
-        'A senha deve ter pelo menos 6 caracteres.',
+        'A senha deve possuir pelo menos 6 caracteres.',
       );
-      return;
-    }
-
-    if (_senhaController.text !=
-        _confirmarSenhaController.text) {
-      setState(() {});
-      return;
-    }
-
-    if (_emailController.text.trim().isEmpty) {
-      _mostrarMensagem(
-        'Digite o e-mail da empresa.',
-      );
-      return;
-    }
-
-    if (_carregando) {
       return;
     }
 
@@ -177,20 +349,14 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
     });
 
     try {
-      final String email =
-          _emailController.text.trim();
-
-      final String senha =
-          _senhaController.text;
-
-      final UserCredential credencial =
+      final credencial =
           await FirebaseAuth.instance
               .createUserWithEmailAndPassword(
-        email: email,
-        password: senha,
+        email: _emailController.text.trim(),
+        password: _senhaController.text,
       );
 
-      final User? usuario = credencial.user;
+      final usuario = credencial.user;
 
       if (usuario == null) {
         throw Exception(
@@ -198,68 +364,71 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
         );
       }
 
-      final String uid = usuario.uid;
+      final Map<String, dynamic> horarios = {};
 
-      final Map<String, String> horarios = {};
+      for (final dia in _diasSelecionados.keys) {
+        horarios[dia] = {
+          'abertura':
+              _horarioAbertura[dia] != null
+                  ? _horarioAbertura[dia]!.format(context)
+                  : '',
+          'fechamento':
+              _horarioFechamento[dia] != null
+                  ? _horarioFechamento[dia]!.format(context)
+                  : '',
+          'aberto':
+              _diasSelecionados[dia] ?? false,
+        };
+      }
 
-      _horariosControllers.forEach(
-        (dia, controller) {
-          horarios[dia] =
-              controller.text.trim();
-        },
-      );
+      final Map<String, dynamic> redesSociais = {
+        'instagram':
+            _instagramController.text.trim(),
+        'facebook':
+            _facebookController.text.trim(),
+        'tiktok':
+            _tiktokController.text.trim(),
+        'website':
+            _websiteController.text.trim(),
+      };
 
-      final List<Map<String, String>> profissionais =
-          _profissionais.map(
-        (profissional) {
-          return {
-            'uid': profissional['uid'] ?? '',
-            'nome': profissional['nome'] ?? '',
-            'especialidade':
-                profissional['especialidade'] ?? '',
-          };
-        },
-      ).toList();
+      final Map<String, dynamic> formasPagamento = {
+        'cartao':
+            _formasPagamento['Cartão'] ?? false,
+        'pix':
+            _formasPagamento['Pix'] ?? false,
+        'dinheiro':
+            _formasPagamento['Dinheiro'] ?? false,
+        'outros':
+            _formasPagamento['Outros'] ?? false,
+      };
 
       await FirebaseFirestore.instance
           .collection('empresas')
-          .doc(uid)
+          .doc(usuario.uid)
           .set({
-        'uid': uid,
+        'uid': usuario.uid,
         'tipoUsuario': 'empresa',
         'nome': _nomeController.text.trim(),
-        'categoria':
-            _categoriaController.text.trim(),
+        'cnpj': _cnpjController.text.trim(),
+        'categoria': _categoriaSelecionada,
         'telefone':
             _telefoneController.text.trim(),
         'descricao':
             _descricaoController.text.trim(),
         'endereco':
             _enderecoController.text.trim(),
-        'email': email,
+        'email':
+            _emailController.text.trim(),
         'horarios': horarios,
-        'redesSociais': {
-          'instagram':
-              _instagramController.text.trim(),
-          'facebook':
-              _facebookController.text.trim(),
-          'tiktok':
-              _tiktokController.text.trim(),
-          'website':
-              _websiteController.text.trim(),
-        },
+        'redesSociais': redesSociais,
         'necessitaAgendamento':
             _necessitaAgendamento,
-        'profissionais': profissionais,
+        'profissionais':
+            _profissionais,
         'fotos': [],
-        'formasPagamento': {
-          'cartao':
-              _cartaoController.text.trim(),
-          'pix':
-              _pixController.text.trim(),
-          'outros':
-              _outrosPagamentoController.text.trim(),
-        },
+        'formasPagamento':
+            formasPagamento,
         'criadoEm':
             FieldValue.serverTimestamp(),
       });
@@ -268,21 +437,13 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
         return;
       }
 
-      setState(() {
-        _carregando = false;
-      });
-
-      _mostrarMensagem(
-        'Empresa cadastrada com sucesso!',
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Empresa cadastrada com sucesso!',
+          ),
+        ),
       );
-
-      await Future.delayed(
-        const Duration(milliseconds: 500),
-      );
-
-      if (!mounted) {
-        return;
-      }
 
       Navigator.pushAndRemoveUntil(
         context,
@@ -293,1401 +454,1284 @@ class _CadastroEmpresaState extends State<CadastroEmpresa> {
         (route) => false,
       );
     } on FirebaseAuthException catch (e) {
-      if (!mounted) {
-        return;
-      }
+      String mensagem =
+          'Erro ao cadastrar empresa.';
 
-      setState(() {
-        _carregando = false;
-      });
-
-      String mensagem;
-
-      switch (e.code) {
-        case 'email-already-in-use':
-          mensagem =
-              'Este e-mail já está cadastrado.';
-          break;
-
-        case 'invalid-email':
-          mensagem =
-              'Digite um e-mail válido.';
-          break;
-
-        case 'weak-password':
-          mensagem =
-              'A senha é muito fraca.';
-          break;
-
-        case 'operation-not-allowed':
-          mensagem =
-              'O cadastro por e-mail e senha não está ativado no Firebase.';
-          break;
-
-        case 'configuration-not-found':
-          mensagem =
-              'A configuração do Firebase Authentication não foi encontrada.';
-          break;
-
-        case 'network-request-failed':
-          mensagem =
-              'Erro de conexão com o Firebase.';
-          break;
-
-        default:
-          mensagem =
-              'Erro ao criar a conta: ${e.message ?? e.code}';
+      if (e.code == 'email-already-in-use') {
+        mensagem =
+            'Este e-mail já está sendo utilizado.';
+      } else if (e.code == 'invalid-email') {
+        mensagem =
+            'O e-mail informado é inválido.';
+      } else if (e.code == 'weak-password') {
+        mensagem =
+            'A senha informada é muito fraca.';
       }
 
       _mostrarMensagem(mensagem);
-    } on FirebaseException catch (e) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _carregando = false;
-      });
-
-      _mostrarMensagem(
-        'Erro ao salvar os dados da empresa: ${e.message ?? e.code}',
-      );
     } catch (e) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _carregando = false;
-      });
-
       _mostrarMensagem(
-        'Ocorreu um erro durante o cadastro.',
+        'Erro ao cadastrar empresa: $e',
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _carregando = false;
+        });
+      }
     }
   }
 
-  @override
-  void dispose() {
-    _senhaController.removeListener(
-      _atualizarSenhas,
-    );
-
-    _confirmarSenhaController.removeListener(
-      _atualizarSenhas,
-    );
-
-    _nomeController.dispose();
-    _categoriaController.dispose();
-    _telefoneController.dispose();
-    _descricaoController.dispose();
-    _enderecoController.dispose();
-    _emailController.dispose();
-    _senhaController.dispose();
-    _confirmarSenhaController.dispose();
-
-    _instagramController.dispose();
-    _facebookController.dispose();
-    _tiktokController.dispose();
-    _websiteController.dispose();
-
-    _cartaoController.dispose();
-    _pixController.dispose();
-    _outrosPagamentoController.dispose();
-
-    for (final controller
-        in _horariosControllers.values) {
-      controller.dispose();
-    }
-
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final screenHeight =
-        MediaQuery.of(context).size.height;
-
-    final screenWidth =
-        MediaQuery.of(context).size.width;
-
-    final molduraHeight =
-        screenHeight * 0.15;
-
-    return Scaffold(
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: SafeArea(
-              child: SingleChildScrollView(
-                physics:
-                    const BouncingScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.stretch,
-                  children: [
-                    // QUEBRA-CABEÇA SUPERIOR
-                    SizedBox(
-                      height: molduraHeight,
-                      child: Image.asset(
-                        'imagem/quebrasuperior.png',
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        alignment:
-                            Alignment.topCenter,
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // SETA + TÍTULO
-                    Padding(
-                      padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 16,
-                      ),
-                      child: Row(
-                        children: [
-                          InkWell(
-                            onTap: () {
-                              if (Navigator.canPop(
-                                  context)) {
-                                Navigator.pop(
-                                    context);
-                              } else {
-                                Navigator
-                                    .pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) =>
-                                            const Menuprincipal(),
-                                  ),
-                                );
-                              }
-                            },
-                            child: const Padding(
-                              padding:
-                                  EdgeInsets.all(8),
-                              child: Icon(
-                                Icons
-                                    .arrow_back_ios_new,
-                                color: Colors.black,
-                                size: 22,
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(width: 4),
-
-                          Expanded(
-                            child: Center(
-                              child: Text(
-                                'Cadastro de Empresa',
-                                style: TextStyle(
-                                  fontSize:
-                                      screenWidth *
-                                          0.06,
-                                  fontWeight:
-                                      FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(
-                            width: 38,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    Padding(
-                      padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 24,
-                      ),
-                      child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                        children: [
-                          // NOME
-                          _buildTextField(
-                            label: 'Nome:',
-                            controller:
-                                _nomeController,
-                          ),
-
-                          // CATEGORIA
-                          _buildTextField(
-                            label: 'Categoria:',
-                            controller:
-                                _categoriaController,
-                            hint:
-                                '(escola, barbearia, restaurante...)',
-                          ),
-
-                          // TELEFONE
-                          _buildTextField(
-                            label: 'Telefone:',
-                            controller:
-                                _telefoneController,
-                            hint:
-                                '(12) 99999-9999',
-                            keyboardType:
-                                TextInputType.phone,
-                            inputFormatters: [
-                              TelefoneInputFormatter(),
-                            ],
-                          ),
-
-                          const SizedBox(
-                            height: 16,
-                          ),
-
-                          // HORÁRIOS
-                          const Text(
-                            'Dias/horários de funcionamento:',
-                            style: TextStyle(
-                              fontWeight:
-                                  FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-
-                          const SizedBox(
-                            height: 8,
-                          ),
-
-                          _buildHorariosGrid(),
-
-                          const SizedBox(
-                            height: 18,
-                          ),
-
-                          // DESCRIÇÃO
-                          _buildDescriptionField(),
-
-                          // ENDEREÇO
-                          _buildTextField(
-                            label:
-                                'Endereço completo:',
-                            controller:
-                                _enderecoController,
-                          ),
-
-                          const SizedBox(
-                            height: 16,
-                          ),
-
-                          // REDES SOCIAIS
-                          const Text(
-                            'Redes sociais:',
-                            style: TextStyle(
-                              fontWeight:
-                                  FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-
-                          const SizedBox(
-                            height: 8,
-                          ),
-
-                          _buildSocialInput(
-                            Icons.camera_alt,
-                            'Instagram (URL ou @)',
-                            _instagramController,
-                          ),
-
-                          _buildSocialInput(
-                            Icons.facebook,
-                            'Facebook (URL)',
-                            _facebookController,
-                          ),
-
-                          _buildSocialInput(
-                            Icons.music_note,
-                            'TikTok',
-                            _tiktokController,
-                          ),
-
-                          _buildSocialInput(
-                            Icons.language,
-                            'Website',
-                            _websiteController,
-                          ),
-
-                          const SizedBox(
-                            height: 20,
-                          ),
-
-                          // AGENDAMENTO
-                          const Text(
-                            'Necessita agendamento?',
-                            style: TextStyle(
-                              fontWeight:
-                                  FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-
-                          const SizedBox(
-                            height: 8,
-                          ),
-
-                          _buildAgendamentoOptions(),
-
-                          const SizedBox(
-                            height: 20,
-                          ),
-
-                          // PROFISSIONAIS
-                          const Text(
-                            'Descrição dos profissionais:',
-                            style: TextStyle(
-                              fontWeight:
-                                  FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-
-                          const SizedBox(
-                            height: 10,
-                          ),
-
-                          _buildProfissionaisSection(),
-
-                          const SizedBox(
-                            height: 20,
-                          ),
-
-                          // FOTOS
-                          const Text(
-                            'Fotos (até 15 fotos)',
-                            style: TextStyle(
-                              fontWeight:
-                                  FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-
-                          const SizedBox(
-                            height: 10,
-                          ),
-
-                          _buildFotosGrid(),
-
-                          const SizedBox(
-                            height: 20,
-                          ),
-
-                          // PAGAMENTO
-                          const Text(
-                            'Formas de pagamento:',
-                            style: TextStyle(
-                              fontWeight:
-                                  FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-
-                          const SizedBox(
-                            height: 8,
-                          ),
-
-                          _buildPaymentInput(
-                            'Cartão (crédito/débito):',
-                            _cartaoController,
-                          ),
-
-                          _buildPaymentInput(
-                            'Pix:',
-                            _pixController,
-                          ),
-
-                          _buildPaymentInput(
-                            'Outros:',
-                            _outrosPagamentoController,
-                          ),
-
-                          const SizedBox(
-                            height: 16,
-                          ),
-
-                          // E-MAIL
-                          _buildTextField(
-                            label: 'Email:',
-                            controller:
-                                _emailController,
-                            keyboardType:
-                                TextInputType
-                                    .emailAddress,
-                          ),
-
-                          // SENHA
-                          _buildPasswordField(
-                            label: 'Senha:',
-                            controller:
-                                _senhaController,
-                            mostrarSenha:
-                                _mostrarSenha,
-                            onToggle: () {
-                              setState(() {
-                                _mostrarSenha =
-                                    !_mostrarSenha;
-                              });
-                            },
-                          ),
-
-                          // CONFIRMAR SENHA
-                          _buildPasswordField(
-                            label:
-                                'Confirmar senha:',
-                            controller:
-                                _confirmarSenhaController,
-                            mostrarSenha:
-                                _mostrarConfirmarSenha,
-                            onToggle: () {
-                              setState(() {
-                                _mostrarConfirmarSenha =
-                                    !_mostrarConfirmarSenha;
-                              });
-                            },
-                          ),
-
-                          if (_senhasNaoCoincidem)
-                            const Padding(
-                              padding:
-                                  EdgeInsets.only(
-                                left: 4,
-                                top: 2,
-                              ),
-                              child: Text(
-                                'As senhas não coincidem',
-                                style: TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 13,
-                                  fontWeight:
-                                      FontWeight.w500,
-                                ),
-                              ),
-                            ),
-
-                          const SizedBox(
-                            height: 32,
-                          ),
-
-                          // BOTÃO CADASTRAR
-                          Center(
-                            child:
-                                ElevatedButton(
-                              onPressed:
-                                  _carregando
-                                      ? null
-                                      : _realizarCadastro,
-                              style:
-                                  ElevatedButton
-                                      .styleFrom(
-                                backgroundColor:
-                                    const Color(
-                                  0xFF76A085,
-                                ),
-                                disabledBackgroundColor:
-                                    Colors.grey,
-                                padding:
-                                    const EdgeInsets
-                                        .symmetric(
-                                  horizontal: 40,
-                                  vertical: 12,
-                                ),
-                                shape:
-                                    RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius
-                                          .circular(
-                                    8,
-                                  ),
-                                ),
-                              ),
-                              child: _carregando
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child:
-                                          CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color:
-                                            Colors.white,
-                                      ),
-                                    )
-                                  : const Text(
-                                      'Cadastrar',
-                                      style:
-                                          TextStyle(
-                                        color:
-                                            Colors.white,
-                                        fontSize: 16,
-                                        fontWeight:
-                                            FontWeight
-                                                .bold,
-                                      ),
-                                    ),
-                            ),
-                          ),
-
-                          const SizedBox(
-                            height: 32,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // QUEBRA-CABEÇA INFERIOR
-                    SizedBox(
-                      height: molduraHeight,
-                      child: Image.asset(
-                        'imagem/quebrainferior.png',
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        alignment:
-                            Alignment.bottomCenter,
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
+  // ============================================================
   // CAMPO DE TEXTO
-  Widget _buildTextField({
+  // ============================================================
+
+  Widget _campoTexto({
     required String label,
     required TextEditingController controller,
     String? hint,
     TextInputType? keyboardType,
+    int maxLines = 1,
+    String? Function(String?)? validator,
     List<TextInputFormatter>? inputFormatters,
   }) {
     return Padding(
-      padding:
-          const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
+      padding: const EdgeInsets.only(
+        bottom: 15,
+      ),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        validator: validator,
+        inputFormatters: inputFormatters,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius:
+                BorderRadius.circular(12),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius:
+                BorderRadius.circular(12),
+            borderSide:
+                const BorderSide(
+              color: Colors.grey,
             ),
           ),
-
-          const SizedBox(width: 8),
-
-          Expanded(
-            child: TextField(
-              controller: controller,
-              keyboardType: keyboardType,
-              inputFormatters:
-                  inputFormatters,
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: TextStyle(
-                  color: Colors.grey.shade400,
-                  fontSize: 13,
-                ),
-                isDense: true,
-                contentPadding:
-                    const EdgeInsets.symmetric(
-                  vertical: 7,
-                ),
-                enabledBorder:
-                    const UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.black45,
-                    width: 1,
-                  ),
-                ),
-                focusedBorder:
-                    const UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.blue,
-                    width: 1.5,
-                  ),
-                ),
-              ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius:
+                BorderRadius.circular(12),
+            borderSide:
+                const BorderSide(
+              color: Colors.black,
+              width: 2,
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  // DESCRIÇÃO
-  Widget _buildDescriptionField() {
-    return Padding(
-      padding:
-          const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Descrição:',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-            ),
-          ),
+  // ============================================================
+  // PROFISSIONAIS
+  // ============================================================
 
-          const SizedBox(height: 5),
-
-          TextField(
-            controller: _descricaoController,
-            maxLines: 3,
-            minLines: 3,
-            textAlignVertical:
-                TextAlignVertical.top,
-            decoration: InputDecoration(
-              hintText:
-                  'Digite uma descrição da empresa...',
-              hintStyle: TextStyle(
-                color: Colors.grey.shade400,
-                fontSize: 13,
-              ),
-              contentPadding:
-                  const EdgeInsets.all(10),
-              enabledBorder:
-                  const OutlineInputBorder(
-                borderSide: BorderSide(
-                  color: Colors.black45,
-                  width: 1,
-                ),
-              ),
-              focusedBorder:
-                  const OutlineInputBorder(
-                borderSide: BorderSide(
-                  color: Colors.blue,
-                  width: 1.5,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // SENHA
-  Widget _buildPasswordField({
-    required String label,
-    required TextEditingController controller,
-    required bool mostrarSenha,
-    required VoidCallback onToggle,
-  }) {
-    return Padding(
-      padding:
-          const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-            ),
-          ),
-
-          const SizedBox(width: 8),
-
-          Expanded(
-            child: TextField(
-              controller: controller,
-              obscureText: !mostrarSenha,
-              decoration: InputDecoration(
-                isDense: true,
-                contentPadding:
-                    const EdgeInsets.symmetric(
-                  vertical: 7,
-                ),
-                enabledBorder:
-                    const UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.black45,
-                    width: 1,
-                  ),
-                ),
-                focusedBorder:
-                    const UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.blue,
-                    width: 1.5,
-                  ),
-                ),
-                suffixIcon: IconButton(
-                  onPressed: onToggle,
-                  icon: Icon(
-                    mostrarSenha
-                        ? Icons.visibility
-                        : Icons.visibility_off,
-                    color: Colors.black54,
-                    size: 21,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // HORÁRIOS
-  Widget _buildHorariosGrid() {
-    final dias = [
-      'Segunda',
-      'Terça',
-      'Quarta',
-      'Quinta',
-      'Sexta',
-      'Sábado',
-      'Domingo',
-      'Feriados',
-    ];
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics:
-          const NeverScrollableScrollPhysics(),
-      gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 2.8,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 4,
-      ),
-      itemCount: dias.length,
-      itemBuilder: (context, index) {
-        final dia = dias[index];
-
-        return Row(
+  Widget _buildProfissionaisSection() {
+    return Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            SizedBox(
-              width: 62,
+            const Expanded(
               child: Text(
-                '$dia:',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight:
-                      FontWeight.w500,
+                'Profissionais',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
               ),
             ),
-
-            Expanded(
-              child: TextField(
-                controller:
-                    _horariosControllers[dia],
-                keyboardType:
-                    TextInputType.number,
-                inputFormatters: [
-                  HorarioInputFormatter(),
-                ],
-                decoration:
-                    const InputDecoration(
-                  hintText:
-                      '00:00 às 00:00',
-                  isDense: true,
-                  contentPadding:
-                      EdgeInsets.symmetric(
-                    vertical: 4,
-                  ),
+            ElevatedButton.icon(
+              onPressed: _adicionarProfissional,
+              icon: const Icon(
+                Icons.person_add,
+                size: 18,
+              ),
+              label: const Text(
+                'Adicionar',
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    const Color(0xFF76A085),
+                foregroundColor:
+                    Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
                 ),
-                style: const TextStyle(
-                  fontSize: 11,
+                shape:
+                    RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(10),
                 ),
               ),
             ),
           ],
-        );
-      },
-    );
-  }
+        ),
 
-  // REDES SOCIAIS
-  Widget _buildSocialInput(
-    IconData icon,
-    String hint,
-    TextEditingController controller,
-  ) {
-    return Padding(
-      padding:
-          const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 24,
-            color: Colors.black54,
-          ),
+        const SizedBox(height: 12),
 
-          const SizedBox(width: 10),
-
-          Expanded(
-            child: TextField(
-              controller: controller,
-              decoration:
-                  InputDecoration(
-                hintText: hint,
-                isDense: true,
-                contentPadding:
-                    const EdgeInsets.symmetric(
-                  vertical: 7,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // AGENDAMENTO
-  Widget _buildAgendamentoOptions() {
-    final opcoes = [
-      'SIM',
-      'NÃO',
-      'OPCIONAL',
-    ];
-
-    return Row(
-      mainAxisAlignment:
-          MainAxisAlignment.spaceAround,
-      children: opcoes.map((opcao) {
-        final bool isSelected =
-            _necessitaAgendamento ==
-                opcao;
-
-        return InkWell(
-          onTap: () {
-            setState(() {
-              _necessitaAgendamento =
-                  opcao;
-            });
-          },
-          child: Container(
+        if (_profissionais.isEmpty)
+          Container(
+            width: double.infinity,
             padding:
-                const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 8,
-            ),
-            decoration:
-                BoxDecoration(
-              color: isSelected
-                  ? Colors.grey.shade300
-                  : Colors.white,
-              border:
-                  Border.all(
-                color: Colors.black38,
-              ),
+                const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
               borderRadius:
-                  BorderRadius.circular(
-                20,
+                  BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.grey.shade300,
               ),
             ),
-            child: Text(
-              opcao,
+            child: const Text(
+              'Nenhum profissional adicionado.',
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontWeight:
-                    FontWeight.bold,
-                color: isSelected
-                    ? Colors.black
-                    : Colors.black54,
+                color: Colors.grey,
               ),
             ),
-          ),
-        );
-      }).toList(),
-    );
-  }
+          )
+        else
+          Column(
+            children: List.generate(
+              _profissionais.length,
+              (index) {
+                final profissional =
+                    _profissionais[index];
 
-  // PROFISSIONAIS
-  Widget _buildProfissionaisSection() {
-    return Row(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: _profissionais.isEmpty
-              ? Container(
+                final nome =
+                    profissional['nome'] ?? '';
+
+                final especialidade =
+                    profissional['especialidade'] ??
+                        '';
+
+                return Container(
+                  width: double.infinity,
+                  margin:
+                      const EdgeInsets.only(
+                    bottom: 10,
+                  ),
                   padding:
-                      const EdgeInsets.all(12),
+                      const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration:
                       BoxDecoration(
-                    border:
-                        Border.all(
-                      color: Colors.black26,
-                    ),
+                    color: Colors.white,
                     borderRadius:
-                        BorderRadius.circular(
-                      15,
+                        BorderRadius.circular(12),
+                    border: Border.all(
+                      color:
+                          Colors.grey.shade300,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black
+                            .withOpacity(0.04),
+                        blurRadius: 4,
+                        offset:
+                            const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor:
-                            Colors.black12,
-                        child: Icon(
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration:
+                            BoxDecoration(
+                          color:
+                              const Color(
+                            0xFF76A085,
+                          ).withOpacity(0.15),
+                          shape:
+                              BoxShape.circle,
+                        ),
+                        child: const Icon(
                           Icons.person,
                           color:
-                              Colors.black54,
+                              Color(0xFF76A085),
                         ),
                       ),
 
-                      SizedBox(width: 8),
+                      const SizedBox(
+                        width: 12,
+                      ),
 
                       Expanded(
-                        child: Text(
-                          'Nenhum profissional adicionado',
-                          style:
-                              TextStyle(
-                            color:
-                                Colors.black54,
-                            fontSize: 12,
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment
+                                  .start,
+                          children: [
+                            Text(
+                              nome,
+                              maxLines: 1,
+                              overflow:
+                                  TextOverflow
+                                      .ellipsis,
+                              style:
+                                  const TextStyle(
+                                fontSize: 15,
+                                fontWeight:
+                                    FontWeight.bold,
+                                color:
+                                    Colors.black,
+                              ),
+                            ),
+
+                            if (especialidade
+                                .trim()
+                                .isNotEmpty)
+                              ...[
+                                const SizedBox(
+                                  height: 3,
+                                ),
+                                Text(
+                                  especialidade,
+                                  maxLines: 1,
+                                  overflow:
+                                      TextOverflow
+                                          .ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors
+                                        .grey
+                                        .shade600,
+                                  ),
+                                ),
+                              ],
+                          ],
+                        ),
+                      ),
+
+                      SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: IconButton(
+                          onPressed: () =>
+                              _removerProfissional(
+                            index,
+                          ),
+                          tooltip:
+                              'Excluir profissional',
+                          padding:
+                              EdgeInsets.zero,
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.red,
+                            size: 22,
                           ),
                         ),
                       ),
                     ],
                   ),
-                )
-              : Column(
-                  children:
-                      _profissionais.map(
-                    (profissional) {
-                      return Container(
-                        width:
-                            double.infinity,
-                        margin:
-                            const EdgeInsets
-                                .only(
-                          bottom: 8,
-                        ),
-                        padding:
-                            const EdgeInsets
-                                .all(8),
-                        decoration:
-                            BoxDecoration(
-                          border:
-                              Border.all(
-                            color:
-                                Colors.black26,
-                          ),
-                          borderRadius:
-                              BorderRadius
-                                  .circular(
-                            15,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const CircleAvatar(
-                              radius: 20,
-                              backgroundColor:
-                                  Colors
-                                      .black12,
-                              child: Icon(
-                                Icons.person,
-                                color: Colors
-                                    .black54,
-                              ),
-                            ),
-
-                            const SizedBox(
-                              width: 8,
-                            ),
-
-                            Expanded(
-                              child:
-                                  Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment
-                                        .start,
-                                children: [
-                                  Text(
-                                    profissional[
-                                            'nome'] ??
-                                        '',
-                                    style:
-                                        const TextStyle(
-                                      fontWeight:
-                                          FontWeight
-                                              .bold,
-                                      fontSize:
-                                          12,
-                                    ),
-                                  ),
-
-                                  if ((profissional[
-                                              'especialidade'] ??
-                                          '')
-                                      .isNotEmpty)
-                                    Text(
-                                      profissional[
-                                              'especialidade'] ??
-                                          '',
-                                      style:
-                                          TextStyle(
-                                        color:
-                                            Colors
-                                                .grey
-                                                .shade600,
-                                        fontSize:
-                                            10,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ).toList(),
-                ),
-        ),
-
-        const SizedBox(width: 12),
-
-        // ADICIONAR PROFISSIONAL
-        InkWell(
-          onTap:
-              _adicionarProfissional,
-          child: Container(
-            padding:
-                const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ),
-            decoration:
-                BoxDecoration(
-              border:
-                  Border.all(
-                color: Colors.black26,
-              ),
-              borderRadius:
-                  BorderRadius.circular(
-                15,
-              ),
-            ),
-            child: const Column(
-              children: [
-                Icon(
-                  Icons.add,
-                  size: 24,
-                ),
-                Text(
-                  'Adicionar\nprofissional',
-                  textAlign:
-                      TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight:
-                        FontWeight.bold,
-                  ),
-                ),
-              ],
+                );
+              },
             ),
           ),
+      ],
+    );
+  }
+
+  // ============================================================
+  // HORÁRIOS
+  // ============================================================
+
+  Widget _buildHorariosSection() {
+    return Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Horários de funcionamento',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        ..._diasSelecionados.keys.map(
+          (dia) {
+            return Container(
+              margin:
+                  const EdgeInsets.only(
+                bottom: 8,
+              ),
+              padding:
+                  const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 5,
+              ),
+              decoration:
+                  BoxDecoration(
+                border: Border.all(
+                  color:
+                      Colors.grey.shade300,
+                ),
+                borderRadius:
+                    BorderRadius.circular(10),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child:
+                            CheckboxListTile(
+                          contentPadding:
+                              EdgeInsets.zero,
+                          title: Text(
+                            dia,
+                            style:
+                                const TextStyle(
+                              color:
+                                  Colors.black,
+                              fontSize: 16,
+                            ),
+                          ),
+                          value:
+                              _diasSelecionados[
+                                  dia],
+                          activeColor:
+                              Colors.black,
+                          checkColor:
+                              Colors.white,
+                          selected: false,
+                          onChanged:
+                              (valor) {
+                            setState(() {
+                              _diasSelecionados[
+                                      dia] =
+                                  valor ?? false;
+                            });
+                          },
+                          controlAffinity:
+                              ListTileControlAffinity
+                                  .leading,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  if (_diasSelecionados[
+                          dia] ==
+                      true)
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(
+                        left: 12,
+                        right: 12,
+                        bottom: 10,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child:
+                                OutlinedButton(
+                              onPressed: () =>
+                                  _selecionarHorario(
+                                dia,
+                                true,
+                              ),
+                              style:
+                                  OutlinedButton
+                                      .styleFrom(
+                                foregroundColor:
+                                    Colors.black,
+                                side:
+                                    const BorderSide(
+                                  color:
+                                      Colors.black,
+                                ),
+                              ),
+                              child: Text(
+                                'Abertura: ${_formatarHorario(_horarioAbertura[dia])}',
+                                style:
+                                    const TextStyle(
+                                  color:
+                                      Colors.black,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(
+                            width: 8,
+                          ),
+
+                          Expanded(
+                            child:
+                                OutlinedButton(
+                              onPressed: () =>
+                                  _selecionarHorario(
+                                dia,
+                                false,
+                              ),
+                              style:
+                                  OutlinedButton
+                                      .styleFrom(
+                                foregroundColor:
+                                    Colors.black,
+                                side:
+                                    const BorderSide(
+                                  color:
+                                      Colors.black,
+                                ),
+                              ),
+                              child: Text(
+                                'Fechamento: ${_formatarHorario(_horarioFechamento[dia])}',
+                                style:
+                                    const TextStyle(
+                                  color:
+                                      Colors.black,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
         ),
       ],
     );
   }
 
-  // FOTOS
-  Widget _buildFotosGrid() {
-    return Row(
-      mainAxisAlignment:
-          MainAxisAlignment.spaceBetween,
-      children:
-          List.generate(3, (index) {
-        return InkWell(
-          onTap: () {
-            _mostrarMensagem(
-              'Função de fotos será adicionada posteriormente.',
-            );
-          },
-          child: Container(
-            width:
-                MediaQuery.of(context)
-                        .size
-                        .width *
-                    0.26,
-            height: 90,
-            decoration:
-                BoxDecoration(
-              color:
-                  Colors.lightGreen.shade100,
-              border:
-                  Border.all(
-                color:
-                    Colors.green.shade300,
-              ),
-              borderRadius:
-                  BorderRadius.circular(
-                12,
-              ),
-            ),
-            child: ClipRRect(
-              borderRadius:
-                  BorderRadius.circular(
-                12,
-              ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 10,
-                    left: 0,
-                    right: 0,
-                    child: Icon(
-                      Icons.cloud_queue,
-                      color: Colors.white
-                          .withOpacity(
-                        0.9,
-                      ),
-                      size: 30,
-                    ),
-                  ),
+  // ============================================================
+  // REDES SOCIAIS
+  // ============================================================
 
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: 40,
-                      color:
-                          Colors.lightGreen
-                              .shade400,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+  Widget _buildRedesSociaisSection() {
+    return Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Redes sociais',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
           ),
-        );
-      }),
+        ),
+
+        const SizedBox(height: 12),
+
+        _campoTexto(
+          label: 'Instagram',
+          controller: _instagramController,
+          hint: '@suaempresa',
+        ),
+
+        _campoTexto(
+          label: 'Facebook',
+          controller: _facebookController,
+        ),
+
+        _campoTexto(
+          label: 'TikTok',
+          controller: _tiktokController,
+        ),
+
+        _campoTexto(
+          label: 'Website',
+          controller: _websiteController,
+          keyboardType:
+              TextInputType.url,
+        ),
+      ],
     );
   }
 
-  // PAGAMENTO
-  Widget _buildPaymentInput(
-    String label,
-    TextEditingController controller,
-  ) {
-    return Padding(
-      padding:
-          const EdgeInsets.symmetric(
-        vertical: 4,
-      ),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style:
-                const TextStyle(
-              fontSize: 14,
-              fontWeight:
-                  FontWeight.w500,
-            ),
+  // ============================================================
+  // FORMAS DE PAGAMENTO
+  // ============================================================
+
+  Widget _buildFormasPagamentoSection() {
+    return Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Formas de pagamento',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
           ),
+        ),
 
-          const SizedBox(width: 8),
+        const SizedBox(height: 8),
 
-          Expanded(
-            child: TextField(
-              controller: controller,
-              decoration:
-                  const InputDecoration(
-                isDense: true,
-                contentPadding:
-                    EdgeInsets.symmetric(
-                  vertical: 5,
+        ..._formasPagamento.keys.map(
+          (forma) {
+            return CheckboxListTile(
+              contentPadding:
+                  EdgeInsets.zero,
+              title: Text(
+                forma,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                ),
+              ),
+              value:
+                  _formasPagamento[forma],
+              activeColor: Colors.black,
+              checkColor: Colors.white,
+              selected: false,
+              onChanged: (valor) {
+                setState(() {
+                  _formasPagamento[
+                          forma] =
+                      valor ?? false;
+                });
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
+
+  @override
+  Widget build(BuildContext context) {
+    final double screenHeight =
+        MediaQuery.of(context).size.height;
+
+    final double screenWidth =
+        MediaQuery.of(context).size.width;
+
+    final double molduraHeight =
+        screenHeight * 0.15;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+
+      body: SingleChildScrollView(
+        physics:
+            const BouncingScrollPhysics(),
+
+        child: Column(
+          children: [
+
+            // ==================================================
+            // QUEBRA-CABEÇA SUPERIOR
+            // ==================================================
+
+            SizedBox(
+              height: molduraHeight,
+              width: double.infinity,
+              child: Image.asset(
+                'imagem/quebrasuperior.png',
+                width: double.infinity,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+              ),
+            ),
+
+            // MESMO ESPAÇO DA TELA PROFISSIONAL
+            const SizedBox(height: 10),
+
+            // ==================================================
+            // CABEÇALHO
+            // ==================================================
+
+            Padding(
+              padding: const EdgeInsets.only(
+                left: 32,
+                right: 16,
+              ),
+              child: SizedBox(
+                height: 150,
+
+                child: Stack(
+                  alignment: Alignment.center,
+
+                  children: [
+
+                    // SETA
+                    Positioned(
+                      left: 0,
+
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+
+                        constraints:
+                            const BoxConstraints(
+                          minWidth: 0,
+                          minHeight: 0,
+                        ),
+
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Colors.black,
+                          size: 22,
+                        ),
+
+                        onPressed: _carregando
+                            ? null
+                            : () {
+                                Navigator.maybePop(
+                                  context,
+                                );
+                              },
+                      ),
+                    ),
+
+                    // IMAGEM DA EMPRESA
+                    Center(
+                      child: SizedBox(
+                        height: 150,
+                        width: 260,
+                        child: Image.asset(
+                          'imagem/Cadastro_empresa.png',
+                          width: 260,
+                          height: 150,
+                          fit: BoxFit.contain,
+                          alignment: Alignment.center,
+                        ),
+                      ),
+                    ),
+
+
+                  ],
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  // MENSAGEM
-  void _mostrarMensagem(
-    String mensagem,
-  ) {
-    if (!mounted) {
-      return;
-    }
+            const SizedBox(height: 20),
 
-    ScaffoldMessenger.of(context)
-        .hideCurrentSnackBar();
+            // ==================================================
+            // FORMULÁRIO
+            // ==================================================
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(
-      SnackBar(
-        content:
-            Text(mensagem),
-        duration:
-            const Duration(
-          seconds: 3,
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.06,
+              ),
+
+              child: Form(
+                key: _formKey,
+
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+
+                  children: [
+
+                    // ==================================================
+                    // NOME
+                    // ==================================================
+
+                    _campoTexto(
+                      label: 'Nome',
+                      controller:
+                          _nomeController,
+                      validator: (valor) {
+                        if (valor == null ||
+                            valor.trim().isEmpty) {
+                          return 'Informe o nome da empresa.';
+                        }
+
+                        return null;
+                      },
+                    ),
+
+                    // ==================================================
+                    // CNPJ
+                    // ==================================================
+
+                    _campoTexto(
+                      label: 'CNPJ',
+                      controller:
+                          _cnpjController,
+                      keyboardType:
+                          TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter
+                            .digitsOnly,
+                        LengthLimitingTextInputFormatter(
+                          14,
+                        ),
+                      ],
+                      validator: (valor) {
+                        if (valor == null ||
+                            valor.trim().isEmpty) {
+                          return 'Informe o CNPJ.';
+                        }
+
+                        return null;
+                      },
+                    ),
+
+                    // ==================================================
+                    // CATEGORIA
+                    // ==================================================
+
+                    DropdownButtonFormField<String>(
+                      value:
+                          _categoriaSelecionada,
+
+                      decoration:
+                          InputDecoration(
+                        labelText:
+                            'Categoria',
+                        filled: true,
+                        fillColor:
+                            Colors.white,
+                        border:
+                            OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius
+                                  .circular(12),
+                        ),
+                      ),
+
+                      items:
+                          _categorias.map(
+                        (categoria) {
+                          return DropdownMenuItem<
+                              String>(
+                            value:
+                                categoria,
+                            child:
+                                Text(
+                              categoria,
+                              style:
+                                  const TextStyle(
+                                color:
+                                    Colors.black,
+                              ),
+                            ),
+                          );
+                        },
+                      ).toList(),
+
+                      onChanged:
+                          (valor) {
+                        if (valor == null) {
+                          return;
+                        }
+
+                        setState(() {
+                          _categoriaSelecionada =
+                              valor;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(
+                      height: 15,
+                    ),
+
+                    // ==================================================
+                    // TELEFONE
+                    // ==================================================
+
+                    _campoTexto(
+                      label: 'Telefone',
+                      controller:
+                          _telefoneController,
+                      keyboardType:
+                          TextInputType.phone,
+                      validator: (valor) {
+                        if (valor == null ||
+                            valor.trim().isEmpty) {
+                          return 'Informe o telefone.';
+                        }
+
+                        return null;
+                      },
+                    ),
+
+                    // ==================================================
+                    // DESCRIÇÃO
+                    // ==================================================
+
+                    _campoTexto(
+                      label: 'Descrição',
+                      controller:
+                          _descricaoController,
+                      maxLines: 4,
+                      validator: (valor) {
+                        if (valor == null ||
+                            valor.trim().isEmpty) {
+                          return 'Informe uma descrição.';
+                        }
+
+                        return null;
+                      },
+                    ),
+
+                    // ==================================================
+                    // ENDEREÇO
+                    // ==================================================
+
+                    _campoTexto(
+                      label: 'Endereço',
+                      controller:
+                          _enderecoController,
+                      validator: (valor) {
+                        if (valor == null ||
+                            valor.trim().isEmpty) {
+                          return 'Informe o endereço.';
+                        }
+
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(
+                      height: 10,
+                    ),
+
+                    // ==================================================
+                    // PROFISSIONAIS
+                    // ==================================================
+
+                    _buildProfissionaisSection(),
+
+                    const SizedBox(
+                      height: 25,
+                    ),
+
+                    // ==================================================
+                    // HORÁRIOS
+                    // ==================================================
+
+                    _buildHorariosSection(),
+
+                    const SizedBox(
+                      height: 25,
+                    ),
+
+                    // ==================================================
+                    // AGENDAMENTO
+                    // ==================================================
+
+                    const Text(
+                      'Agendamento',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight:
+                            FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+
+                    const SizedBox(
+                      height: 8,
+                    ),
+
+                    Container(
+                      decoration:
+                          BoxDecoration(
+                        border:
+                            Border.all(
+                          color:
+                              Colors.grey.shade300,
+                        ),
+                        borderRadius:
+                            BorderRadius.circular(
+                          12,
+                        ),
+                      ),
+
+                      child: Column(
+                        children: [
+
+                          RadioListTile<String>(
+                            title:
+                                const Text(
+                              'SIM',
+                              style:
+                                  TextStyle(
+                                color:
+                                    Colors.black,
+                              ),
+                            ),
+                            value: 'SIM',
+                            groupValue:
+                                _necessitaAgendamento,
+                            activeColor:
+                                Colors.black,
+                            onChanged:
+                                (valor) {
+                              setState(() {
+                                _necessitaAgendamento =
+                                    valor!;
+                              });
+                            },
+                          ),
+
+                          RadioListTile<String>(
+                            title:
+                                const Text(
+                              'NÃO',
+                              style:
+                                  TextStyle(
+                                color:
+                                    Colors.black,
+                              ),
+                            ),
+                            value: 'NÃO',
+                            groupValue:
+                                _necessitaAgendamento,
+                            activeColor:
+                                Colors.black,
+                            onChanged:
+                                (valor) {
+                              setState(() {
+                                _necessitaAgendamento =
+                                    valor!;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(
+                      height: 25,
+                    ),
+
+                    // ==================================================
+                    // REDES SOCIAIS
+                    // ==================================================
+
+                    _buildRedesSociaisSection(),
+
+                    const SizedBox(
+                      height: 10,
+                    ),
+
+                    // ==================================================
+                    // FORMAS DE PAGAMENTO
+                    // ==================================================
+
+                    _buildFormasPagamentoSection(),
+
+                    const SizedBox(
+                      height: 25,
+                    ),
+
+                    // ==================================================
+                    // DADOS DE ACESSO
+                    // ==================================================
+
+                    const Text(
+                      'Dados de acesso',
+                      style:
+                          TextStyle(
+                        fontSize: 18,
+                        fontWeight:
+                            FontWeight.bold,
+                        color:
+                            Colors.black,
+                      ),
+                    ),
+
+                    const SizedBox(
+                      height: 12,
+                    ),
+
+                    // ==================================================
+                    // E-MAIL
+                    // ==================================================
+
+                    _campoTexto(
+                      label: 'E-mail',
+                      controller:
+                          _emailController,
+                      keyboardType:
+                          TextInputType.emailAddress,
+                      validator:
+                          (valor) {
+                        if (valor == null ||
+                            valor.trim().isEmpty) {
+                          return 'Informe o e-mail.';
+                        }
+
+                        if (!valor.contains('@')) {
+                          return 'Informe um e-mail válido.';
+                        }
+
+                        return null;
+                      },
+                    ),
+
+                    // ==================================================
+                    // SENHA
+                    // ==================================================
+
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(
+                        bottom: 15,
+                      ),
+
+                      child:
+                          TextFormField(
+                        controller:
+                            _senhaController,
+
+                        obscureText:
+                            !_mostrarSenha,
+
+                        validator:
+                            (valor) {
+                          if (valor == null ||
+                              valor.isEmpty) {
+                            return 'Informe uma senha.';
+                          }
+
+                          if (valor.length < 6) {
+                            return 'A senha deve ter pelo menos 6 caracteres.';
+                          }
+
+                          return null;
+                        },
+
+                        decoration:
+                            InputDecoration(
+                          labelText:
+                              'Senha',
+
+                          filled: true,
+                          fillColor:
+                              Colors.white,
+
+                          border:
+                              OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius
+                                    .circular(12),
+                          ),
+
+                          suffixIcon:
+                              IconButton(
+                            onPressed:
+                                () {
+                              setState(() {
+                                _mostrarSenha =
+                                    !_mostrarSenha;
+                              });
+                            },
+
+                            icon: Icon(
+                              _mostrarSenha
+                                  ? Icons
+                                      .visibility_off
+                                  : Icons
+                                      .visibility,
+                              color:
+                                  Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // ==================================================
+                    // CONFIRMAR SENHA
+                    // ==================================================
+
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(
+                        bottom: 15,
+                      ),
+
+                      child:
+                          TextFormField(
+                        controller:
+                            _confirmarSenhaController,
+
+                        obscureText:
+                            !_mostrarConfirmarSenha,
+
+                        validator:
+                            (valor) {
+                          if (valor == null ||
+                              valor.isEmpty) {
+                            return 'Confirme a senha.';
+                          }
+
+                          if (valor !=
+                              _senhaController
+                                  .text) {
+                            return 'As senhas não coincidem';
+                          }
+
+                          return null;
+                        },
+
+                        decoration:
+                            InputDecoration(
+                          labelText:
+                              'Confirmar senha',
+
+                          filled: true,
+                          fillColor:
+                              Colors.white,
+
+                          border:
+                              OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius
+                                    .circular(12),
+                          ),
+
+                          suffixIcon:
+                              IconButton(
+                            onPressed:
+                                () {
+                              setState(() {
+                                _mostrarConfirmarSenha =
+                                    !_mostrarConfirmarSenha;
+                              });
+                            },
+
+                            icon: Icon(
+                              _mostrarConfirmarSenha
+                                  ? Icons
+                                      .visibility_off
+                                  : Icons
+                                      .visibility,
+                              color:
+                                  Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(
+                      height: 10,
+                    ),
+
+                    // ==================================================
+                    // BOTÃO CADASTRAR
+                    // ==================================================
+
+                    SizedBox(
+                      width:
+                          double.infinity,
+                      height: 52,
+
+                      child:
+                          ElevatedButton(
+                        onPressed:
+                            _carregando
+                                ? null
+                                : _cadastrarEmpresa,
+
+                        style:
+                            ElevatedButton
+                                .styleFrom(
+                          backgroundColor:
+                              const Color(
+                            0xFF76A085,
+                          ),
+
+                          foregroundColor:
+                              Colors.white,
+
+                          shape:
+                              RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius
+                                    .circular(12),
+                          ),
+                        ),
+
+                        child:
+                            _carregando
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child:
+                                        CircularProgressIndicator(
+                                      color:
+                                          Colors.white,
+                                      strokeWidth:
+                                          2.5,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Cadastrar empresa',
+                                    style:
+                                        TextStyle(
+                                      fontSize:
+                                          16,
+                                      fontWeight:
+                                          FontWeight.bold,
+                                    ),
+                                  ),
+                      ),
+                    ),
+
+                    const SizedBox(
+                      height: 30,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ==================================================
+            // QUEBRA-CABEÇA INFERIOR
+            // ==================================================
+
+            SizedBox(
+              height: molduraHeight,
+              width: double.infinity,
+
+              child: Image.asset(
+                'imagem/quebrainferior.png',
+                width: double.infinity,
+                fit: BoxFit.cover,
+                alignment:
+                    Alignment.bottomCenter,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-// MÁSCARA DE TELEFONE
-class TelefoneInputFormatter
-    extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    String numeros =
-        newValue.text.replaceAll(
-      RegExp(r'\D'),
-      '',
-    );
-
-    if (numeros.length > 11) {
-      numeros =
-          numeros.substring(0, 11);
-    }
-
-    String resultado = '';
-
-    if (numeros.isNotEmpty) {
-      resultado =
-          '(${numeros.substring(
-        0,
-        numeros.length.clamp(0, 2),
-      )}';
-
-      if (numeros.length >= 2) {
-        resultado += ') ';
-      }
-
-      if (numeros.length > 2) {
-        final restante =
-            numeros.substring(2);
-
-        if (numeros.length <= 6) {
-          resultado += restante;
-        } else if (numeros.length <= 10) {
-          resultado +=
-              '${restante.substring(0, 4)}-';
-          resultado +=
-              restante.substring(4);
-        } else {
-          resultado +=
-              '${restante.substring(0, 5)}-';
-          resultado +=
-              restante.substring(5);
-        }
-      }
-    }
-
-    return TextEditingValue(
-      text: resultado,
-      selection:
-          TextSelection.collapsed(
-        offset: resultado.length,
-      ),
-    );
-  }
-}
-
-// MÁSCARA DE HORÁRIO
-class HorarioInputFormatter
-    extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    String numeros =
-        newValue.text.replaceAll(
-      RegExp(r'\D'),
-      '',
-    );
-
-    if (numeros.length > 8) {
-      numeros =
-          numeros.substring(0, 8);
-    }
-
-    String resultado = '';
-
-    if (numeros.length >= 1) {
-      resultado +=
-          numeros.substring(0, 1);
-    }
-
-    if (numeros.length >= 2) {
-      resultado +=
-          ':${numeros.substring(1, 2)}';
-    }
-
-    if (numeros.length >= 3) {
-      resultado +=
-          numeros.substring(2, 3);
-    }
-
-    if (numeros.length >= 4) {
-      resultado +=
-          numeros.substring(3, 4);
-    }
-
-    if (numeros.length >= 5) {
-      resultado +=
-          ' às ${numeros.substring(4, 5)}';
-    }
-
-    if (numeros.length >= 6) {
-      resultado +=
-          ':${numeros.substring(5, 6)}';
-    }
-
-    if (numeros.length >= 7) {
-      resultado +=
-          numeros.substring(6, 7);
-    }
-
-    if (numeros.length >= 8) {
-      resultado +=
-          numeros.substring(7, 8);
-    }
-
-    return TextEditingValue(
-      text: resultado,
-      selection:
-          TextSelection.collapsed(
-        offset: resultado.length,
-      ),
-    );
-  }
-}
