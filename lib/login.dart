@@ -32,25 +32,14 @@ class LOGINState extends State<LOGIN> {
     super.dispose();
   }
 
-  // ============================================================
   // FUNÇÃO DE LOGIN
-  // ============================================================
-
   Future<void> _realizarLogin() async {
-    // Remove espaços antes/depois do e-mail
     final email = _emailController.text.trim();
-
-    // Senha
     final senha = _passwordController.text;
 
-    // Limpa erro anterior
     setState(() {
       _erroLogin = null;
     });
-
-    // ==========================================================
-    // VALIDAÇÕES
-    // ==========================================================
 
     if (email.isEmpty) {
       setState(() {
@@ -66,7 +55,6 @@ class LOGINState extends State<LOGIN> {
       return;
     }
 
-    // Verifica formato básico do e-mail
     if (!email.contains('@')) {
       setState(() {
         _erroLogin = 'Digite um e-mail válido.';
@@ -79,10 +67,8 @@ class LOGINState extends State<LOGIN> {
     });
 
     try {
-      // ========================================================
-      // FIREBASE AUTHENTICATION
-      // ========================================================
 
+      // FIREBASE AUTHENTICATION
       final UserCredential resultado =
           await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
@@ -92,17 +78,16 @@ class LOGINState extends State<LOGIN> {
       final User? usuario = resultado.user;
 
       if (usuario == null) {
-        throw Exception('Não foi possível identificar o usuário.');
+        throw Exception(
+          'Não foi possível identificar o usuário.',
+        );
       }
 
       debugPrint(
         'Login realizado com sucesso. UID: ${usuario.uid}',
       );
 
-      // ========================================================
       // FIRESTORE
-      // ========================================================
-
       try {
         final DocumentSnapshot<Map<String, dynamic>> documento =
             await FirebaseFirestore.instance
@@ -129,15 +114,9 @@ class LOGINState extends State<LOGIN> {
           'Erro ao consultar Firestore: '
           '${e.code} - ${e.message}',
         );
-
-        // Não impedimos o login caso apenas o Firestore
-        // apresente um problema.
       }
 
-      // ========================================================
       // LOGIN CONCLUÍDO
-      // ========================================================
-
       if (!mounted) return;
 
       Navigator.pushReplacement(
@@ -244,10 +223,7 @@ class LOGINState extends State<LOGIN> {
     }
   }
 
-  // ============================================================
   // TELA
-  // ============================================================
-
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -258,10 +234,17 @@ class LOGINState extends State<LOGIN> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
 
+      resizeToAvoidBottomInset: false,
+
       body: Stack(
         children: [
+
+          // CONTEÚDO ROLÁVEL
           SafeArea(
             child: SingleChildScrollView(
+              keyboardDismissBehavior:
+                  ScrollViewKeyboardDismissBehavior.manual,
+
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   minHeight: screenHeight,
@@ -274,26 +257,59 @@ class LOGINState extends State<LOGIN> {
                   ),
 
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.center,
-
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       SizedBox(
                         height: screenHeight * 0.03,
                       ),
 
-                      // ==================================================
-                      // LOGO
-                      // ==================================================
+                      // CABEÇALHO COM SETA E LOGO
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                        ),
 
-                      Center(
                         child: SizedBox(
-                          width: screenWidth * 0.45,
-                          height: screenHeight * 0.055,
+                          width: double.infinity,
 
-                          child: Image.asset(
-                            'imagem/login.png',
-                            fit: BoxFit.contain,
+                          height: screenHeight * 0.075,
+
+                          child: Stack(
+                            alignment: Alignment.center,
+
+                            children: [
+                              // SETA PARA VOLTAR
+
+                              Align(
+                                alignment: Alignment.centerLeft,
+
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.arrow_back_ios_new,
+                                    color: Colors.black,
+                                    size: 22,
+                                  ),
+
+                                  onPressed: () {
+                                    Navigator.maybePop(context);
+                                  },
+                                ),
+                              ),
+
+                              // LOGO CENTRALIZADA
+
+                              Center(
+                                child: SizedBox(
+                                  width: screenWidth * 0.45,
+                                  height: screenHeight * 0.055,
+
+                                  child: Image.asset(
+                                    'imagem/login.png',
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -302,10 +318,7 @@ class LOGINState extends State<LOGIN> {
                         height: screenHeight * 0.015,
                       ),
 
-                      // ==================================================
                       // CAMPOS
-                      // ==================================================
-
                       Padding(
                         padding: EdgeInsets.symmetric(
                           horizontal: screenWidth * 0.1,
@@ -314,6 +327,7 @@ class LOGINState extends State<LOGIN> {
                         child: Column(
                           children: [
                             // E-MAIL
+
                             _buildTextField(
                               "E-mail",
                               _emailController,
@@ -324,16 +338,14 @@ class LOGINState extends State<LOGIN> {
                             ),
 
                             // SENHA
+
                             _buildTextField(
                               "Senha",
                               _passwordController,
                               isPassword: true,
                             ),
 
-                            // ==================================================
                             // MENSAGEM DE ERRO
-                            // ==================================================
-
                             if (_erroLogin != null) ...[
                               SizedBox(
                                 height: screenHeight * 0.015,
@@ -379,18 +391,13 @@ class LOGINState extends State<LOGIN> {
                         height: screenHeight * 0.04,
                       ),
 
-                      // ==================================================
                       // BOTÕES LOGIN E CADASTRAR
-                      // ==================================================
-
                       Row(
                         mainAxisAlignment:
                             MainAxisAlignment.center,
 
                         children: [
-                          // ==================================================
                           // BOTÃO LOGIN
-                          // ==================================================
 
                           ElevatedButton(
                             onPressed: _carregando
@@ -452,9 +459,7 @@ class LOGINState extends State<LOGIN> {
                             width: screenWidth * 0.04,
                           ),
 
-                          // ==================================================
                           // BOTÃO CADASTRAR
-                          // ==================================================
 
                           ElevatedButton(
                             onPressed: _carregando
@@ -513,10 +518,7 @@ class LOGINState extends State<LOGIN> {
                         height: screenHeight * 0.05,
                       ),
 
-                      // ==================================================
                       // CADASTRO DE EMPRESA
-                      // ==================================================
-
                       Center(
                         child: GestureDetector(
                           onTap: _carregando
@@ -565,10 +567,7 @@ class LOGINState extends State<LOGIN> {
             ),
           ),
 
-          // ============================================================
-          // MOLDURA SUPERIOR
-          // ============================================================
-
+          // QUEBRA-CABEÇA SUPERIOR FIXO
           Positioned(
             top: 0,
             left: 0,
@@ -589,10 +588,7 @@ class LOGINState extends State<LOGIN> {
             ),
           ),
 
-          // ============================================================
-          // MOLDURA INFERIOR
-          // ============================================================
-
+          // QUEBRA-CABEÇA INFERIOR FIXO
           Positioned(
             bottom: 0,
             left: 0,
@@ -617,82 +613,93 @@ class LOGINState extends State<LOGIN> {
     );
   }
 
-  // ============================================================
   // CAMPO DE TEXTO
-  // ============================================================
 
   Widget _buildTextField(
     String hint,
     TextEditingController controller, {
     bool isPassword = false,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFD1D5D8),
-        borderRadius: BorderRadius.circular(25),
-      ),
+    return TextFormField(
+      controller: controller,
 
-      child: TextFormField(
-        controller: controller,
+      obscureText: isPassword && !_mostrarSenha,
 
-        obscureText:
-            isPassword && !_mostrarSenha,
+      keyboardType: hint == "E-mail"
+          ? TextInputType.emailAddress
+          : TextInputType.text,
 
-        keyboardType: hint == "E-mail"
-            ? TextInputType.emailAddress
-            : TextInputType.text,
+      textInputAction: isPassword
+          ? TextInputAction.done
+          : TextInputAction.next,
 
-        textInputAction: isPassword
-            ? TextInputAction.done
-            : TextInputAction.next,
-
-        onFieldSubmitted: isPassword
-            ? (_) {
-                if (!_carregando) {
-                  _realizarLogin();
-                }
+      onFieldSubmitted: isPassword
+          ? (_) {
+              if (!_carregando) {
+                _realizarLogin();
               }
-            : null,
+            }
+          : null,
 
-        decoration: InputDecoration(
-          hintText: hint,
+      decoration: InputDecoration(
+        labelText: hint,
 
-          hintStyle: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w500,
-          ),
-
-          contentPadding:
-              const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 15,
-          ),
-
-          border: InputBorder.none,
-
-          // ==========================================================
-          // OLHINHO DA SENHA
-          // ==========================================================
-
-          suffixIcon: isPassword
-              ? IconButton(
-                  onPressed: () {
-                    setState(() {
-                      _mostrarSenha =
-                          !_mostrarSenha;
-                    });
-                  },
-
-                  icon: Icon(
-                    _mostrarSenha
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-
-                    color: Colors.black,
-                  ),
-                )
-              : null,
+        labelStyle: const TextStyle(
+          color: Colors.black,
         ),
+
+        floatingLabelStyle: const TextStyle(
+          color: Colors.black,
+        ),
+
+        filled: true,
+
+        fillColor: Colors.white,
+
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(
+            color: Colors.grey,
+            width: 1,
+          ),
+        ),
+
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(
+            color: Colors.black,
+            width: 1.5,
+          ),
+        ),
+
+        // OLHINHO DA SENHA
+
+        suffixIcon: isPassword
+            ? IconButton(
+                onPressed: () {
+                  setState(() {
+                    _mostrarSenha = !_mostrarSenha;
+                  });
+                },
+
+                icon: Icon(
+                  _mostrarSenha
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+
+                  color: Colors.black,
+                ),
+              )
+            : null,
       ),
     );
   }

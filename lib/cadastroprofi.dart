@@ -1,15 +1,20 @@
-
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
 class CadastroPage extends StatefulWidget {
-  const CadastroPage({super.key});
+  final String? empresaUid;
+
+  const CadastroPage({
+    super.key,
+    this.empresaUid,
+  });
 
   @override
   State<CadastroPage> createState() => _CadastroPageState();
@@ -41,14 +46,30 @@ class _CadastroPageState extends State<CadastroPage> {
     _experienciaController.dispose();
     _senhaController.dispose();
     _confirmarSenhaController.dispose();
-
     super.dispose();
   }
 
-  // ============================================================
-  // SELECIONAR FOTO
-  // ============================================================
+  // Firebase Auth secundário
+  Future<FirebaseAuth> _obterAuthSecundario() async {
+    const nomeApp = 'neurowayCadastroProfissional';
 
+    for (final app in Firebase.apps) {
+      if (app.name == nomeApp) {
+        return FirebaseAuth.instanceFor(app: app);
+      }
+    }
+
+    final appSecundario = await Firebase.initializeApp(
+      name: nomeApp,
+      options: Firebase.app().options,
+    );
+
+    return FirebaseAuth.instanceFor(
+      app: appSecundario,
+    );
+  }
+
+  // Selecionar foto
   Future<void> _selecionarFoto() async {
     try {
       final ImagePicker picker = ImagePicker();
@@ -58,7 +79,7 @@ class _CadastroPageState extends State<CadastroPage> {
         imageQuality: 80,
       );
 
-      if (imagem != null) {
+      if (imagem != null && mounted) {
         setState(() {
           _fotoSelecionada = File(imagem.path);
         });
@@ -68,50 +89,13 @@ class _CadastroPageState extends State<CadastroPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Erro ao selecionar imagem: $e',
-          ),
+          content: Text('Erro ao selecionar imagem: $e'),
         ),
       );
     }
   }
 
-  // ============================================================
-  // FORMATAR TELEFONE
-  // ============================================================
-
-  String _formatarTelefone(String valor) {
-    String numeros = valor.replaceAll(
-      RegExp(r'[^0-9]'),
-      '',
-    );
-
-    if (numeros.length > 11) {
-      numeros = numeros.substring(0, 11);
-    }
-
-    if (numeros.length <= 2) {
-      return '($numeros';
-    }
-
-    if (numeros.length <= 7) {
-      return '(${numeros.substring(0, 2)}) '
-          '${numeros.substring(2)}';
-    }
-
-    if (numeros.length <= 11) {
-      return '(${numeros.substring(0, 2)}) '
-          '${numeros.substring(2, 7)}-'
-          '${numeros.substring(7)}';
-    }
-
-    return valor;
-  }
-
-  // ============================================================
-  // CADASTRAR PROFISSIONAL
-  // ============================================================
-
+  // Cadastrar profissional
   Future<void> _cadastrar() async {
     final nome = _nomeController.text.trim();
     final email = _emailController.text.trim();
@@ -122,6 +106,11 @@ class _CadastroPageState extends State<CadastroPage> {
     final senha = _senhaController.text;
     final confirmarSenha = _confirmarSenhaController.text;
 
+    final telefoneNumeros = telefone.replaceAll(
+      RegExp(r'\D'),
+      '',
+    );
+
     if (nome.isEmpty ||
         email.isEmpty ||
         telefone.isEmpty ||
@@ -130,36 +119,36 @@ class _CadastroPageState extends State<CadastroPage> {
         confirmarSenha.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Preencha todos os campos obrigatórios.',
-          ),
+          content: Text('Preencha todos os campos obrigatórios.'),
         ),
       );
+      return;
+    }
 
+    if (telefoneNumeros.length != 11) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Informe um telefone completo.'),
+        ),
+      );
       return;
     }
 
     if (senha.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'A senha deve ter pelo menos 6 caracteres.',
-          ),
+          content: Text('A senha deve ter pelo menos 6 caracteres.'),
         ),
       );
-
       return;
     }
 
     if (senha != confirmarSenha) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'As senhas não coincidem.',
-          ),
+          content: Text('As senhas não coincidem.'),
         ),
       );
-
       return;
     }
 
@@ -167,13 +156,14 @@ class _CadastroPageState extends State<CadastroPage> {
       _carregando = true;
     });
 
+    FirebaseAuth? authSecundario;
+
     try {
-      // --------------------------------------------------------
-      // CRIAR USUÁRIO NO FIREBASE AUTH
-      // --------------------------------------------------------
+      // Criar Auth secundário
+      authSecundario = await _obterAuthSecundario();
 
       final credencial =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          await authSecundario.createUserWithEmailAndPassword(
         email: email,
         password: senha,
       );
@@ -181,63 +171,98 @@ class _CadastroPageState extends State<CadastroPage> {
       final usuarioCriado = credencial.user;
 
       if (usuarioCriado == null) {
-        throw Exception(
-          'Não foi possível criar o usuário.',
-        );
+        throw Exception('Não foi possível criar o usuário.');
       }
 
-      String? fotoUrl;
+      final profissionalUid = usuarioCriado.uid;
+      String fotoUrl = '';
 
-      // --------------------------------------------------------
-      // ENVIAR FOTO PARA O FIREBASE STORAGE
-      // --------------------------------------------------------
-
+      // Foto do profissional
       if (_fotoSelecionada != null) {
         final referencia = FirebaseStorage.instance
             .ref()
             .child('profissionais')
-            .child('${usuarioCriado.uid}.jpg');
+            .child('$profissionalUid.jpg');
 
-        await referencia.putFile(
-          _fotoSelecionada!,
-        );
-
+        await referencia.putFile(_fotoSelecionada!);
         fotoUrl = await referencia.getDownloadURL();
       }
 
-      // --------------------------------------------------------
-      // SALVAR PROFISSIONAL NO FIRESTORE
-      // --------------------------------------------------------
-
-      await FirebaseFirestore.instance
-          .collection('profissionais')
-          .doc(usuarioCriado.uid)
-          .set({
-        'uid': usuarioCriado.uid,
+      // Dados do profissional
+      final Map<String, dynamic> dadosProfissional = {
+        'uid': profissionalUid,
         'nome': nome,
         'email': email,
         'telefone': telefone,
         'descricao': descricao,
         'profissao': profissao,
+        'especialidade': profissao,
         'experiencia': experiencia,
         'tipo': 'profissional',
-        'fotoUrl': fotoUrl ?? '',
+        'fotoUrl': fotoUrl,
+        'empresaUid': widget.empresaUid ?? '',
         'criadoEm': FieldValue.serverTimestamp(),
-      });
+      };
+
+      // Salvar profissional
+      await FirebaseFirestore.instance
+          .collection('profissionais')
+          .doc(profissionalUid)
+          .set(dadosProfissional);
+
+      // Adicionar profissional à empresa
+      final empresaUid = widget.empresaUid;
+
+      if (empresaUid != null && empresaUid.trim().isNotEmpty) {
+        final empresaRef = FirebaseFirestore.instance
+            .collection('empresas')
+            .doc(empresaUid);
+
+        final empresaDoc = await empresaRef.get();
+
+        if (!empresaDoc.exists) {
+          throw Exception(
+            'A empresa não foi encontrada no Firestore.',
+          );
+        }
+
+        final Map<String, dynamic> profissionalParaEmpresa = {
+          'uid': profissionalUid,
+          'nome': nome,
+          'especialidade': profissao,
+          'profissao': profissao,
+          'telefone': telefone,
+          'descricao': descricao,
+          'experiencia': experiencia,
+          'fotoUrl': fotoUrl,
+          'empresaUid': empresaUid,
+        };
+
+        await empresaRef.update({
+          'profissionais': FieldValue.arrayUnion([
+            profissionalParaEmpresa,
+          ]),
+        });
+      }
+
+      // Deslogar Auth secundário
+      await authSecundario.signOut();
 
       if (!mounted) return;
 
-      // --------------------------------------------------------
-      // DEVOLVER DADOS PARA A TELA DE CADASTRO DA EMPRESA
-      // --------------------------------------------------------
-
+      // Devolver dados para a tela anterior
       Navigator.pop(
         context,
         {
+          'uid': profissionalUid,
           'nome': nome,
           'especialidade': profissao,
-          'uid': usuarioCriado.uid,
-          'fotoUrl': fotoUrl ?? '',
+          'profissao': profissao,
+          'telefone': telefone,
+          'descricao': descricao,
+          'experiencia': experiencia,
+          'fotoUrl': fotoUrl,
+          'empresaUid': empresaUid ?? '',
         },
       );
     } on FirebaseAuthException catch (e) {
@@ -249,6 +274,9 @@ class _CadastroPageState extends State<CadastroPage> {
         mensagem = 'Digite um e-mail válido.';
       } else if (e.code == 'weak-password') {
         mensagem = 'A senha é muito fraca.';
+      } else if (e.code == 'operation-not-allowed') {
+        mensagem =
+            'O login por e-mail e senha não está habilitado no Firebase.';
       }
 
       if (!mounted) return;
@@ -259,13 +287,13 @@ class _CadastroPageState extends State<CadastroPage> {
         ),
       );
     } catch (e) {
+      debugPrint('Erro ao cadastrar profissional: $e');
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Erro ao cadastrar: $e',
-          ),
+          content: Text('Erro ao cadastrar: $e'),
         ),
       );
     } finally {
@@ -277,10 +305,7 @@ class _CadastroPageState extends State<CadastroPage> {
     }
   }
 
-  // ============================================================
-  // CAMPO DE TEXTO
-  // ============================================================
-
+  // Campo de texto
   Widget _campoTexto({
     required String label,
     required TextEditingController controller,
@@ -291,15 +316,17 @@ class _CadastroPageState extends State<CadastroPage> {
     List<TextInputFormatter>? inputFormatters,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(
-        bottom: 16,
-      ),
+      padding: const EdgeInsets.only(bottom: 16),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         maxLines: obscureText ? 1 : maxLines,
         obscureText: obscureText,
         inputFormatters: inputFormatters,
+        style: const TextStyle(
+          color: Colors.black,
+        ),
+        cursorColor: Colors.black,
         decoration: InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(
@@ -324,18 +351,17 @@ class _CadastroPageState extends State<CadastroPage> {
     );
   }
 
-  // ============================================================
-  // DESCRIÇÃO
-  // ============================================================
-
+  // Descrição
   Widget _campoDescricao() {
     return Padding(
-      padding: const EdgeInsets.only(
-        bottom: 16,
-      ),
+      padding: const EdgeInsets.only(bottom: 16),
       child: TextField(
         controller: _descricaoController,
         maxLines: 4,
+        style: const TextStyle(
+          color: Colors.black,
+        ),
+        cursorColor: Colors.black,
         decoration: InputDecoration(
           labelText: 'Descrição',
           labelStyle: const TextStyle(
@@ -362,25 +388,17 @@ class _CadastroPageState extends State<CadastroPage> {
 
   @override
   Widget build(BuildContext context) {
-    final double screenHeight =
-        MediaQuery.of(context).size.height;
-
-    final double molduraHeight =
-        screenHeight * 0.15;
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double molduraHeight = screenHeight * 0.15;
 
     return Scaffold(
       backgroundColor: Colors.white,
-
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ==================================================
-              // QUEBRA-CABEÇA SUPERIOR
-              // ==================================================
-
-              // QUEBRA-CABEÇA SUPERIOR
+              // Quebra-cabeça superior
               SizedBox(
                 height: molduraHeight,
                 width: double.infinity,
@@ -391,13 +409,9 @@ class _CadastroPageState extends State<CadastroPage> {
                   alignment: Alignment.topCenter,
                 ),
               ),
+              const SizedBox(height: 10),
 
-              // MESMO ESPAÇO NAS DUAS TELAS
-              const SizedBox(
-                height: 10,
-              ),
-
-              // CABEÇALHO
+              // Cabeçalho
               Padding(
                 padding: const EdgeInsets.only(
                   left: 32,
@@ -428,7 +442,6 @@ class _CadastroPageState extends State<CadastroPage> {
                                 },
                         ),
                       ),
-
                       Center(
                         child: Image.asset(
                           'imagem/Cadastro_profissionais.png',
@@ -441,123 +454,113 @@ class _CadastroPageState extends State<CadastroPage> {
                 ),
               ),
 
-
-              // ==================================================
-              // CONTEÚDO
-              // ==================================================
-
+              // Conteúdo
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.stretch,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // FOTO
+                    const Text(
+                      'Foto de perfil',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Center(
                       child: GestureDetector(
-                        onTap: _carregando
-                            ? null
-                            : _selecionarFoto,
+                        onTap: _carregando ? null : _selecionarFoto,
                         child: Container(
                           width: 120,
                           height: 120,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
+                            color: const Color(0xFFF1F1F1),
                             border: Border.all(
-                              color: Colors.black,
-                              width: 1.5,
+                              color: const Color(0xFF98B9A6),
+                              width: 2,
                             ),
                           ),
-                          child: ClipOval(
-                            child: _fotoSelecionada != null
-                                ? Image.file(
+                          child: _fotoSelecionada != null
+                              ? ClipOval(
+                                  child: Image.file(
                                     _fotoSelecionada!,
+                                    width: 120,
+                                    height: 120,
                                     fit: BoxFit.cover,
-                                  )
-                                : const Icon(
-                                    Icons.person,
-                                    size: 60,
-                                    color: Colors.black,
                                   ),
-                          ),
+                                )
+                              : const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.add_a_photo_outlined,
+                                      size: 38,
+                                      color: Colors.black54,
+                                    ),
+                                    SizedBox(height: 5),
+                                    Text(
+                                      'Adicionar',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ),
                     ),
-
-                    const SizedBox(
-                      height: 10,
-                    ),
-
+                    const SizedBox(height: 5),
                     Center(
                       child: TextButton(
-                        onPressed: _carregando
-                            ? null
-                            : _selecionarFoto,
-                        child: const Text(
-                          'Adicionar foto',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
+                        onPressed: _carregando ? null : _selecionarFoto,
+                        child: Text(
+                          _fotoSelecionada == null
+                              ? 'Selecionar foto'
+                              : 'Alterar foto',
+                          style: const TextStyle(
+                            color: Color(0xFF76A085),
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ),
-
-                    const SizedBox(
-                      height: 10,
-                    ),
-
-                    // NOME
+                    const SizedBox(height: 15),
                     _campoTexto(
                       label: 'Nome',
                       controller: _nomeController,
                       keyboardType: TextInputType.name,
                     ),
-
-                    // E-MAIL
                     _campoTexto(
                       label: 'E-mail',
                       controller: _emailController,
-                      keyboardType:
-                          TextInputType.emailAddress,
+                      keyboardType: TextInputType.emailAddress,
                     ),
-
-                    // TELEFONE
+                    // Telefone
                     _campoTexto(
                       label: 'Telefone',
                       controller: _telefoneController,
-                      keyboardType:
-                          TextInputType.phone,
+                      keyboardType: TextInputType.phone,
                       inputFormatters: [
-                        FilteringTextInputFormatter
-                            .digitsOnly,
-                        LengthLimitingTextInputFormatter(
-                          11,
-                        ),
+                        FilteringTextInputFormatter.digitsOnly,
+                        _MascaraTelefone(),
                       ],
                     ),
-
-                    // PROFISSÃO
                     _campoTexto(
                       label: 'Profissão / Especialidade',
                       controller: _profissaoController,
                       keyboardType: TextInputType.text,
                     ),
-
-                    // EXPERIÊNCIA
                     _campoTexto(
                       label: 'Experiência',
-                      controller:
-                          _experienciaController,
+                      controller: _experienciaController,
                       keyboardType: TextInputType.text,
                     ),
-
-                    // DESCRIÇÃO
                     _campoDescricao(),
-
-                    // SENHA
                     _campoTexto(
                       label: 'Senha',
                       controller: _senhaController,
@@ -571,20 +574,15 @@ class _CadastroPageState extends State<CadastroPage> {
                         ),
                         onPressed: () {
                           setState(() {
-                            _mostrarSenha =
-                                !_mostrarSenha;
+                            _mostrarSenha = !_mostrarSenha;
                           });
                         },
                       ),
                     ),
-
-                    // CONFIRMAR SENHA
                     _campoTexto(
                       label: 'Confirmar senha',
-                      controller:
-                          _confirmarSenhaController,
-                      obscureText:
-                          !_mostrarConfirmarSenha,
+                      controller: _confirmarSenhaController,
+                      obscureText: !_mostrarConfirmarSenha,
                       suffixIcon: IconButton(
                         icon: Icon(
                           _mostrarConfirmarSenha
@@ -600,38 +598,23 @@ class _CadastroPageState extends State<CadastroPage> {
                         },
                       ),
                     ),
-
-                    const SizedBox(
-                      height: 10,
-                    ),
-
-                    // BOTÃO CADASTRAR
+                    const SizedBox(height: 10),
                     SizedBox(
                       height: 52,
                       child: ElevatedButton(
-                        onPressed:
-                            _carregando
-                                ? null
-                                : _cadastrar,
+                        onPressed: _carregando ? null : _cadastrar,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color(0xFF76A085),
-                          foregroundColor:
-                              Colors.white,
-                          shape:
-                              RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(
-                              10,
-                            ),
+                          backgroundColor: const Color(0xFF76A085),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                         child: _carregando
                             ? const SizedBox(
                                 width: 24,
                                 height: 24,
-                                child:
-                                    CircularProgressIndicator(
+                                child: CircularProgressIndicator(
                                   color: Colors.white,
                                   strokeWidth: 2,
                                 ),
@@ -640,24 +623,17 @@ class _CadastroPageState extends State<CadastroPage> {
                                 'Cadastrar profissional',
                                 style: TextStyle(
                                   fontSize: 16,
-                                  fontWeight:
-                                      FontWeight.bold,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                       ),
                     ),
-
-                    const SizedBox(
-                      height: 30,
-                    ),
+                    const SizedBox(height: 30),
                   ],
                 ),
               ),
 
-              // ==================================================
-              // QUEBRA-CABEÇA INFERIOR
-              // ==================================================
-
+              // Quebra-cabeça inferior
               SizedBox(
                 height: molduraHeight,
                 width: double.infinity,
@@ -676,3 +652,51 @@ class _CadastroPageState extends State<CadastroPage> {
   }
 }
 
+// Máscara de telefone
+class _MascaraTelefone extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    String numeros = newValue.text.replaceAll(
+      RegExp(r'\D'),
+      '',
+    );
+
+    if (numeros.length > 11) {
+      numeros = numeros.substring(0, 11);
+    }
+
+    String formatado = '';
+
+    if (numeros.isNotEmpty) {
+      formatado = '(${numeros.substring(
+        0,
+        numeros.length > 2 ? 2 : numeros.length,
+      )}';
+    }
+
+    if (numeros.length >= 2) {
+      formatado += ') ';
+    }
+
+    if (numeros.length > 2) {
+      formatado += numeros.substring(
+        2,
+        numeros.length > 7 ? 7 : numeros.length,
+      );
+    }
+
+    if (numeros.length > 7) {
+      formatado += '-${numeros.substring(7)}';
+    }
+
+    return TextEditingValue(
+      text: formatado,
+      selection: TextSelection.collapsed(
+        offset: formatado.length,
+      ),
+    );
+  }
+}

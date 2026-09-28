@@ -1,7 +1,10 @@
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+
 import 'package:neuroway/menuprincipal.dart';
 
 class CriarConta extends StatefulWidget {
@@ -12,6 +15,7 @@ class CriarConta extends StatefulWidget {
 }
 
 class CriarContaState extends State<CriarConta> {
+  // Controladores
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -19,14 +23,14 @@ class CriarContaState extends State<CriarConta> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  // Controla a visualização das senhas
+  // Foto de perfil
+  File? _fotoPerfil;
+  final ImagePicker _seletorImagem = ImagePicker();
+
+  // Controle da tela
   bool _senhaVisivel = false;
   bool _confirmarSenhaVisivel = false;
-
-  // Mensagem de erro das senhas
   String? _erroSenha;
-
-  // Controla o carregamento
   bool _carregando = false;
 
   @override
@@ -36,13 +40,35 @@ class CriarContaState extends State<CriarConta> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-
     super.dispose();
   }
 
-  // ============================================================
-  // FUNÇÃO DE CADASTRO
-  // ============================================================
+  // Selecionar foto
+  Future<void> _selecionarFoto() async {
+    try {
+      final XFile? imagem = await _seletorImagem.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (imagem == null || !mounted) return;
+
+      setState(() {
+        _fotoPerfil = File(imagem.path);
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Não foi possível selecionar a foto: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Realizar cadastro
   Future<void> _realizarCadastro() async {
     final String nome = _userController.text.trim();
     final String cidade = _cityController.text.trim();
@@ -50,9 +76,6 @@ class CriarContaState extends State<CriarConta> {
     final String senha = _passwordController.text;
     final String confirmarSenha = _confirmPasswordController.text;
 
-    // ------------------------------------------------------------
-    // VERIFICA SE TODOS OS CAMPOS FORAM PREENCHIDOS
-    // ------------------------------------------------------------
     if (nome.isEmpty ||
         cidade.isEmpty ||
         email.isEmpty ||
@@ -64,37 +87,21 @@ class CriarContaState extends State<CriarConta> {
           backgroundColor: Colors.red,
         ),
       );
-
       return;
     }
 
-    // ------------------------------------------------------------
-    // VERIFICA SE AS SENHAS SÃO IGUAIS
-    // ------------------------------------------------------------
     if (senha != confirmarSenha) {
       setState(() {
         _erroSenha = 'As senhas não coincidem';
       });
-
       return;
     }
 
-    // ------------------------------------------------------------
-    // INICIA O CARREGAMENTO
-    // ------------------------------------------------------------
     setState(() {
       _carregando = true;
     });
 
     try {
-      // ==========================================================
-      // 1. CRIA A CONTA NO FIREBASE AUTHENTICATION
-      // ==========================================================
-      debugPrint('======================================');
-      debugPrint('INICIANDO CADASTRO');
-      debugPrint('E-mail: $email');
-      debugPrint('======================================');
-
       final UserCredential credencial =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
@@ -103,7 +110,6 @@ class CriarContaState extends State<CriarConta> {
 
       final User? usuario = credencial.user;
 
-      // Verifica se o usuário foi realmente criado
       if (usuario == null) {
         throw Exception(
           'O Firebase não retornou o usuário após o cadastro.',
@@ -112,45 +118,21 @@ class CriarContaState extends State<CriarConta> {
 
       final String uid = usuario.uid;
 
-      debugPrint('======================================');
-      debugPrint('USUÁRIO CRIADO NO AUTHENTICATION');
-      debugPrint('UID: $uid');
-      debugPrint('======================================');
-
-      // ==========================================================
-      // 2. SALVA OS DADOS NO FIRESTORE
-      // ==========================================================
-      debugPrint('======================================');
-      debugPrint('SALVANDO DADOS NO FIRESTORE');
-      debugPrint('Coleção: usuarios');
-      debugPrint('Documento: $uid');
-      debugPrint('======================================');
-
-      await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(uid)
-          .set({
+      // Salvar usuário
+      await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
         'nome': nome,
         'cidade': cidade,
         'email': email,
         'criadoEm': FieldValue.serverTimestamp(),
       });
 
-      debugPrint('======================================');
-      debugPrint('DADOS SALVOS COM SUCESSO NO FIRESTORE');
-      debugPrint('======================================');
-
       if (!mounted) return;
 
-      // Remove o erro de senha caso exista
       setState(() {
         _erroSenha = null;
         _carregando = false;
       });
 
-      // ==========================================================
-      // 3. MOSTRA MENSAGEM DE SUCESSO
-      // ==========================================================
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Conta criada com sucesso!'),
@@ -164,9 +146,6 @@ class CriarContaState extends State<CriarConta> {
 
       if (!mounted) return;
 
-      // ==========================================================
-      // 4. VAI PARA O MENU PRINCIPAL
-      // ==========================================================
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
@@ -174,18 +153,7 @@ class CriarContaState extends State<CriarConta> {
         ),
         (route) => false,
       );
-    }
-
-    // ============================================================
-    // ERROS DO FIREBASE AUTHENTICATION
-    // ============================================================
-    on FirebaseAuthException catch (e) {
-      debugPrint('======================================');
-      debugPrint('ERRO NO FIREBASE AUTHENTICATION');
-      debugPrint('Código: ${e.code}');
-      debugPrint('Mensagem: ${e.message}');
-      debugPrint('======================================');
-
+    } on FirebaseAuthException catch (e) {
       String mensagem = 'Não foi possível criar a conta.';
 
       switch (e.code) {
@@ -234,19 +202,7 @@ class CriarContaState extends State<CriarConta> {
           duration: const Duration(seconds: 8),
         ),
       );
-    }
-
-    // ============================================================
-    // ERROS DO FIRESTORE
-    // ============================================================
-    on FirebaseException catch (e) {
-      debugPrint('======================================');
-      debugPrint('ERRO NO FIRESTORE');
-      debugPrint('Código: ${e.code}');
-      debugPrint('Mensagem: ${e.message}');
-      debugPrint('Plugin: ${e.plugin}');
-      debugPrint('======================================');
-
+    } on FirebaseException catch (e) {
       if (!mounted) return;
 
       setState(() {
@@ -264,17 +220,7 @@ class CriarContaState extends State<CriarConta> {
           duration: const Duration(seconds: 10),
         ),
       );
-    }
-
-    // ============================================================
-    // OUTROS ERROS
-    // ============================================================
-    catch (e) {
-      debugPrint('======================================');
-      debugPrint('ERRO DESCONHECIDO');
-      debugPrint('$e');
-      debugPrint('======================================');
-
+    } catch (e) {
       if (!mounted) return;
 
       setState(() {
@@ -283,9 +229,7 @@ class CriarContaState extends State<CriarConta> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Erro inesperado:\n$e',
-          ),
+          content: Text('Erro inesperado:\n$e'),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 10),
         ),
@@ -296,15 +240,22 @@ class CriarContaState extends State<CriarConta> {
   @override
   Widget build(BuildContext context) {
     final double screenHeight = MediaQuery.of(context).size.height;
+
     final double molduraHeight = screenHeight * 0.15;
+
+    // Altura ocupada pelo teclado
+    final double alturaTeclado =
+        MediaQuery.viewInsetsOf(context).bottom;
 
     return Scaffold(
       backgroundColor: Colors.white,
+
+      // Impede que o Scaffold mova as molduras quando o teclado abre.
+      resizeToAvoidBottomInset: false,
+
       body: Stack(
         children: [
-          // ========================================================
-          // CONTEÚDO PRINCIPAL
-          // ========================================================
+          // CONTEÚDO ROLÁVEL
           Positioned.fill(
             child: SafeArea(
               child: Padding(
@@ -312,254 +263,350 @@ class CriarContaState extends State<CriarConta> {
                   top: molduraHeight,
                   bottom: molduraHeight,
                 ),
-                child: SingleChildScrollView(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: screenHeight - molduraHeight * 2,
-                    ),
-                    child: IntrinsicHeight(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // ==================================================
-                          // TÍTULO + BOTÃO VOLTAR
-                          // ==================================================
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                            ),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: IconButton(
-                                    icon: const Icon(
-                                      Icons.arrow_back_ios_new,
-                                      color: Colors.black,
-                                      size: 22,
-                                    ),
-                                    onPressed: _carregando
-                                        ? null
-                                        : () {
-                                            Navigator.maybePop(context);
-                                          },
-                                  ),
+
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+
+                      padding: EdgeInsets.only(
+                        bottom: alturaTeclado > 0 ? 20 : 0,
+                      ),
+
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
+                        ),
+
+                        child: IntrinsicHeight(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+
+                            children: [
+                              // TÍTULO
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
                                 ),
 
-                                Image.asset(
-                                  "imagem/criarconta.png",
-                                  width: 224,
-                                  height: 147,
-                                  errorBuilder:
-                                      (context, error, stackTrace) {
-                                    return const Text(
-                                      "Criar Conta",
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
+                                child: Stack(
+                                  alignment: Alignment.center,
 
-                          const SizedBox(height: 30),
+                                  children: [
+                                    Align(
+                                      alignment: Alignment.centerLeft,
 
-                          // ==================================================
-                          // CAMPOS
-                          // ==================================================
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 40,
-                            ),
-                            child: Column(
-                              children: [
-                                // ------------------------------------------------
-                                // NOME
-                                // ------------------------------------------------
-                                _buildTextField(
-                                  "Nome de Usuário",
-                                  _userController,
-                                ),
-
-                                const SizedBox(height: 15),
-
-                                // ------------------------------------------------
-                                // CIDADE
-                                // ------------------------------------------------
-                                _buildTextField(
-                                  "Cidade",
-                                  _cityController,
-                                ),
-
-                                const SizedBox(height: 15),
-
-                                // ------------------------------------------------
-                                // E-MAIL
-                                // ------------------------------------------------
-                                _buildTextField(
-                                  "E-mail",
-                                  _emailController,
-                                  keyboardType:
-                                      TextInputType.emailAddress,
-                                ),
-
-                                const SizedBox(height: 15),
-
-                                // ------------------------------------------------
-                                // SENHA
-                                // ------------------------------------------------
-                                _buildTextField(
-                                  "Senha",
-                                  _passwordController,
-                                  isPassword: true,
-                                  isVisible: _senhaVisivel,
-                                  onVisibilityChanged: () {
-                                    setState(() {
-                                      _senhaVisivel = !_senhaVisivel;
-                                    });
-                                  },
-                                  onChanged: (value) {
-                                    if (_confirmPasswordController
-                                        .text.isNotEmpty) {
-                                      setState(() {
-                                        if (value !=
-                                            _confirmPasswordController.text) {
-                                          _erroSenha =
-                                              "As senhas não coincidem";
-                                        } else {
-                                          _erroSenha = null;
-                                        }
-                                      });
-                                    }
-                                  },
-                                ),
-
-                                const SizedBox(height: 15),
-
-                                // ------------------------------------------------
-                                // CONFIRMAR SENHA
-                                // ------------------------------------------------
-                                _buildTextField(
-                                  "Confirmar Senha",
-                                  _confirmPasswordController,
-                                  isPassword: true,
-                                  isVisible:
-                                      _confirmarSenhaVisivel,
-                                  onVisibilityChanged: () {
-                                    setState(() {
-                                      _confirmarSenhaVisivel =
-                                          !_confirmarSenhaVisivel;
-                                    });
-                                  },
-                                  onChanged: (value) {
-                                    setState(() {
-                                      if (value.isEmpty) {
-                                        _erroSenha = null;
-                                      } else if (value !=
-                                          _passwordController.text) {
-                                        _erroSenha =
-                                            "As senhas não coincidem";
-                                      } else {
-                                        _erroSenha = null;
-                                      }
-                                    });
-                                  },
-                                ),
-
-                                // ==================================================
-                                // MENSAGEM DE ERRO DA SENHA
-                                // ==================================================
-                                if (_erroSenha != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      top: 5,
-                                      left: 15,
-                                    ),
-                                    child: Align(
-                                      alignment:
-                                          Alignment.centerLeft,
-                                      child: Text(
-                                        _erroSenha!,
-                                        style: const TextStyle(
-                                          color: Colors.red,
-                                          fontSize: 13,
+                                      child: IconButton(
+                                        icon: const Icon(
+                                          Icons.arrow_back_ios_new,
+                                          color: Colors.black,
+                                          size: 22,
                                         ),
+
+                                        onPressed: _carregando
+                                            ? null
+                                            : () {
+                                                Navigator.maybePop(context);
+                                              },
                                       ),
                                     ),
-                                  ),
 
-                                const SizedBox(height: 30),
+                                    Image.asset(
+                                      'imagem/criarconta.png',
+                                      width: 224,
+                                      height: 147,
 
-                                // ==================================================
-                                // BOTÃO CADASTRAR
-                                // ==================================================
-                                ElevatedButton(
-                                  onPressed: _carregando
-                                      ? null
-                                      : _realizarCadastro,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        const Color(0xFF98B9A6),
-                                    foregroundColor: Colors.black,
-                                    disabledBackgroundColor:
-                                        const Color(0xFF98B9A6),
-                                    disabledForegroundColor:
-                                        Colors.black,
-                                    padding:
-                                        const EdgeInsets.symmetric(
-                                      horizontal: 45,
-                                      vertical: 15,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(25),
-                                    ),
-                                    elevation: 2,
-                                  ),
-                                  child: _carregando
-                                      ? const SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child:
-                                              CircularProgressIndicator(
-                                            strokeWidth: 2.5,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        return const Text(
+                                          'Criar Conta',
+                                          style: TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
                                             color: Colors.black,
                                           ),
-                                        )
-                                      : const Text(
-                                          "Cadastrar",
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight:
-                                                FontWeight.bold,
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(height: 25),
+
+                              // CAMPOS
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 40,
+                                ),
+
+                                child: Column(
+                                  children: [
+                                    _buildTextField(
+                                      'Nome de Usuário',
+                                      _userController,
+                                      textCapitalization:
+                                          TextCapitalization.words,
+                                    ),
+
+                                    const SizedBox(height: 15),
+
+                                    _buildTextField(
+                                      'Cidade',
+                                      _cityController,
+                                      textCapitalization:
+                                          TextCapitalization.words,
+                                    ),
+
+                                    const SizedBox(height: 15),
+
+                                    _buildTextField(
+                                      'E-mail',
+                                      _emailController,
+                                      keyboardType:
+                                          TextInputType.emailAddress,
+                                    ),
+
+                                    const SizedBox(height: 15),
+
+                                    _buildTextField(
+                                      'Senha',
+                                      _passwordController,
+                                      isPassword: true,
+                                      isVisible: _senhaVisivel,
+
+                                      onVisibilityChanged: () {
+                                        setState(() {
+                                          _senhaVisivel = !_senhaVisivel;
+                                        });
+                                      },
+
+                                      onChanged: (value) {
+                                        if (_confirmPasswordController
+                                            .text.isNotEmpty) {
+                                          setState(() {
+                                            if (value !=
+                                                _confirmPasswordController
+                                                    .text) {
+                                              _erroSenha =
+                                                  'As senhas não coincidem';
+                                            } else {
+                                              _erroSenha = null;
+                                            }
+                                          });
+                                        }
+                                      },
+                                    ),
+
+                                    const SizedBox(height: 15),
+
+                                    _buildTextField(
+                                      'Confirmar Senha',
+                                      _confirmPasswordController,
+                                      isPassword: true,
+                                      isVisible: _confirmarSenhaVisivel,
+
+                                      onVisibilityChanged: () {
+                                        setState(() {
+                                          _confirmarSenhaVisivel =
+                                              !_confirmarSenhaVisivel;
+                                        });
+                                      },
+
+                                      onChanged: (value) {
+                                        setState(() {
+                                          if (value.isEmpty) {
+                                            _erroSenha = null;
+                                          } else if (value !=
+                                              _passwordController.text) {
+                                            _erroSenha =
+                                                'As senhas não coincidem';
+                                          } else {
+                                            _erroSenha = null;
+                                          }
+                                        });
+                                      },
+                                    ),
+
+                                    if (_erroSenha != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 5,
+                                          left: 15,
+                                        ),
+
+                                        child: Align(
+                                          alignment: Alignment.centerLeft,
+
+                                          child: Text(
+                                            _erroSenha!,
+                                            style: const TextStyle(
+                                              color: Colors.red,
+                                              fontSize: 13,
+                                            ),
                                           ),
                                         ),
+                                      ),
+
+                                    const SizedBox(height: 25),
+
+                                    // FOTO
+                                    const Text(
+                                      'Foto de perfil',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 12),
+
+                                    GestureDetector(
+                                      onTap: _carregando
+                                          ? null
+                                          : _selecionarFoto,
+
+                                      child: Container(
+                                        width: 110,
+                                        height: 110,
+
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: const Color(0xFFF1F1F1),
+                                          border: Border.all(
+                                            color: const Color(0xFF98B9A6),
+                                            width: 2,
+                                          ),
+                                        ),
+
+                                        child: _fotoPerfil != null
+                                            ? ClipOval(
+                                                child: Image.file(
+                                                  _fotoPerfil!,
+                                                  width: 110,
+                                                  height: 110,
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              )
+                                            : const Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+
+                                                children: [
+                                                  Icon(
+                                                    Icons.add_a_photo_outlined,
+                                                    size: 35,
+                                                    color: Colors.black54,
+                                                  ),
+
+                                                  SizedBox(height: 5),
+
+                                                  Text(
+                                                    'Adicionar',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.black54,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 8),
+
+                                    TextButton(
+                                      onPressed: _carregando
+                                          ? null
+                                          : _selecionarFoto,
+
+                                      child: Text(
+                                        _fotoPerfil == null
+                                            ? 'Selecionar foto'
+                                            : 'Alterar foto',
+
+                                        style: const TextStyle(
+                                          color: Color(0xFF76A085),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 15),
+
+                                    // BOTÃO CADASTRAR
+                                    ElevatedButton(
+                                      onPressed: _carregando
+                                          ? null
+                                          : _realizarCadastro,
+
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFF98B9A6),
+                                        foregroundColor: Colors.black,
+                                        disabledBackgroundColor:
+                                            const Color(0xFF98B9A6),
+                                        disabledForegroundColor: Colors.black,
+
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 45,
+                                          vertical: 15,
+                                        ),
+
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(25),
+                                        ),
+
+                                        elevation: 2,
+                                      ),
+
+                                      child: _carregando
+                                          ? const SizedBox(
+                                              width: 24,
+                                              height: 24,
+
+                                              child:
+                                                  CircularProgressIndicator(
+                                                strokeWidth: 2.5,
+                                                color: Colors.black,
+                                              ),
+                                            )
+                                          : const Text(
+                                              'Cadastrar',
+                                              style: TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                    ),
+
+                                    const SizedBox(height: 20),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
             ),
           ),
 
-          // ============================================================
-          // MOLDURA SUPERIOR
-          // ============================================================
+          // QUEBRA-CABEÇA SUPERIOR FIXO
           Positioned(
             top: 0,
             left: 0,
             right: 0,
+
             child: SizedBox(
               height: molduraHeight,
+
               child: Image.asset(
                 'imagem/quebrasuperior.png',
                 width: double.infinity,
@@ -569,15 +616,15 @@ class CriarContaState extends State<CriarConta> {
             ),
           ),
 
-          // ============================================================
-          // MOLDURA INFERIOR
-          // ============================================================
+          // QUEBRA-CABEÇA INFERIOR FIXO
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
+
             child: SizedBox(
               height: molduraHeight,
+
               child: Image.asset(
                 'imagem/quebrainferior.png',
                 width: double.infinity,
@@ -591,9 +638,7 @@ class CriarContaState extends State<CriarConta> {
     );
   }
 
-  // ============================================================
-  // FUNÇÃO PARA CRIAR OS CAMPOS DE TEXTO
-  // ============================================================
+  // CAMPO DE TEXTO
   Widget _buildTextField(
     String hint,
     TextEditingController controller, {
@@ -602,55 +647,96 @@ class CriarContaState extends State<CriarConta> {
     VoidCallback? onVisibilityChanged,
     ValueChanged<String>? onChanged,
     TextInputType? keyboardType,
+    TextCapitalization textCapitalization =
+        TextCapitalization.none,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFD1D5D8),
-        borderRadius: BorderRadius.circular(25),
+    return TextFormField(
+      controller: controller,
+      obscureText: isPassword && !isVisible,
+      keyboardType: keyboardType,
+      textCapitalization: textCapitalization,
+      onChanged: onChanged,
+      cursorColor: const Color(0xFF7952A3),
+
+      style: const TextStyle(
+        color: Colors.black,
+        fontSize: 15,
       ),
-      child: TextFormField(
-        controller: controller,
 
-        // Esconde ou mostra a senha
-        obscureText: isPassword && !isVisible,
+      decoration: InputDecoration(
+        labelText: hint,
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
 
-        // Tipo do teclado
-        keyboardType: keyboardType,
-
-        // Detecta alterações
-        onChanged: onChanged,
-
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w500,
-          ),
-
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 15,
-          ),
-
-          border: InputBorder.none,
-
-          // ========================================================
-          // OLHINHO DA SENHA
-          // ========================================================
-          suffixIcon: isPassword
-              ? IconButton(
-                  icon: Icon(
-                    isVisible
-                        ? Icons.visibility
-                        : Icons.visibility_outlined,
-                    color: Colors.black,
-                  ),
-                  onPressed: onVisibilityChanged,
-                )
-              : null,
+        labelStyle: const TextStyle(
+          color: Colors.black,
+          fontSize: 14,
         ),
+
+        floatingLabelStyle: const TextStyle(
+          color: Colors.black,
+          fontSize: 14,
+        ),
+
+        filled: true,
+        fillColor: Colors.white,
+
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
+
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(
+            color: Color(0xFFBDBDBD),
+            width: 1,
+          ),
+        ),
+
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(
+            color: Colors.black,
+            width: 1.5,
+          ),
+        ),
+
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(
+            color: Color(0xFFBDBDBD),
+            width: 1,
+          ),
+        ),
+
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(
+            color: Colors.red,
+            width: 1,
+          ),
+        ),
+
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(
+            color: Colors.red,
+            width: 1.5,
+          ),
+        ),
+
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  isVisible
+                      ? Icons.visibility
+                      : Icons.visibility_off,
+                  color: Colors.black,
+                ),
+                onPressed: onVisibilityChanged,
+              )
+            : null,
       ),
     );
   }
 }
-

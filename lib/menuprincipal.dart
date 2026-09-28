@@ -3,9 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:neuroway/agendamentos.dart';
 import 'package:neuroway/descricaolocal.dart';
-import 'package:neuroway/localizacao.dart';
 import 'package:neuroway/favoritos.dart';
 import 'package:neuroway/peril.dart';
+import 'package:neuroway/perfilempresa.dart';
 
 class Menuprincipal extends StatefulWidget {
   final int initialIndex;
@@ -25,8 +25,10 @@ class _MenuprincipalState extends State<Menuprincipal> {
 
   late int _currentIndex;
 
-  String _cidadeSelecionada = 'SJC';
   String _searchQuery = '';
+
+  bool _ehEmpresa = false;
+  bool _verificandoTipo = true;
 
   @override
   void initState() {
@@ -37,156 +39,56 @@ class _MenuprincipalState extends State<Menuprincipal> {
     if (_currentIndex < 0 || _currentIndex > 3) {
       _currentIndex = 0;
     }
+
+    _verificarTipoUsuario();
   }
 
-  void _abrirSelecaoCidade() {
-    final List<Map<String, String>> cidades = [
-      {
-        'nome': 'São José dos Campos',
-        'sigla': 'SJC',
-      },
-      {
-        'nome': 'São Paulo',
-        'sigla': 'SP',
-      },
-      {
-        'nome': 'Campinas',
-        'sigla': 'CPS',
-      },
-      {
-        'nome': 'Taubaté',
-        'sigla': 'TBT',
-      },
-      {
-        'nome': 'Jacareí',
-        'sigla': 'JCR',
-      },
-    ];
+  Future<void> _verificarTipoUsuario() async {
+    final usuario = FirebaseAuth.instance.currentUser;
 
-    String? cidadeEscolhida;
+    if (usuario == null) {
+      if (!mounted) return;
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: const Text(
-                'Selecione sua cidade',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: cidades.map((cidade) {
-                  final bool selecionada =
-                      cidadeEscolhida == cidade['sigla'];
+      setState(() {
+        _ehEmpresa = false;
+        _verificandoTipo = false;
+      });
 
-                  return GestureDetector(
-                    onTap: () {
-                      setStateDialog(() {
-                        cidadeEscolhida =
-                            cidade['sigla'];
-                      });
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(
-                        bottom: 8,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: selecionada
-                            ? const Color(0xFF98B9A6)
-                            : const Color(0xFFF3F3F4),
-                        borderRadius:
-                            BorderRadius.circular(12),
-                        border: Border.all(
-                          color: selecionada
-                              ? const Color(0xFF98B9A6)
-                              : const Color(0xFFD0D3D8),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            cidade['nome']!,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight:
-                                  FontWeight.w500,
-                              color: selecionada
-                                  ? Colors.white
-                                  : Colors.black87,
-                            ),
-                          ),
-                          Text(
-                            cidade['sigla']!,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight:
-                                  FontWeight.bold,
-                              color: selecionada
-                                  ? Colors.white70
-                                  : Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text(
-                    'Cancelar',
-                    style: TextStyle(
-                      color: Colors.grey,
-                    ),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: cidadeEscolhida == null
-                      ? null
-                      : () {
-                          setState(() {
-                            _cidadeSelecionada =
-                                cidadeEscolhida!;
-                          });
+      return;
+    }
 
-                          Navigator.pop(context);
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        const Color(0xFF98B9A6),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text('Confirmar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+    try {
+      final empresaDireta = await FirebaseFirestore.instance
+          .collection('empresas')
+          .doc(usuario.uid)
+          .get();
+
+      bool ehEmpresa = empresaDireta.exists;
+
+      if (!ehEmpresa) {
+        final empresaPorUid = await FirebaseFirestore.instance
+            .collection('empresas')
+            .where('uid', isEqualTo: usuario.uid)
+            .limit(1)
+            .get();
+
+        ehEmpresa = empresaPorUid.docs.isNotEmpty;
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _ehEmpresa = ehEmpresa;
+        _verificandoTipo = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _ehEmpresa = false;
+        _verificandoTipo = false;
+      });
+    }
   }
 
   @override
@@ -207,14 +109,9 @@ class _MenuprincipalState extends State<Menuprincipal> {
                 const SizedBox(height: 20),
 
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: SearchBarWidget(
                     controller: _searchController,
-                    cidade: _cidadeSelecionada,
-                    onCidadeTap:
-                        _abrirSelecaoCidade,
                     onChanged: (query) {
                       setState(() {
                         _searchQuery = query;
@@ -228,19 +125,17 @@ class _MenuprincipalState extends State<Menuprincipal> {
             ),
           ),
 
-          StreamBuilder<
-              QuerySnapshot<Map<String, dynamic>>>(
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance
                 .collection('empresas')
                 .snapshots(),
+
             builder: (context, snapshot) {
               if (snapshot.connectionState ==
                   ConnectionState.waiting) {
                 return const SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.only(
-                      top: 50,
-                    ),
+                    padding: EdgeInsets.only(top: 50),
                     child: Center(
                       child: CircularProgressIndicator(
                         color: Color(0xFF98B9A6),
@@ -272,9 +167,7 @@ class _MenuprincipalState extends State<Menuprincipal> {
                   snapshot.data!.docs.isEmpty) {
                 return const SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.only(
-                      top: 40,
-                    ),
+                    padding: EdgeInsets.only(top: 40),
                     child: Center(
                       child: Text(
                         'Nenhuma empresa cadastrada.',
@@ -293,29 +186,18 @@ class _MenuprincipalState extends State<Menuprincipal> {
                 final dados = empresa.data();
 
                 final nome =
-                    (dados['nome'] ?? '')
-                        .toString()
-                        .toLowerCase();
+                    (dados['nome'] ?? '').toString().toLowerCase();
 
                 final categoria =
-                    (dados['categoria'] ?? '')
-                        .toString()
-                        .toLowerCase();
+                    (dados['categoria'] ?? '').toString().toLowerCase();
 
                 final descricao =
-                    (dados['descricao'] ?? '')
-                        .toString()
-                        .toLowerCase();
+                    (dados['descricao'] ?? '').toString().toLowerCase();
 
                 final endereco =
-                    (dados['endereco'] ?? '')
-                        .toString()
-                        .toLowerCase();
+                    (dados['endereco'] ?? '').toString().toLowerCase();
 
-                final busca =
-                    _searchQuery
-                        .toLowerCase()
-                        .trim();
+                final busca = _searchQuery.toLowerCase().trim();
 
                 if (busca.isEmpty) {
                   return true;
@@ -330,9 +212,7 @@ class _MenuprincipalState extends State<Menuprincipal> {
               if (empresas.isEmpty) {
                 return const SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.only(
-                      top: 40,
-                    ),
+                    padding: EdgeInsets.only(top: 40),
                     child: Center(
                       child: Text(
                         'Nenhum resultado encontrado.',
@@ -347,22 +227,17 @@ class _MenuprincipalState extends State<Menuprincipal> {
               }
 
               return SliverPadding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 sliver: SliverList(
-                  delegate:
-                      SliverChildBuilderDelegate(
+                  delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      final empresa =
-                          empresas[index];
+                      final empresa = empresas[index];
 
                       return BarbeariaCard(
                         empresa: empresa,
                       );
                     },
-                    childCount:
-                        empresas.length,
+                    childCount: empresas.length,
                   ),
                 ),
               );
@@ -375,11 +250,25 @@ class _MenuprincipalState extends State<Menuprincipal> {
 
   @override
   Widget build(BuildContext context) {
+    final Widget paginaPerfil;
+
+    if (_verificandoTipo) {
+      paginaPerfil = const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF98B9A6),
+        ),
+      );
+    } else if (_ehEmpresa) {
+      paginaPerfil = const PerfilEmpresa();
+    } else {
+      paginaPerfil = const Perfil();
+    }
+
     final List<Widget> paginas = [
       _buildHomeContent(),
       const Favoritos(),
       const Agendamentos(),
-      const Perfil(),
+      paginaPerfil,
     ];
 
     return Scaffold(
@@ -399,13 +288,13 @@ class _MenuprincipalState extends State<Menuprincipal> {
             ),
           ),
         ),
+
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white,
           selectedItemColor: Colors.black,
-          unselectedItemColor:
-              Color(0xFF9E9E9E),
+          unselectedItemColor: const Color(0xFF9E9E9E),
           showSelectedLabels: false,
           showUnselectedLabels: false,
           elevation: 0,
@@ -418,34 +307,19 @@ class _MenuprincipalState extends State<Menuprincipal> {
 
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(
-                Icons.home_filled,
-                size: 28,
-              ),
+              icon: Icon(Icons.home_filled, size: 28),
               label: 'Home',
             ),
-
             BottomNavigationBarItem(
-              icon: Icon(
-                Icons.favorite,
-                size: 28,
-              ),
+              icon: Icon(Icons.favorite, size: 28),
               label: 'Favoritos',
             ),
-
             BottomNavigationBarItem(
-              icon: Icon(
-                Icons.calendar_month,
-                size: 28,
-              ),
+              icon: Icon(Icons.calendar_month, size: 28),
               label: 'Agenda',
             ),
-
             BottomNavigationBarItem(
-              icon: Icon(
-                Icons.person,
-                size: 28,
-              ),
+              icon: Icon(Icons.person, size: 28),
               label: 'Perfil',
             ),
           ],
@@ -455,17 +329,17 @@ class _MenuprincipalState extends State<Menuprincipal> {
   }
 }
 
+// =====================================================
+// BARRA DE PESQUISA SEM CIDADE
+// =====================================================
+
 class SearchBarWidget extends StatelessWidget {
   final TextEditingController controller;
-  final String cidade;
-  final VoidCallback onCidadeTap;
   final ValueChanged<String> onChanged;
 
   const SearchBarWidget({
     super.key,
     required this.controller,
-    required this.cidade,
-    required this.onCidadeTap,
     required this.onChanged,
   });
 
@@ -473,15 +347,16 @@ class SearchBarWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 54,
+
       decoration: BoxDecoration(
         color: const Color(0xFFF3F3F4),
-        borderRadius:
-            BorderRadius.circular(27),
+        borderRadius: BorderRadius.circular(27),
         border: Border.all(
           color: const Color(0xFFD0D3D8),
           width: 1.5,
         ),
       ),
+
       child: Row(
         children: [
           const SizedBox(width: 16),
@@ -498,78 +373,42 @@ class SearchBarWidget extends StatelessWidget {
             child: TextField(
               controller: controller,
               onChanged: onChanged,
-              decoration:
-                  const InputDecoration(
+
+              decoration: const InputDecoration(
                 hintText: 'Buscar',
                 hintStyle: TextStyle(
                   color: Color(0xFF9E9E9E),
                   fontSize: 18,
                 ),
                 border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
               ),
             ),
           ),
 
-          Container(
-            height: 24,
-            width: 1,
-            color: const Color(0xFFB0B3B8),
-          ),
-
-          const SizedBox(width: 12),
-
-          GestureDetector(
-            onTap: onCidadeTap,
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.location_on_outlined,
-                  color: Color(0xFF9E9E9E),
-                  size: 24,
-                ),
-
-                const SizedBox(width: 6),
-
-                Text(
-                  cidade,
-                  style: const TextStyle(
-                    color: Color(0xFF7D828A),
-                    fontSize: 18,
-                    fontWeight:
-                        FontWeight.bold,
-                  ),
-                ),
-
-                const Icon(
-                  Icons.arrow_drop_down,
-                  color: Color(0xFF9E9E9E),
-                  size: 20,
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
         ],
       ),
     );
   }
 }
 
+// =====================================================
+// QUEBRA-CABEÇA SUPERIOR
+// =====================================================
+
 class PuzzleHeader extends StatelessWidget {
   const PuzzleHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight =
-        MediaQuery.of(context).size.height;
-
-    final molduraHeight =
-        screenHeight * 0.15;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final molduraHeight = screenHeight * 0.15;
 
     return SizedBox(
       height: molduraHeight,
       width: double.infinity,
+
       child: Image.asset(
         'imagem/quebrasuperior.png',
         width: double.infinity,
@@ -580,9 +419,12 @@ class PuzzleHeader extends StatelessWidget {
   }
 }
 
+// =====================================================
+// CARD DA EMPRESA
+// =====================================================
+
 class BarbeariaCard extends StatelessWidget {
-  final QueryDocumentSnapshot<
-      Map<String, dynamic>> empresa;
+  final QueryDocumentSnapshot<Map<String, dynamic>> empresa;
 
   const BarbeariaCard({
     super.key,
@@ -594,22 +436,17 @@ class BarbeariaCard extends StatelessWidget {
   }
 
   Future<void> _alternarFavorito() async {
-    final usuario =
-        FirebaseAuth.instance.currentUser;
+    final usuario = FirebaseAuth.instance.currentUser;
 
     if (usuario == null) {
       return;
     }
 
-    final referencia = FirebaseFirestore
-        .instance
+    final referencia = FirebaseFirestore.instance
         .collection('favoritos')
-        .doc(
-          '${usuario.uid}_${_idFavorito()}',
-        );
+        .doc('${usuario.uid}_${_idFavorito()}');
 
-    final favorito =
-        await referencia.get();
+    final favorito = await referencia.get();
 
     if (favorito.exists) {
       await referencia.delete();
@@ -618,28 +455,21 @@ class BarbeariaCard extends StatelessWidget {
 
     final dados = empresa.data();
 
-    final String nome =
-        (dados['nome'] ?? 'Empresa')
-            .toString();
-
+    final String nome = (dados['nome'] ?? 'Empresa').toString();
     final String categoria =
-        (dados['categoria'] ?? '')
-            .toString();
+        (dados['categoria'] ?? '').toString();
 
     final String descricao =
-        (dados['descricao'] ?? '')
-            .toString();
+        (dados['descricao'] ?? '').toString();
 
     final String endereco =
-        (dados['endereco'] ?? '')
-            .toString();
+        (dados['endereco'] ?? '').toString();
 
     String foto = '';
 
     final fotos = dados['fotos'];
 
-    if (fotos is List &&
-        fotos.isNotEmpty) {
+    if (fotos is List && fotos.isNotEmpty) {
       final primeiraFoto = fotos.first;
 
       if (primeiraFoto is String &&
@@ -658,15 +488,11 @@ class BarbeariaCard extends StatelessWidget {
       'descricao': descricao,
       'endereco': endereco,
       'foto': foto,
-      'criadoEm':
-          FieldValue.serverTimestamp(),
+      'criadoEm': FieldValue.serverTimestamp(),
     });
   }
 
-  IconData _iconeEstrela(
-    double media,
-    int numero,
-  ) {
+  IconData _iconeEstrela(double media, int numero) {
     if (media >= numero) {
       return Icons.star;
     }
@@ -678,12 +504,8 @@ class BarbeariaCard extends StatelessWidget {
     return Icons.star_border;
   }
 
-  Widget _buildAvaliacao(
-    Map<String, dynamic> dados,
-  ) {
-    final dynamic mediaRaw =
-        dados['mediaAvaliacao'];
-
+  Widget _buildAvaliacao(Map<String, dynamic> dados) {
+    final dynamic mediaRaw = dados['mediaAvaliacao'];
     final dynamic quantidadeRaw =
         dados['quantidadeAvaliacoes'];
 
@@ -693,16 +515,13 @@ class BarbeariaCard extends StatelessWidget {
     if (mediaRaw is num) {
       media = mediaRaw.toDouble();
     } else if (mediaRaw is String) {
-      media =
-          double.tryParse(mediaRaw) ?? 0.0;
+      media = double.tryParse(mediaRaw) ?? 0.0;
     }
 
     if (quantidadeRaw is num) {
-      quantidade =
-          quantidadeRaw.toInt();
+      quantidade = quantidadeRaw.toInt();
     } else if (quantidadeRaw is String) {
-      quantidade =
-          int.tryParse(quantidadeRaw) ?? 0;
+      quantidade = int.tryParse(quantidadeRaw) ?? 0;
     }
 
     if (media < 0) {
@@ -717,16 +536,14 @@ class BarbeariaCard extends StatelessWidget {
       children: [
         Row(
           mainAxisSize: MainAxisSize.min,
+
           children: List.generate(
             5,
             (index) {
               final numero = index + 1;
 
               return Icon(
-                _iconeEstrela(
-                  media,
-                  numero,
-                ),
+                _iconeEstrela(media, numero),
                 color: quantidade > 0
                     ? Colors.amber
                     : Colors.grey[400],
@@ -740,13 +557,11 @@ class BarbeariaCard extends StatelessWidget {
 
         if (quantidade > 0)
           Text(
-            '${media.toStringAsFixed(1).replaceAll('.', ',')} '
-            '(${quantidade})',
+            '${media.toStringAsFixed(1).replaceAll('.', ',')} ($quantidade)',
             style: const TextStyle(
               fontSize: 11,
               color: Colors.black87,
-              fontWeight:
-                  FontWeight.w500,
+              fontWeight: FontWeight.w500,
             ),
           )
         else
@@ -755,8 +570,7 @@ class BarbeariaCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 10,
               color: Colors.grey,
-              fontWeight:
-                  FontWeight.w500,
+              fontWeight: FontWeight.w500,
             ),
           ),
       ],
@@ -768,32 +582,25 @@ class BarbeariaCard extends StatelessWidget {
     final dados = empresa.data();
 
     final String nome =
-        (dados['nome'] ?? 'Empresa')
-            .toString();
+        (dados['nome'] ?? 'Empresa').toString();
 
     final String categoria =
-        (dados['categoria'] ?? '')
-            .toString();
+        (dados['categoria'] ?? '').toString();
 
     final String descricao =
-        (dados['descricao'] ??
-                'Sem descrição cadastrada.')
+        (dados['descricao'] ?? 'Sem descrição cadastrada.')
             .toString();
 
     final String endereco =
-        (dados['endereco'] ??
-                'Endereço não informado.')
+        (dados['endereco'] ?? 'Endereço não informado.')
             .toString();
 
-    final dynamic fotos =
-        dados['fotos'];
+    final dynamic fotos = dados['fotos'];
 
     String? fotoUrl;
 
-    if (fotos is List &&
-        fotos.isNotEmpty) {
-      final primeiraFoto =
-          fotos.first;
+    if (fotos is List && fotos.isNotEmpty) {
+      final primeiraFoto = fotos.first;
 
       if (primeiraFoto is String &&
           primeiraFoto.trim().isNotEmpty) {
@@ -801,8 +608,7 @@ class BarbeariaCard extends StatelessWidget {
       }
     }
 
-    final usuario =
-        FirebaseAuth.instance.currentUser;
+    final usuario = FirebaseAuth.instance.currentUser;
 
     Widget conteudoCoracao;
 
@@ -814,19 +620,14 @@ class BarbeariaCard extends StatelessWidget {
       );
     } else {
       conteudoCoracao = StreamBuilder<
-          DocumentSnapshot<
-              Map<String, dynamic>>>(
-        stream: FirebaseFirestore
-            .instance
+          DocumentSnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance
             .collection('favoritos')
-            .doc(
-              '${usuario.uid}_${_idFavorito()}',
-            )
+            .doc('${usuario.uid}_${_idFavorito()}')
             .snapshots(),
+
         builder: (context, snapshot) {
-          final favorito =
-              snapshot.data?.exists ??
-                  false;
+          final favorito = snapshot.data?.exists ?? false;
 
           return Icon(
             favorito
@@ -842,44 +643,41 @@ class BarbeariaCard extends StatelessWidget {
     }
 
     return Container(
-      margin: const EdgeInsets.only(
-        bottom: 16,
-      ),
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
+
       decoration: BoxDecoration(
         color: const Color(0xFFF5F5F5),
-        borderRadius:
-            BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: const Color(0xFFE0E2E5),
           width: 1.5,
         ),
       ),
+
       child: Column(
         children: [
           Row(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+
             children: [
               ClipRRect(
-                borderRadius:
-                    BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(16),
+
                 child: Container(
                   width: 110,
                   height: 90,
                   color: Colors.grey[400],
+
                   child: fotoUrl != null
                       ? Image.network(
                           fotoUrl,
                           width: 110,
                           height: 90,
                           fit: BoxFit.cover,
+
                           errorBuilder:
-                              (
-                            context,
-                            error,
-                            stackTrace,
-                          ) {
+                              (context, error, stackTrace) {
                             return const Icon(
                               Icons.store,
                               color: Colors.white,
@@ -899,39 +697,35 @@ class BarbeariaCard extends StatelessWidget {
 
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+
                   children: [
                     Row(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+
                       children: [
                         Expanded(
-                          child:
-                              GestureDetector(
+                          child: GestureDetector(
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder:
-                                      (context) =>
-                                          DescricaoLocalScreen(
-                                    empresaId:
-                                        empresa.id,
+                                  builder: (context) =>
+                                      DescricaoLocalScreen(
+                                    empresaId: empresa.id,
                                   ),
                                 ),
                               );
                             },
+
                             child: Text(
                               nome,
                               maxLines: 2,
-                              overflow:
-                                  TextOverflow.ellipsis,
-                              style:
-                                  const TextStyle(
+                              overflow: TextOverflow.ellipsis,
+
+                              style: const TextStyle(
                                 fontSize: 20,
-                                fontWeight:
-                                    FontWeight.bold,
+                                fontWeight: FontWeight.bold,
                                 color: Colors.black,
                               ),
                             ),
@@ -941,15 +735,11 @@ class BarbeariaCard extends StatelessWidget {
                         const SizedBox(width: 5),
 
                         GestureDetector(
-                          onTap:
-                              _alternarFavorito,
+                          onTap: _alternarFavorito,
+
                           child: Padding(
-                            padding:
-                                const EdgeInsets.all(
-                              4,
-                            ),
-                            child:
-                                conteudoCoracao,
+                            padding: const EdgeInsets.all(4),
+                            child: conteudoCoracao,
                           ),
                         ),
                       ],
@@ -961,15 +751,12 @@ class BarbeariaCard extends StatelessWidget {
                       Text(
                         categoria,
                         maxLines: 1,
-                        overflow:
-                            TextOverflow.ellipsis,
-                        style:
-                            const TextStyle(
+                        overflow: TextOverflow.ellipsis,
+
+                        style: const TextStyle(
                           fontSize: 11,
-                          color:
-                              Color(0xFF555555),
-                          fontWeight:
-                              FontWeight.w500,
+                          color: Color(0xFF555555),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
 
@@ -982,19 +769,18 @@ class BarbeariaCard extends StatelessWidget {
                           MaterialPageRoute(
                             builder: (context) =>
                                 DescricaoLocalScreen(
-                              empresaId:
-                                  empresa.id,
+                              empresaId: empresa.id,
                             ),
                           ),
                         );
                       },
+
                       child: Text(
                         descricao,
                         maxLines: 3,
-                        overflow:
-                            TextOverflow.ellipsis,
-                        style:
-                            const TextStyle(
+                        overflow: TextOverflow.ellipsis,
+
+                        style: const TextStyle(
                           fontSize: 10,
                           color: Colors.black87,
                           height: 1.2,
@@ -1010,59 +796,41 @@ class BarbeariaCard extends StatelessWidget {
           const SizedBox(height: 8),
 
           Row(
-            mainAxisAlignment:
-                MainAxisAlignment.spaceBetween,
-            crossAxisAlignment:
-                CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+
             children: [
               Expanded(
-                child: _buildAvaliacao(
-                  dados,
-                ),
+                child: _buildAvaliacao(dados),
               ),
 
               Flexible(
-                child: GestureDetector(
-                  behavior:
-                      HitTestBehavior.opaque,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const LocalizacaoScreen(),
-                      ),
-                    );
-                  },
-                  child: Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.end,
-                    children: [
-                      const Icon(
-                        Icons.location_on,
-                        color: Colors.red,
-                        size: 14,
-                      ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
 
-                      const SizedBox(width: 2),
+                  children: [
+                    const Icon(
+                      Icons.location_on,
+                      color: Colors.red,
+                      size: 14,
+                    ),
 
-                      Flexible(
-                        child: Text(
-                          endereco,
-                          maxLines: 1,
-                          overflow:
-                              TextOverflow.ellipsis,
-                          style:
-                              const TextStyle(
-                            fontSize: 9,
-                            color: Colors.black,
-                            fontWeight:
-                                FontWeight.w500,
-                          ),
+                    const SizedBox(width: 2),
+
+                    Flexible(
+                      child: Text(
+                        endereco,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+
+                        style: const TextStyle(
+                          fontSize: 9,
+                          color: Colors.black,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ],

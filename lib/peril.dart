@@ -1,11 +1,15 @@
+
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:neuroway/favoritos.dart';
 import 'package:neuroway/agendamentos.dart';
 import 'package:neuroway/login.dart';
-import 'package:neuroway/perfilempresa.dart';
 
 class Perfil extends StatefulWidget {
   const Perfil({super.key});
@@ -15,453 +19,290 @@ class Perfil extends StatefulWidget {
 }
 
 class _PerfilState extends State<Perfil> {
-  // ============================================================
-  // CONTROLE DO TIPO DE USUÁRIO
-  // ============================================================
-
-  bool carregandoTipoUsuario = true;
-
-  bool ehEmpresa = false;
-
-  // ============================================================
-  // DADOS DO USUÁRIO NORMAL
-  // ============================================================
+  final Color verde = const Color(0xFF98B9A6);
 
   String nome = 'Carregando...';
-  String email = 'Carregando...';
-  String cidade = 'Carregando...';
+  String email = 'Não informado';
+  String cidade = 'Não informado';
+  String fotoPerfilUrl = '';
 
   bool carregando = true;
-
-  // ============================================================
-  // INICIALIZAÇÃO
-  // ============================================================
+  bool enviandoFoto = false;
 
   @override
   void initState() {
     super.initState();
-
-    _verificarTipoUsuario();
+    _buscarDados();
   }
-
-  // ============================================================
-  // VERIFICAR TIPO DE USUÁRIO
-  // ============================================================
-
-  Future<void> _verificarTipoUsuario() async {
-    try {
-      final User? usuario =
-          FirebaseAuth.instance.currentUser;
-
-      // ==========================================================
-      // NENHUM USUÁRIO LOGADO
-      // ==========================================================
-
-      if (usuario == null) {
-        if (!mounted) return;
-
-        setState(() {
-          ehEmpresa = false;
-          carregandoTipoUsuario = false;
-        });
-
-        _buscarDados();
-
-        return;
-      }
-
-      final String uid = usuario.uid;
-
-      debugPrint('========================================');
-      debugPrint('VERIFICANDO TIPO DE USUÁRIO - PERFIL');
-      debugPrint('UID: $uid');
-      debugPrint('========================================');
-
-      // ==========================================================
-      // PRIMEIRO:
-      // PROCURA EMPRESA PELO ID DO DOCUMENTO
-      // ==========================================================
-
-      final DocumentSnapshot<Map<String, dynamic>>
-          empresaDocumento =
-          await FirebaseFirestore.instance
-              .collection('empresas')
-              .doc(uid)
-              .get();
-
-      if (empresaDocumento.exists) {
-        debugPrint(
-          'USUÁRIO IDENTIFICADO COMO EMPRESA.',
-        );
-
-        if (!mounted) return;
-
-        setState(() {
-          ehEmpresa = true;
-          carregandoTipoUsuario = false;
-        });
-
-        return;
-      }
-
-      // ==========================================================
-      // SEGUNDO:
-      // CASO NÃO ENCONTRE PELO ID,
-      // PROCURA PELO CAMPO uid
-      // ==========================================================
-
-      debugPrint(
-        'Empresa não encontrada pelo ID.',
-      );
-
-      debugPrint(
-        'Procurando pelo campo uid...',
-      );
-
-      final QuerySnapshot<Map<String, dynamic>>
-          resultado =
-          await FirebaseFirestore.instance
-              .collection('empresas')
-              .where(
-                'uid',
-                isEqualTo: uid,
-              )
-              .limit(1)
-              .get();
-
-      if (resultado.docs.isNotEmpty) {
-        debugPrint(
-          'USUÁRIO IDENTIFICADO COMO EMPRESA PELO CAMPO uid.',
-        );
-
-        if (!mounted) return;
-
-        setState(() {
-          ehEmpresa = true;
-          carregandoTipoUsuario = false;
-        });
-
-        return;
-      }
-
-      // ==========================================================
-      // NÃO É EMPRESA
-      // ==========================================================
-
-      debugPrint(
-        'USUÁRIO IDENTIFICADO COMO USUÁRIO NORMAL.',
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        ehEmpresa = false;
-        carregandoTipoUsuario = false;
-      });
-
-      _buscarDados();
-    }
-
-    // ============================================================
-    // ERRO FIREBASE
-    // ============================================================
-
-    on FirebaseException catch (e) {
-      debugPrint('========================================');
-      debugPrint('ERRO AO VERIFICAR TIPO DE USUÁRIO');
-      debugPrint('Código: ${e.code}');
-      debugPrint('Mensagem: ${e.message}');
-      debugPrint('========================================');
-
-      // Se houver erro na verificação,
-      // mantemos o perfil normal como fallback.
-
-      if (!mounted) return;
-
-      setState(() {
-        ehEmpresa = false;
-        carregandoTipoUsuario = false;
-      });
-
-      _buscarDados();
-    }
-
-    // ============================================================
-    // ERRO GERAL
-    // ============================================================
-
-    catch (e) {
-      debugPrint(
-        'ERRO GERAL AO VERIFICAR TIPO DE USUÁRIO: $e',
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        ehEmpresa = false;
-        carregandoTipoUsuario = false;
-      });
-
-      _buscarDados();
-    }
-  }
-
-  // ============================================================
-  // BUSCAR DADOS DO USUÁRIO NORMAL
-  // ============================================================
 
   Future<void> _buscarDados() async {
     try {
-      final User? usuario =
-          FirebaseAuth.instance.currentUser;
-
-      // ==========================================================
-      // VERIFICA SE EXISTE USUÁRIO LOGADO
-      // ==========================================================
+      final usuario = FirebaseAuth.instance.currentUser;
 
       if (usuario == null) {
         if (!mounted) return;
 
         setState(() {
           nome = 'Usuário não identificado';
-          email = 'Faça login novamente';
-          cidade = 'Não informado';
           carregando = false;
         });
 
         return;
       }
 
-      final String? emailAuth = usuario.email;
+      final firestore = FirebaseFirestore.instance;
 
-      final String uid = usuario.uid;
+      DocumentSnapshot<Map<String, dynamic>>? documentoUsuario;
 
-      debugPrint('========================================');
-      debugPrint('PERFIL DO USUÁRIO');
-      debugPrint('UID: $uid');
-      debugPrint('E-MAIL AUTHENTICATION: $emailAuth');
-      debugPrint('========================================');
+      final documentoPorUid = await firestore
+          .collection('usuarios')
+          .doc(usuario.uid)
+          .get();
 
-      DocumentSnapshot<Map<String, dynamic>>?
-          documento;
-
-      // ==========================================================
-      // PRIMEIRA TENTATIVA:
-      // PROCURAR PELO E-MAIL
-      // ==========================================================
-
-      if (emailAuth != null &&
-          emailAuth.isNotEmpty) {
-        debugPrint(
-          'Procurando usuário pelo e-mail...',
-        );
-
-        final QuerySnapshot<Map<String, dynamic>>
-            resultado =
-            await FirebaseFirestore.instance
-                .collection('usuarios')
-                .where(
-                  'email',
-                  isEqualTo: emailAuth,
-                )
-                .limit(1)
-                .get();
+      if (documentoPorUid.exists) {
+        documentoUsuario = documentoPorUid;
+      } else {
+        final resultado = await firestore
+            .collection('usuarios')
+            .where(
+              'email',
+              isEqualTo: usuario.email,
+            )
+            .limit(1)
+            .get();
 
         if (resultado.docs.isNotEmpty) {
-          documento = resultado.docs.first;
-
-          debugPrint(
-            'Usuário encontrado pelo e-mail!',
-          );
-
-          debugPrint(
-            'ID do documento: ${documento.id}',
-          );
+          documentoUsuario = resultado.docs.first;
         }
       }
 
-      // ==========================================================
-      // SEGUNDA TENTATIVA:
-      // PROCURAR PELO UID
-      // ==========================================================
+      final dados = documentoUsuario?.data() ?? {};
 
-      if (documento == null) {
-        debugPrint(
-          'Usuário não encontrado pelo e-mail.',
-        );
+      final nomeBanco = dados['nome']?.toString().trim() ?? '';
+      final emailBanco = dados['email']?.toString().trim() ?? '';
+      final cidadeBanco = dados['cidade']?.toString().trim() ?? '';
 
-        debugPrint(
-          'Tentando procurar pelo UID...',
-        );
+      final dynamic fotoValor = dados['fotoPerfilUrl'];
 
-        final DocumentSnapshot<Map<String, dynamic>>
-            documentoUid =
-            await FirebaseFirestore.instance
-                .collection('usuarios')
-                .doc(uid)
-                .get();
-
-        if (documentoUid.exists) {
-          documento = documentoUid;
-
-          debugPrint(
-            'Usuário encontrado pelo UID!',
-          );
-        }
-      }
-
-      // ==========================================================
-      // DOCUMENTO ENCONTRADO
-      // ==========================================================
-
-      if (documento != null &&
-          documento.exists) {
-        final Map<String, dynamic> dados =
-            documento.data() ?? {};
-
-        debugPrint('========================================');
-        debugPrint('DADOS DO FIRESTORE');
-        debugPrint('Nome: ${dados['nome']}');
-        debugPrint('E-mail: ${dados['email']}');
-        debugPrint('Cidade: ${dados['cidade']}');
-        debugPrint('========================================');
-
-        if (!mounted) return;
-
-        setState(() {
-          // ======================================================
-          // NOME
-          // ======================================================
-
-          final nomeBanco =
-              dados['nome']
-                      ?.toString()
-                      .trim() ??
-                  '';
-
-          nome = nomeBanco.isNotEmpty
-              ? nomeBanco
-              : 'Nome não informado';
-
-          // ======================================================
-          // E-MAIL
-          // ======================================================
-
-          final emailBanco =
-              dados['email']
-                      ?.toString()
-                      .trim() ??
-                  '';
-
-          if (emailBanco.isNotEmpty) {
-            email = emailBanco;
-          } else if (emailAuth != null &&
-              emailAuth.isNotEmpty) {
-            email = emailAuth;
-          } else {
-            email = 'E-mail não informado';
-          }
-
-          // ======================================================
-          // CIDADE
-          // ======================================================
-
-          final cidadeBanco =
-              dados['cidade']
-                      ?.toString()
-                      .trim() ??
-                  '';
-
-          cidade = cidadeBanco.isNotEmpty
-              ? cidadeBanco
-              : 'Cidade não informada';
-
-          carregando = false;
-        });
-
-        return;
-      }
-
-      // ==========================================================
-      // NÃO ENCONTROU NO FIRESTORE
-      // ==========================================================
-
-      debugPrint(
-        'NENHUM DOCUMENTO DE USUÁRIO ENCONTRADO.',
-      );
+      final String fotoBanco =
+          fotoValor == null ? '' : fotoValor.toString().trim();
 
       if (!mounted) return;
 
       setState(() {
-        nome = 'Nome não encontrado';
-
-        email = emailAuth ??
-            'E-mail não encontrado';
-
-        cidade = 'Cidade não encontrada';
-
+        nome = nomeBanco.isNotEmpty ? nomeBanco : 'Usuário';
+        email = emailBanco.isNotEmpty
+            ? emailBanco
+            : (usuario.email ?? 'Não informado');
+        cidade = cidadeBanco.isNotEmpty
+            ? cidadeBanco
+            : 'Não informado';
+        fotoPerfilUrl = fotoBanco;
         carregando = false;
       });
-    }
-
-    // ============================================================
-    // ERRO FIREBASE
-    // ============================================================
-
-    on FirebaseException catch (e) {
-      debugPrint('========================================');
-      debugPrint('ERRO FIREBASE NO PERFIL');
-      debugPrint('Código: ${e.code}');
-      debugPrint('Mensagem: ${e.message}');
-      debugPrint('========================================');
+    } catch (e) {
+      debugPrint('Erro ao carregar perfil: $e');
 
       if (!mounted) return;
 
-      final User? usuario =
-          FirebaseAuth.instance.currentUser;
-
       setState(() {
-        nome = 'Erro ao carregar nome';
-
-        email = usuario?.email ??
-            'E-mail não disponível';
-
-        cidade = 'Erro ao carregar cidade';
-
-        carregando = false;
-      });
-    }
-
-    // ============================================================
-    // ERRO GERAL
-    // ============================================================
-
-    catch (e) {
-      debugPrint(
-        'ERRO GERAL NO PERFIL: $e',
-      );
-
-      if (!mounted) return;
-
-      final User? usuario =
-          FirebaseAuth.instance.currentUser;
-
-      setState(() {
-        nome = 'Erro ao carregar';
-
-        email = usuario?.email ??
-            'E-mail não disponível';
-
-        cidade = 'Erro ao carregar cidade';
-
+        nome = 'Erro ao carregar perfil';
         carregando = false;
       });
     }
   }
 
-  // ============================================================
-  // SAIR
-  // ============================================================
+  Future<void> _alterarFoto() async {
+    try {
+      final imagem = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (imagem == null) return;
+
+      if (mounted) {
+        setState(() {
+          enviandoFoto = true;
+        });
+      }
+
+      final usuario = FirebaseAuth.instance.currentUser;
+
+      if (usuario == null) {
+        _mostrarMensagem('Usuário não identificado.');
+        return;
+      }
+
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('usuarios/${usuario.uid}/foto_perfil.jpg');
+
+      await storageRef.putFile(File(imagem.path));
+
+      final url = await storageRef.getDownloadURL();
+
+      await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(usuario.uid)
+          .set(
+        {
+          'fotoPerfilUrl': url,
+        },
+        SetOptions(merge: true),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        fotoPerfilUrl = url;
+      });
+
+      _mostrarMensagem('Foto atualizada com sucesso.');
+    } catch (e) {
+      debugPrint('Erro ao alterar foto: $e');
+
+      if (mounted) {
+        _mostrarMensagem('Não foi possível alterar a foto.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          enviandoFoto = false;
+        });
+      }
+    }
+  }
+
+  void _mostrarEdicaoCidade() {
+    final controller = TextEditingController(
+      text: cidade == 'Não informado' ? '' : cidade,
+    );
+
+    bool editando = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                const Expanded(
+                  child: Text('Cidade'),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () {
+                    setDialogState(() {
+                      editando = true;
+                    });
+                  },
+                ),
+              ],
+            ),
+            content: TextField(
+              controller: controller,
+              enabled: editando,
+              keyboardType: TextInputType.streetAddress,
+              maxLines: 1,
+              decoration: const InputDecoration(
+                labelText: 'Cidade',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Fechar'),
+              ),
+              if (editando)
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: verde,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () async {
+                    final valor = controller.text.trim();
+
+                    if (valor.isEmpty) {
+                      _mostrarMensagem('Preencha a cidade.');
+                      return;
+                    }
+
+                    Navigator.pop(dialogContext);
+
+                    await _salvarCidade(valor);
+                  },
+                  child: const Text('Salvar'),
+                ),
+            ],
+          );
+        },
+      ),
+    ).then((_) => controller.dispose());
+  }
+
+  Future<void> _salvarCidade(String valor) async {
+    try {
+      final usuario = FirebaseAuth.instance.currentUser;
+
+      if (usuario == null) {
+        _mostrarMensagem('Usuário não identificado.');
+        return;
+      }
+
+      await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(usuario.uid)
+          .set(
+        {
+          'cidade': valor,
+        },
+        SetOptions(merge: true),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        cidade = valor;
+      });
+
+      _mostrarMensagem('Cidade atualizada com sucesso.');
+    } catch (e) {
+      debugPrint('Erro ao salvar cidade: $e');
+
+      if (mounted) {
+        _mostrarMensagem('Não foi possível atualizar a cidade.');
+      }
+    }
+  }
+
+  void _abrirFavoritos() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const Scaffold(
+          backgroundColor: Colors.white,
+          body: Favoritos(),
+        ),
+      ),
+    );
+  }
+
+  void _abrirAgendamentos() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const Scaffold(
+          backgroundColor: Colors.white,
+          body: Agendamentos(),
+        ),
+      ),
+    );
+  }
 
   Future<void> _sair() async {
     try {
@@ -472,470 +313,223 @@ class _PerfilState extends State<Perfil> {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
-          builder: (context) => const LOGIN(),
+          builder: (_) => const LOGIN(),
         ),
         (route) => false,
       );
     } catch (e) {
-      debugPrint(
-        'Erro ao sair: $e',
-      );
-
-      if (!mounted) return;
-
-      _mostrarMensagem(
-        'Erro ao sair da conta.',
-      );
+      _mostrarMensagem('Erro ao sair da conta.');
     }
   }
 
-  // ============================================================
-  // BUILD
-  // ============================================================
-
-  @override
-  Widget build(BuildContext context) {
-    // ==========================================================
-    // AINDA VERIFICANDO O TIPO
-    // ==========================================================
-
-    if (carregandoTipoUsuario) {
-      return const Scaffold(
-        backgroundColor: Colors.white,
-        body: Center(
-          child: CircularProgressIndicator(
-            color: Color(0xFF76A085),
-          ),
-        ),
-      );
-    }
-
-    // ==========================================================
-    // EMPRESA
-    // ==========================================================
-
-    if (ehEmpresa) {
-      return const PerfilEmpresa();
-    }
-
-    // ==========================================================
-    // USUÁRIO NORMAL
-    // ==========================================================
-
-    return _buildPerfilUsuario();
-  }
-
-  // ============================================================
-  // PERFIL DO USUÁRIO NORMAL
-  // ============================================================
-
-  Widget _buildPerfilUsuario() {
-    return Scaffold(
-      backgroundColor: Colors.white,
-
-      body: SafeArea(
-        top: false,
-
-        child: Column(
-          children: [
-
-            // ==================================================
-            // PARTE PRINCIPAL
-            // ==================================================
-
-            Expanded(
-              child: ListView(
-                padding:
-                    const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-
-                children: [
-
-                  // ==================================================
-                  // FOTO + NOME + E-MAIL
-                  // ==================================================
-
-                  Row(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.center,
-
-                    children: [
-
-                      const CircleAvatar(
-                        radius: 50,
-
-                        backgroundColor:
-                            Color(0xFF6C757D),
-
-                        child: Icon(
-                          Icons.person,
-                          size: 60,
-                          color: Colors.white,
-                        ),
-                      ),
-
-                      const SizedBox(width: 20),
-
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-
-                          children: [
-
-                            // NOME
-                            Text(
-                              nome,
-
-                              style:
-                                  const TextStyle(
-                                fontSize: 28,
-                                fontWeight:
-                                    FontWeight.bold,
-                                color: Colors.black,
-                              ),
-
-                              maxLines: 2,
-
-                              overflow:
-                                  TextOverflow.ellipsis,
-                            ),
-
-                            const SizedBox(height: 5),
-
-                            // E-MAIL
-                            Text(
-                              email,
-
-                              style:
-                                  const TextStyle(
-                                fontSize: 16,
-                                color:
-                                    Color(0xFF495057),
-                              ),
-
-                              maxLines: 2,
-
-                              overflow:
-                                  TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  // ==================================================
-                  // CIDADE
-                  // ==================================================
-
-                  _buildProfileOption(
-                    icon:
-                        Icons.location_on_outlined,
-
-                    label: cidade,
-
-                    onTap: () {
-                      if (!carregando) {
-                        _mostrarMensagem(
-                          'Cidade: $cidade',
-                        );
-                      }
-                    },
-                  ),
-
-                  const Divider(height: 1),
-
-                  // ==================================================
-                  // FAVORITOS
-                  // ==================================================
-
-                  _buildProfileOption(
-                    icon:
-                        Icons.favorite_border,
-
-                    label: 'Favoritos',
-
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const Scaffold(
-                            backgroundColor:
-                                Colors.white,
-                            body: Favoritos(),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const Divider(height: 1),
-
-                  // ==================================================
-                  // AGENDAMENTOS
-                  // ==================================================
-
-                  _buildProfileOption(
-                    icon:
-                        Icons.calendar_today_outlined,
-
-                    label: 'Agendamentos',
-
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const Scaffold(
-                            backgroundColor:
-                                Colors.white,
-                            body: Agendamentos(),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            // ==================================================
-            // PARTE INFERIOR
-            // ==================================================
-
-            Padding(
-              padding:
-                  const EdgeInsets.all(20),
-
-              child: Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
-
-                children: [
-
-                  // ==================================================
-                  // EDITAR
-                  // ==================================================
-
-                  TextButton.icon(
-                    onPressed: () {
-                      _mostrarMensagem(
-                        'Botão Editar clicado',
-                      );
-                    },
-
-                    icon: const Icon(
-                      Icons.edit_outlined,
-                      color: Colors.black,
-                      size: 28,
-                    ),
-
-                    label: const Text(
-                      'Editar',
-
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 18,
-                      ),
-                    ),
-
-                    style:
-                        TextButton.styleFrom(
-                      padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                    ),
-                  ),
-
-                  // ==================================================
-                  // SAIR
-                  // ==================================================
-
-                  InkWell(
-                    onTap: _sair,
-
-                    splashColor:
-                        Colors.green.withOpacity(
-                      0.3,
-                    ),
-
-                    borderRadius:
-                        BorderRadius.circular(10),
-
-                    child: const Padding(
-                      padding:
-                          EdgeInsets.all(8),
-
-                      child: Row(
-                        children: [
-
-                          Text(
-                            'Sair',
-
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 18,
-                            ),
-                          ),
-
-                          SizedBox(width: 8),
-
-                          Icon(
-                            Icons.exit_to_app,
-                            color: Colors.black,
-                            size: 28,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+  void _mostrarMensagem(String mensagem) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
 
-  // ============================================================
-  // ITEM DO PERFIL
-  // ============================================================
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        top: false,
+        child: carregando
+            ? Center(
+                child: CircularProgressIndicator(
+                  color: verde,
+                ),
+              )
+            : Column(
+                children: [
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 20,
+                      ),
+                      children: [
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: _alterarFoto,
+                              child: Stack(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 50,
+                                    backgroundColor:
+                                        const Color(0xFFF1F1F1),
+                                    backgroundImage:
+                                        fotoPerfilUrl.isNotEmpty
+                                            ? NetworkImage(fotoPerfilUrl)
+                                            : null,
+                                    child: fotoPerfilUrl.isEmpty
+                                        ? const Icon(
+                                            Icons.person,
+                                            size: 55,
+                                            color: Colors.black54,
+                                          )
+                                        : null,
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: CircleAvatar(
+                                      radius: 17,
+                                      backgroundColor: verde,
+                                      child: const Icon(
+                                        Icons.camera_alt,
+                                        size: 18,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 18),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    nome,
+                                    style: const TextStyle(
+                                      fontSize: 25,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    email,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF495057),
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  TextButton(
+                                    onPressed: enviandoFoto
+                                        ? null
+                                        : _alterarFoto,
+                                    style: TextButton.styleFrom(
+                                      padding: EdgeInsets.zero,
+                                      minimumSize: const Size(0, 36),
+                                      alignment: Alignment.centerLeft,
+                                    ),
+                                    child: Text(
+                                      enviandoFoto
+                                          ? 'Enviando foto...'
+                                          : 'Alterar foto',
+                                      style: TextStyle(
+                                        color: verde,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 25),
+                        _opcao(
+                          Icons.location_city_outlined,
+                          'Cidade: $cidade',
+                          _mostrarEdicaoCidade,
+                        ),
+                        _divisor(),
+                        _opcao(
+                          Icons.favorite_border,
+                          'Favoritos',
+                          _abrirFavoritos,
+                        ),
+                        _divisor(),
+                        _opcao(
+                          Icons.calendar_today_outlined,
+                          'Agendamentos',
+                          _abrirAgendamentos,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: InkWell(
+                        onTap: _sair,
+                        child: const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Sair',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Icon(
+                                Icons.exit_to_app,
+                                color: Colors.black,
+                                size: 28,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
 
-  Widget _buildProfileOption({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
+  Widget _divisor() {
+    return const Divider(height: 1);
+  }
+
+  Widget _opcao(
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+  ) {
     return ListTile(
-      contentPadding:
-          EdgeInsets.zero,
-
+      contentPadding: EdgeInsets.zero,
       leading: Icon(
         icon,
         color: Colors.black,
         size: 28,
       ),
-
       title: Text(
         label,
-
-        style:
-            const TextStyle(
-          fontSize: 18,
+        style: const TextStyle(
+          fontSize: 17,
           color: Colors.black,
         ),
-
-        maxLines: 1,
-
-        overflow:
-            TextOverflow.ellipsis,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
       ),
-
       trailing: const Icon(
         Icons.arrow_forward_ios,
         color: Colors.black,
         size: 16,
       ),
-
       onTap: onTap,
     );
-  }
-
-  // ============================================================
-  // SNACKBAR
-  // ============================================================
-
-  void _mostrarMensagem(
-    String mensagem,
-  ) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensagem),
-
-        duration:
-            const Duration(seconds: 2),
-      ),
-    );
-  }
-}
-
-// ================================================================
-// HEADER WAVE CLIPPER
-// ================================================================
-
-class HeaderWaveClipper
-    extends CustomClipper<Path> {
-
-  @override
-  Path getClip(Size size) {
-    Path path = Path();
-
-    path.lineTo(
-      0,
-      size.height * 0.75,
-    );
-
-    final firstControlPoint =
-        Offset(
-      size.width * 0.25,
-      size.height * 0.60,
-    );
-
-    final firstEndPoint =
-        Offset(
-      size.width * 0.5,
-      size.height * 0.80,
-    );
-
-    path.quadraticBezierTo(
-      firstControlPoint.dx,
-      firstControlPoint.dy,
-      firstEndPoint.dx,
-      firstEndPoint.dy,
-    );
-
-    final secondControlPoint =
-        Offset(
-      size.width * 0.75,
-      size.height * 1.0,
-    );
-
-    final secondEndPoint =
-        Offset(
-      size.width,
-      size.height * 0.75,
-    );
-
-    path.quadraticBezierTo(
-      secondControlPoint.dx,
-      secondControlPoint.dy,
-      secondEndPoint.dx,
-      secondEndPoint.dy,
-    );
-
-    path.lineTo(
-      size.width,
-      0,
-    );
-
-    path.close();
-
-    return path;
-  }
-
-  @override
-  bool shouldReclip(
-    CustomClipper<Path> oldClipper,
-  ) {
-    return false;
   }
 }

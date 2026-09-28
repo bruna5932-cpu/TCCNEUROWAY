@@ -9,8 +9,7 @@ class Favoritos extends StatefulWidget {
   const Favoritos({super.key});
 
   @override
-  State<Favoritos> createState() =>
-      _FavoritosState();
+  State<Favoritos> createState() => _FavoritosState();
 }
 
 class _FavoritosState extends State<Favoritos> {
@@ -23,16 +22,12 @@ class _FavoritosState extends State<Favoritos> {
   void initState() {
     super.initState();
 
-    _pesquisaController.addListener(
-      () {
-        setState(() {
-          _pesquisa =
-              _pesquisaController.text
-                  .trim()
-                  .toLowerCase();
-        });
-      },
-    );
+    _pesquisaController.addListener(() {
+      setState(() {
+        _pesquisa =
+            _pesquisaController.text.trim().toLowerCase();
+      });
+    });
   }
 
   @override
@@ -41,44 +36,35 @@ class _FavoritosState extends State<Favoritos> {
     super.dispose();
   }
 
-  Stream<QuerySnapshot<Map<String, dynamic>>>
-      _favoritosStream() {
-    final usuario =
-        FirebaseAuth.instance.currentUser;
+  // Buscar favoritos
+  Stream<QuerySnapshot<Map<String, dynamic>>> _favoritosStream() {
+    final usuario = FirebaseAuth.instance.currentUser;
 
     if (usuario == null) {
       return FirebaseFirestore.instance
           .collection('favoritos')
-          .where(
-            'usuarioId',
-            isEqualTo: '__usuario_nao_logado__',
-          )
+          .where('usuarioId',
+              isEqualTo: '__usuario_nao_logado__')
           .snapshots();
     }
 
     return FirebaseFirestore.instance
         .collection('favoritos')
-        .where(
-          'usuarioId',
-          isEqualTo: usuario.uid,
-        )
+        .where('usuarioId', isEqualTo: usuario.uid)
         .snapshots();
   }
 
+  // Remover favorito
   Future<void> _removerFavorito(
-    DocumentSnapshot<Map<String, dynamic>>
-        documento,
+    DocumentSnapshot<Map<String, dynamic>> documento,
   ) async {
     try {
       await documento.reference.delete();
     } catch (e) {
-      debugPrint(
-        'Erro ao remover favorito: $e',
-      );
+      debugPrint('Erro ao remover favorito: $e');
 
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
               'Não foi possível remover o favorito.',
@@ -89,28 +75,21 @@ class _FavoritosState extends State<Favoritos> {
     }
   }
 
-  void _abrirFavorito(
-    Map<String, dynamic> dados,
-  ) {
-    final tipo =
-        (dados['tipo'] ?? '').toString();
+  // Abrir detalhes do favorito
+  void _abrirFavorito(Map<String, dynamic> dados) {
+    final tipo = (dados['tipo'] ?? '').toString();
 
     if (tipo == 'empresa') {
       final empresaId =
-          (dados['empresaId'] ??
-                  dados['itemId'] ??
-                  '')
+          (dados['empresaId'] ?? dados['itemId'] ?? '')
               .toString();
 
-      if (empresaId.isEmpty) {
-        return;
-      }
+      if (empresaId.isEmpty) return;
 
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) =>
-              DescricaoLocalScreen(
+          builder: (context) => DescricaoLocalScreen(
             empresaId: empresaId,
           ),
         ),
@@ -121,89 +100,59 @@ class _FavoritosState extends State<Favoritos> {
 
     if (tipo == 'profissional') {
       final profissionalUid =
-          (dados['profissionalUid'] ??
-                  dados['itemId'] ??
-                  '')
+          (dados['profissionalUid'] ?? dados['itemId'] ?? '')
               .toString();
 
-      final Map<String, dynamic>
-          profissional = {
+      final Map<String, dynamic> profissional = {
         'uid': profissionalUid,
-        'nome':
-            dados['nome'] ?? '',
+        'nome': dados['nome'] ?? '',
         'especialidade':
-            dados['especialidade'] ??
-                dados['profissao'] ??
-                '',
+            dados['especialidade'] ?? dados['profissao'] ?? '',
         'profissao':
-            dados['profissao'] ??
-                dados['especialidade'] ??
-                '',
-        'descricao':
-            dados['descricao'] ?? '',
-        'foto':
-            dados['foto'] ?? '',
+            dados['profissao'] ?? dados['especialidade'] ?? '',
+        'descricao': dados['descricao'] ?? '',
+        'foto': dados['foto'] ?? '',
       };
 
       final empresaId =
-          (dados['empresaId'] ??
-                  '')
-              .toString();
+          (dados['empresaId'] ?? '').toString();
 
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) =>
-              Descricaoprofi(
-            profissional:
-                profissional,
-            empresaId:
-                empresaId.isEmpty
-                    ? null
-                    : empresaId,
+          builder: (context) => Descricaoprofi(
+            profissional: profissional,
+            empresaId: empresaId.isEmpty ? null : empresaId,
           ),
         ),
       );
     }
   }
 
-  List<DocumentSnapshot<Map<String, dynamic>>>
-      _filtrarFavoritos(
-    List<DocumentSnapshot<Map<String, dynamic>>>
-        documentos,
+  // Filtrar favoritos
+  List<DocumentSnapshot<Map<String, dynamic>>> _filtrarFavoritos(
+    List<DocumentSnapshot<Map<String, dynamic>>> documentos,
   ) {
-    if (_pesquisa.isEmpty) {
-      return documentos;
-    }
+    if (_pesquisa.isEmpty) return documentos;
 
-    return documentos.where(
-      (documento) {
-        final dados = documento.data() ?? {};
+    return documentos.where((documento) {
+      final dados = documento.data() ?? {};
 
-        final nome =
-            (dados['nome'] ?? '')
-                .toString()
-                .toLowerCase();
+      final nome =
+          (dados['nome'] ?? '').toString().toLowerCase();
 
-        final categoria =
-            (dados['categoria'] ?? '')
-                .toString()
-                .toLowerCase();
+      final categoria =
+          (dados['categoria'] ?? '').toString().toLowerCase();
 
-        final especialidade =
-            (dados['especialidade'] ??
-                    dados['profissao'] ??
-                    '')
-                .toString()
-                .toLowerCase();
+      final especialidade =
+          (dados['especialidade'] ?? dados['profissao'] ?? '')
+              .toString()
+              .toLowerCase();
 
-        return nome.contains(_pesquisa) ||
-            categoria.contains(_pesquisa) ||
-            especialidade.contains(
-              _pesquisa,
-            );
-      },
-    ).toList();
+      return nome.contains(_pesquisa) ||
+          categoria.contains(_pesquisa) ||
+          especialidade.contains(_pesquisa);
+    }).toList();
   }
 
   @override
@@ -215,10 +164,8 @@ class _FavoritosState extends State<Favoritos> {
         child: Column(
           children: [
             _buildTopo(),
-
             Expanded(
-              child:
-                  _buildListaFavoritos(),
+              child: _buildListaFavoritos(),
             ),
           ],
         ),
@@ -226,6 +173,7 @@ class _FavoritosState extends State<Favoritos> {
     );
   }
 
+  // Cabeçalho
   Widget _buildTopo() {
     return Column(
       children: [
@@ -236,24 +184,20 @@ class _FavoritosState extends State<Favoritos> {
             'imagem/quebrasuperior.png',
             width: double.infinity,
             fit: BoxFit.cover,
-            alignment:
-                Alignment.topCenter,
+            alignment: Alignment.topCenter,
           ),
         ),
 
         Container(
-          padding:
-              const EdgeInsets.symmetric(
+          padding: const EdgeInsets.symmetric(
             horizontal: 20,
             vertical: 12,
           ),
           child: Row(
             children: [
               IconButton(
-                padding:
-                    EdgeInsets.zero,
-                constraints:
-                    const BoxConstraints(),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
                 icon: const Icon(
                   Icons.arrow_back_ios,
                   size: 26,
@@ -273,111 +217,49 @@ class _FavoritosState extends State<Favoritos> {
 
               const SizedBox(width: 10),
 
+              // BARRA DE PESQUISA SEM CIDADES
               Expanded(
                 child: Container(
                   height: 54,
-                  decoration:
-                      BoxDecoration(
-                    color:
-                        const Color(
-                      0xFFF5F5F5,
-                    ),
-                    borderRadius:
-                        BorderRadius.circular(
-                      30,
-                    ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(30),
                     border: Border.all(
-                      color:
-                          const Color(
-                        0xFFD4D4D4,
-                      ),
+                      color: const Color(0xFFD4D4D4),
                     ),
                   ),
+
                   child: Row(
                     children: [
-                      const SizedBox(
-                        width: 18,
-                      ),
+                      const SizedBox(width: 18),
 
                       Icon(
                         Icons.search,
-                        color:
-                            Colors.grey[600],
+                        color: Colors.grey[600],
                         size: 26,
                       ),
 
-                      const SizedBox(
-                        width: 10,
-                      ),
+                      const SizedBox(width: 10),
 
                       Expanded(
-                        child:
-                            TextField(
-                          controller:
-                              _pesquisaController,
-                          textInputAction:
-                              TextInputAction.search,
-                          decoration:
-                              const InputDecoration(
-                            hintText:
-                                'Buscar nos favoritos',
-                            hintStyle:
-                                TextStyle(
-                              color:
-                                  Color(
-                                0xFF757575,
-                              ),
+                        child: TextField(
+                          controller: _pesquisaController,
+                          textInputAction: TextInputAction.search,
+
+                          decoration: const InputDecoration(
+                            hintText: 'Buscar nos favoritos',
+                            hintStyle: TextStyle(
+                              color: Color(0xFF757575),
                               fontSize: 16,
                             ),
-                            border:
-                                InputBorder
-                                    .none,
+                            border: InputBorder.none,
                             isDense: true,
+                            contentPadding: EdgeInsets.zero,
                           ),
                         ),
                       ),
 
-                      Container(
-                        width: 1,
-                        height: 30,
-                        color:
-                            Colors.grey[300],
-                      ),
-
-                      const SizedBox(
-                        width: 12,
-                      ),
-
-                      const Icon(
-                        Icons.location_on,
-                        color:
-                            Colors.grey,
-                        size: 22,
-                      ),
-
-                      const SizedBox(
-                        width: 6,
-                      ),
-
-                      const Text(
-                        'SJC',
-                        style: TextStyle(
-                          color:
-                              Colors.grey,
-                          fontSize: 14,
-                        ),
-                      ),
-
-                      const Icon(
-                        Icons
-                            .arrow_drop_down,
-                        color:
-                            Colors.grey,
-                      ),
-
-                      const SizedBox(
-                        width: 10,
-                      ),
+                      const SizedBox(width: 18),
                     ],
                   ),
                 ),
@@ -389,19 +271,17 @@ class _FavoritosState extends State<Favoritos> {
     );
   }
 
+  // Lista de favoritos
   Widget _buildListaFavoritos() {
-    final usuario =
-        FirebaseAuth.instance.currentUser;
+    final usuario = FirebaseAuth.instance.currentUser;
 
     if (usuario == null) {
       return const Center(
         child: Padding(
-          padding:
-              EdgeInsets.all(30),
+          padding: EdgeInsets.all(30),
           child: Text(
             'Faça login para visualizar seus favoritos.',
-            textAlign:
-                TextAlign.center,
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey,
               fontSize: 16,
@@ -411,19 +291,15 @@ class _FavoritosState extends State<Favoritos> {
       );
     }
 
-    return StreamBuilder<
-        QuerySnapshot<
-            Map<String, dynamic>>>(
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: _favoritosStream(),
-      builder:
-          (context, snapshot) {
+
+      builder: (context, snapshot) {
         if (snapshot.connectionState ==
             ConnectionState.waiting) {
           return const Center(
-            child:
-                CircularProgressIndicator(
-              color:
-                  Color(0xFF76A085),
+            child: CircularProgressIndicator(
+              color: Color(0xFF76A085),
             ),
           );
         }
@@ -431,16 +307,11 @@ class _FavoritosState extends State<Favoritos> {
         if (snapshot.hasError) {
           return Center(
             child: Padding(
-              padding:
-                  const EdgeInsets.all(
-                30,
-              ),
+              padding: const EdgeInsets.all(30),
               child: Text(
                 'Erro ao carregar favoritos:\n${snapshot.error}',
-                textAlign:
-                    TextAlign.center,
-                style:
-                    const TextStyle(
+                textAlign: TextAlign.center,
+                style: const TextStyle(
                   color: Colors.red,
                   fontSize: 14,
                 ),
@@ -449,47 +320,31 @@ class _FavoritosState extends State<Favoritos> {
           );
         }
 
-        final documentos =
-            snapshot.data?.docs ??
-                [];
-
-        final favoritos =
-            _filtrarFavoritos(
-          documentos,
-        );
+        final documentos = snapshot.data?.docs ?? [];
+        final favoritos = _filtrarFavoritos(documentos);
 
         if (favoritos.isEmpty) {
           return Center(
             child: Padding(
-              padding:
-                  const EdgeInsets.all(
-                30,
-              ),
+              padding: const EdgeInsets.all(30),
               child: Column(
-                mainAxisSize:
-                    MainAxisSize.min,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.favorite_border,
                     size: 70,
-                    color:
-                        Colors.grey[400],
+                    color: Colors.grey[400],
                   ),
 
-                  const SizedBox(
-                    height: 15,
-                  ),
+                  const SizedBox(height: 15),
 
                   Text(
                     _pesquisa.isEmpty
                         ? 'Você ainda não possui favoritos.'
                         : 'Nenhum favorito encontrado.',
-                    textAlign:
-                        TextAlign.center,
-                    style:
-                        TextStyle(
-                      color:
-                          Colors.grey[600],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.grey[600],
                       fontSize: 16,
                     ),
                   ),
@@ -500,171 +355,109 @@ class _FavoritosState extends State<Favoritos> {
         }
 
         return ListView.builder(
-          padding:
-              const EdgeInsets.only(
+          padding: const EdgeInsets.only(
             left: 16,
             right: 16,
             bottom: 20,
           ),
-          itemCount:
-              favoritos.length,
-          itemBuilder:
-              (context, index) {
-            final documento =
-                favoritos[index];
 
-            final Map<String, dynamic>
-                dados =
+          itemCount: favoritos.length,
+
+          itemBuilder: (context, index) {
+            final documento = favoritos[index];
+            final Map<String, dynamic> dados =
                 documento.data() ?? {};
 
-            return _buildFavoritoCard(
-              documento,
-              dados,
-            );
+            return _buildFavoritoCard(documento, dados);
           },
         );
       },
     );
   }
 
+  // Card do favorito
   Widget _buildFavoritoCard(
-    DocumentSnapshot<
-            Map<String, dynamic>>
-        documento,
+    DocumentSnapshot<Map<String, dynamic>> documento,
     Map<String, dynamic> dados,
   ) {
-    final tipo =
-        (dados['tipo'] ?? '')
-            .toString();
-
-    final nome =
-        (dados['nome'] ??
-                'Favorito')
-            .toString();
-
-    final categoria =
-        (dados['categoria'] ??
-                '')
-            .toString();
+    final tipo = (dados['tipo'] ?? '').toString();
+    final nome = (dados['nome'] ?? 'Favorito').toString();
+    final categoria = (dados['categoria'] ?? '').toString();
 
     final especialidade =
-        (dados['especialidade'] ??
-                dados['profissao'] ??
-                '')
+        (dados['especialidade'] ?? dados['profissao'] ?? '')
             .toString();
 
-    final foto =
-        (dados['foto'] ?? '')
-            .toString();
+    final foto = (dados['foto'] ?? '').toString();
 
-    final bool profissional =
-        tipo == 'profissional';
+    final bool profissional = tipo == 'profissional';
 
     return GestureDetector(
       onTap: () {
-        _abrirFavorito(
-          dados,
-        );
+        _abrirFavorito(dados);
       },
+
       child: Container(
-        margin:
-            const EdgeInsets.only(
-          bottom: 16,
-        ),
-        padding:
-            const EdgeInsets.all(14),
-        decoration:
-            BoxDecoration(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(14),
+
+        decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius:
-              BorderRadius.circular(
-            18,
-          ),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color:
-                const Color(
-              0xFFE0E0E0,
-            ),
+            color: const Color(0xFFE0E0E0),
           ),
           boxShadow: [
             BoxShadow(
-              color:
-                  Colors.black.withOpacity(
-                0.06,
-              ),
+              color: Colors.black.withOpacity(0.06),
               blurRadius: 6,
-              offset:
-                  const Offset(0, 2),
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Row(
-          crossAxisAlignment:
-              CrossAxisAlignment
-                  .center,
-          children: [
-            _buildImagemFavorito(
-              foto,
-              profissional,
-            ),
 
-            const SizedBox(
-              width: 14,
-            ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _buildImagemFavorito(foto, profissional),
+
+            const SizedBox(width: 14),
 
             Expanded(
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment
-                        .start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     nome,
                     maxLines: 1,
-                    overflow:
-                        TextOverflow.ellipsis,
-                    style:
-                        const TextStyle(
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
                       fontSize: 19,
-                      fontWeight:
-                          FontWeight.bold,
-                      color:
-                          Colors.black,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
                     ),
                   ),
 
-                  const SizedBox(
-                    height: 4,
-                  ),
+                  const SizedBox(height: 4),
 
                   Text(
-                    profissional
-                        ? especialidade
-                        : categoria,
+                    profissional ? especialidade : categoria,
                     maxLines: 1,
-                    overflow:
-                        TextOverflow.ellipsis,
-                    style:
-                        TextStyle(
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
                       fontSize: 14,
-                      color:
-                          Colors.grey[600],
+                      color: Colors.grey[600],
                     ),
                   ),
 
-                  const SizedBox(
-                    height: 7,
-                  ),
+                  const SizedBox(height: 7),
 
                   Row(
-                    children:
-                        List.generate(
+                    children: List.generate(
                       5,
-                      (index) =>
-                          const Icon(
+                      (index) => const Icon(
                         Icons.star,
-                        color:
-                            Colors.amber,
+                        color: Colors.amber,
                         size: 18,
                       ),
                     ),
@@ -673,24 +466,20 @@ class _FavoritosState extends State<Favoritos> {
               ),
             ),
 
-            const SizedBox(
-              width: 8,
-            ),
+            const SizedBox(width: 8),
 
             IconButton(
-              padding:
-                  EdgeInsets.zero,
-              constraints:
-                  const BoxConstraints(),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+
               icon: const Icon(
                 Icons.favorite,
                 color: Colors.red,
                 size: 28,
               ),
+
               onPressed: () {
-                _removerFavorito(
-                  documento,
-                );
+                _removerFavorito(documento);
               },
             ),
           ],
@@ -699,56 +488,45 @@ class _FavoritosState extends State<Favoritos> {
     );
   }
 
+  // Imagem do favorito
   Widget _buildImagemFavorito(
     String foto,
     bool profissional,
   ) {
     if (foto.isNotEmpty) {
       return ClipRRect(
-        borderRadius:
-            BorderRadius.circular(
-          14,
-        ),
+        borderRadius: BorderRadius.circular(14),
+
         child: Image.network(
           foto,
           width: 85,
           height: 85,
           fit: BoxFit.cover,
-          errorBuilder:
-              (context, error,
-                  stackTrace) {
-            return _buildImagemPadrao(
-              profissional,
-            );
+
+          errorBuilder: (context, error, stackTrace) {
+            return _buildImagemPadrao(profissional);
           },
         ),
       );
     }
 
-    return _buildImagemPadrao(
-      profissional,
-    );
+    return _buildImagemPadrao(profissional);
   }
 
-  Widget _buildImagemPadrao(
-    bool profissional,
-  ) {
+  // Imagem padrão
+  Widget _buildImagemPadrao(bool profissional) {
     return Container(
       width: 85,
       height: 85,
+
       decoration: BoxDecoration(
-        color:
-            const Color(0xFFE1E1E1),
-        borderRadius:
-            BorderRadius.circular(
-          14,
-        ),
+        color: const Color(0xFFE1E1E1),
+        borderRadius: BorderRadius.circular(14),
       ),
+
       child: Center(
         child: Icon(
-          profissional
-              ? Icons.person
-              : Icons.store,
+          profissional ? Icons.person : Icons.store,
           color: Colors.white,
           size: 42,
         ),

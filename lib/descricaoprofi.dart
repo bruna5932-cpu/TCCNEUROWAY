@@ -24,7 +24,6 @@ class Descricaoprofi extends StatefulWidget {
 
 class _DescricaoprofiState extends State<Descricaoprofi> {
   int _currentIndex = 0;
-
   Map<String, dynamic>? _profissional;
 
   bool _carregandoProfissional = true;
@@ -41,7 +40,6 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
   Future<void> _buscarProfissional() async {
     try {
       final profissionalInicial = widget.profissional;
-
       String? profissionalUid;
 
       if (profissionalInicial != null) {
@@ -54,11 +52,10 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
       Map<String, dynamic>? dadosProfissional;
 
       if (profissionalUid != null && profissionalUid.isNotEmpty) {
-        final documento =
-            await FirebaseFirestore.instance
-                .collection('profissionais')
-                .doc(profissionalUid)
-                .get();
+        final documento = await FirebaseFirestore.instance
+            .collection('profissionais')
+            .doc(profissionalUid)
+            .get();
 
         if (documento.exists && documento.data() != null) {
           dadosProfissional = documento.data();
@@ -70,21 +67,18 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
           widget.empresaId!.isNotEmpty &&
           profissionalUid != null &&
           profissionalUid.isNotEmpty) {
-        final documentoEmpresa =
-            await FirebaseFirestore.instance
-                .collection('empresas')
-                .doc(widget.empresaId)
-                .get();
+        final documentoEmpresa = await FirebaseFirestore.instance
+            .collection('empresas')
+            .doc(widget.empresaId)
+            .get();
 
         final dadosEmpresa = documentoEmpresa.data();
-
         final profissionais = dadosEmpresa?['profissionais'];
 
         if (profissionais is List) {
           for (final item in profissionais) {
             if (item is Map) {
               final mapa = Map<String, dynamic>.from(item);
-
               final uidItem = mapa['uid']?.toString();
 
               if (uidItem == profissionalUid) {
@@ -149,12 +143,10 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
         .toString();
   }
 
-  // Foto do profissional
   String _obterFotoProfissional() {
     final profissional = _profissional ?? {};
 
-    final foto =
-        profissional['foto'] ??
+    final foto = profissional['foto'] ??
         profissional['fotoUrl'] ??
         profissional['imagem'] ??
         profissional['fotoPerfil'] ??
@@ -194,13 +186,11 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
     }
 
     final empresa = widget.empresaId ?? 'sem_empresa';
-
     final nome = _obterNomeProfissional();
 
-    final texto =
-        '${empresa}_$nome'
-            .replaceAll('/', '_')
-            .replaceAll(' ', '_');
+    final texto = '${empresa}_$nome'
+        .replaceAll('/', '_')
+        .replaceAll(' ', '_');
 
     return 'profissional_$texto';
   }
@@ -226,7 +216,6 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
           _isFavorited = false;
         });
       }
-
       return;
     }
 
@@ -244,9 +233,7 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
   }
 
   Future<void> _alternarFavorito() async {
-    if (_alterandoFavorito) {
-      return;
-    }
+    if (_alterandoFavorito) return;
 
     final usuario = FirebaseAuth.instance.currentUser;
 
@@ -258,17 +245,13 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
           ),
         ),
       );
-
       return;
     }
 
     final profissionalUid = _obterUidProfissional();
-
     final nome = _obterNomeProfissional();
 
-    if (nome.isEmpty) {
-      return;
-    }
+    if (nome.isEmpty) return;
 
     setState(() {
       _alterandoFavorito = true;
@@ -359,7 +342,7 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
     );
   }
 
-  // Perfil
+  // Perfil do profissional
   Widget _buildPerfilConteudo() {
     if (_carregandoProfissional) {
       return const Center(
@@ -370,160 +353,162 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
     }
 
     final nome = _obterNomeProfissional();
-
     final especialidade = _obterEspecialidade();
-
     final descricao = _obterDescricaoProfissional();
-
     final profissao = _obterEspecialidade();
-
     final experiencia = _obterExperienciaProfissional();
-
     final foto = _obterFotoProfissional();
-
     final profissionalUid = _obterUidProfissional();
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ProfileHeaderSection(
-            nome: nome,
-            especialidade: especialidade,
-            foto: foto,
-            isFavorited: _isFavorited,
-            carregandoFavorito: _alterandoFavorito,
-            onFavorite: _alternarFavorito,
-          ),
+    final tamanhoTela = MediaQuery.of(context).size;
+    final molduraHeight = tamanhoTela.height * 0.15;
 
-          const SizedBox(height: 10),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20,
-            ),
-            child: Text(
-              descricao,
-              style: const TextStyle(
-                fontSize: 15,
-                height: 1.4,
-                color: Colors.black87,
-              ),
+    return Stack(
+      children: [
+        // Quebra-cabeça superior fixo
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: SizedBox(
+            height: molduraHeight,
+            child: Image.asset(
+              'imagem/quebrasuperior.png',
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
             ),
           ),
+        ),
 
-          const SizedBox(height: 14),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20,
+        // Conteúdo rolável
+        Positioned.fill(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.only(
+              top: molduraHeight,
+              bottom: 20,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (profissao.trim().isNotEmpty)
-                  Row(
+                ProfileHeaderSection(
+                  nome: nome,
+                  especialidade: especialidade,
+                  foto: foto,
+                  isFavorited: _isFavorited,
+                  carregandoFavorito: _alterandoFavorito,
+                  onFavorite: _alternarFavorito,
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    descricao,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      height: 1.4,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.work_outline,
-                        size: 19,
-                        color: Color(0xFF4F7D63),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: RichText(
-                          text: TextSpan(
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.black87,
+                      if (profissao.trim().isNotEmpty)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.work_outline,
+                              size: 19,
+                              color: Color(0xFF4F7D63),
                             ),
-                            children: [
-                              const TextSpan(
-                                text: 'Profissão: ',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                  ),
+                                  children: [
+                                    const TextSpan(
+                                      text: 'Profissão: ',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    TextSpan(text: profissao),
+                                  ],
                                 ),
                               ),
-                              TextSpan(
-                                text: profissao,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                if (profissao.trim().isNotEmpty &&
-                    experiencia.trim().isNotEmpty)
-                  const SizedBox(
-                    height: 8,
-                  ),
-
-                if (experiencia.trim().isNotEmpty)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.access_time,
-                        size: 19,
-                        color: Color(0xFF4F7D63),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: RichText(
-                          text: TextSpan(
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.black87,
                             ),
-                            children: [
-                              const TextSpan(
-                                text: 'Tempo de experiência: ',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
+                          ],
+                        ),
+                      if (profissao.trim().isNotEmpty &&
+                          experiencia.trim().isNotEmpty)
+                        const SizedBox(height: 8),
+                      if (experiencia.trim().isNotEmpty)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.access_time,
+                              size: 19,
+                              color: Color(0xFF4F7D63),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                  ),
+                                  children: [
+                                    const TextSpan(
+                                      text: 'Tempo de experiência: ',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    TextSpan(text: experiencia),
+                                  ],
                                 ),
                               ),
-                              TextSpan(
-                                text: experiencia,
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ),
                     ],
                   ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  child: Divider(
+                    color: Colors.black45,
+                    thickness: 1,
+                  ),
+                ),
+                CommentsSection(
+                  profissionalUid: profissionalUid,
+                  empresaId: widget.empresaId,
+                ),
+                const SizedBox(height: 20),
               ],
             ),
           ),
-
-          const Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 10,
-            ),
-            child: Divider(
-              color: Colors.black45,
-              thickness: 1,
-            ),
-          ),
-
-          CommentsSection(
-            profissionalUid: profissionalUid,
-            empresaId: widget.empresaId,
-          ),
-
-          const SizedBox(
-            height: 20,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-// Bottom navigation
+// Barra de navegação
 class CustomBottomNavigationBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -556,31 +541,19 @@ class CustomBottomNavigationBar extends StatelessWidget {
         onTap: onTap,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(
-              Icons.home_filled,
-              size: 28,
-            ),
+            icon: Icon(Icons.home_filled, size: 28),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(
-              Icons.favorite,
-              size: 28,
-            ),
+            icon: Icon(Icons.favorite, size: 28),
             label: 'Favoritos',
           ),
           BottomNavigationBarItem(
-            icon: Icon(
-              Icons.calendar_month,
-              size: 28,
-            ),
+            icon: Icon(Icons.calendar_month, size: 28),
             label: 'Agenda',
           ),
           BottomNavigationBarItem(
-            icon: Icon(
-              Icons.person,
-              size: 28,
-            ),
+            icon: Icon(Icons.person, size: 28),
             label: 'Perfil',
           ),
         ],
@@ -589,7 +562,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
   }
 }
 
-// Header do profissional
+// Cabeçalho do profissional
 class ProfileHeaderSection extends StatelessWidget {
   final String nome;
   final String especialidade;
@@ -610,177 +583,162 @@ class ProfileHeaderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned(
-          top: 45,
+    return SizedBox(
+      width: double.infinity,
+      child: Padding(
+        padding: const EdgeInsets.only(
           left: 10,
-          child: IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios,
-              color: Colors.black,
-              size: 28,
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-            },
-          ),
+          right: 10,
+          top: 12,
+          bottom: 8,
         ),
-
-        Positioned(
-          top: 95,
-          right: 15,
-          child: IconButton(
-            icon: carregandoFavorito
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.grey,
-                    ),
-                  )
-                : Icon(
-                    isFavorited
-                        ? Icons.favorite
-                        : Icons.favorite_border,
-                    color: isFavorited
-                        ? Colors.red
-                        : Colors.black,
-                    size: 28,
-                  ),
-            onPressed: carregandoFavorito
-                ? null
-                : onFavorite,
-          ),
-        ),
-
-        Padding(
-          padding: const EdgeInsets.only(
-            top: 45,
-            left: 45,
-            right: 45,
-            bottom: 10,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                width: 130,
-                height: 130,
-                decoration: BoxDecoration(
-                  color: Colors.grey[600],
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white,
-                    width: 4,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 5,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Voltar
+            SizedBox(
+              width: 42,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                icon: const Icon(
+                  Icons.arrow_back_ios,
+                  color: Colors.black,
+                  size: 27,
                 ),
-                child: foto.isNotEmpty
-                    ? ClipOval(
-                        child: Image.network(
-                          foto,
-                          width: 130,
-                          height: 130,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (
-                            context,
-                            child,
-                            loadingProgress,
-                          ) {
-                            if (loadingProgress == null) {
-                              return child;
-                            }
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              ),
+            ),
+            const SizedBox(width: 4),
 
-                            return const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            );
-                          },
-                          errorBuilder: (
-                            context,
-                            error,
-                            stackTrace,
-                          ) {
-                            return const Icon(
-                              Icons.person,
-                              size: 70,
+            // Foto
+            Container(
+              width: 110,
+              height: 110,
+              decoration: BoxDecoration(
+                color: Colors.grey[600],
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 4,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: foto.isNotEmpty
+                  ? ClipOval(
+                      child: Image.network(
+                        foto,
+                        width: 110,
+                        height: 110,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (
+                          context,
+                          child,
+                          loadingProgress,
+                        ) {
+                          if (loadingProgress == null) {
+                            return child;
+                          }
+
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
                               color: Colors.white,
-                            );
-                          },
+                            ),
+                          );
+                        },
+                        errorBuilder: (
+                          context,
+                          error,
+                          stackTrace,
+                        ) {
+                          return const Icon(
+                            Icons.person,
+                            size: 65,
+                            color: Colors.white,
+                          );
+                        },
+                      ),
+                    )
+                  : const Icon(
+                      Icons.person,
+                      size: 65,
+                      color: Colors.white,
+                    ),
+            ),
+            const SizedBox(width: 10),
+
+            // Nome e profissão
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    nome,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      height: 1.05,
+                      color: Colors.black,
+                    ),
+                  ),
+                  if (especialidade.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 5),
+                      child: Text(
+                        especialidade,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // Favorito
+            SizedBox(
+              width: 42,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                icon: carregandoFavorito
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.grey,
                         ),
                       )
-                    : const Icon(
-                        Icons.person,
-                        size: 70,
-                        color: Colors.white,
+                    : Icon(
+                        isFavorited
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color: isFavorited
+                            ? Colors.red
+                            : Colors.black,
+                        size: 28,
                       ),
+                onPressed: carregandoFavorito ? null : onFavorite,
               ),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      nome,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                        height: 1.1,
-                        color: Colors.black,
-                      ),
-                    ),
-
-                    if (especialidade.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          top: 4,
-                        ),
-                        child: Text(
-                          especialidade,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-
-                    const SizedBox(
-                      height: 6,
-                    ),
-
-                    Row(
-                      children: List.generate(
-                        5,
-                        (index) => const Icon(
-                          Icons.star,
-                          color: Colors.amber,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -809,6 +767,7 @@ class CommentsSection extends StatelessWidget {
         .collection('comentarios');
   }
 
+  // Publicar comentário
   Future<void> _abrirComentario(BuildContext context) async {
     final usuario = FirebaseAuth.instance.currentUser;
 
@@ -820,7 +779,6 @@ class CommentsSection extends StatelessWidget {
           ),
         ),
       );
-
       return;
     }
 
@@ -830,9 +788,7 @@ class CommentsSection extends StatelessWidget {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text(
-            'Faça um comentário',
-          ),
+          title: const Text('Faça um comentário'),
           content: TextField(
             controller: controller,
             maxLines: 5,
@@ -844,61 +800,47 @@ class CommentsSection extends StatelessWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(
-                dialogContext,
-              ),
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(
-                  0xFF98B9A6,
-                ),
+                backgroundColor: const Color(0xFF98B9A6),
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
                 final texto = controller.text.trim();
 
                 if (texto.isEmpty) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(
+                  ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text(
-                        'Digite um comentário.',
-                      ),
+                      content: Text('Digite um comentário.'),
                     ),
                   );
-
                   return;
                 }
 
-                if (empresaId == null ||
-                    empresaId!.isEmpty) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(
+                if (empresaId == null || empresaId!.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
                         'Erro: empresa não identificada.',
                       ),
                     ),
                   );
-
                   return;
                 }
 
                 if (profissionalUid.isEmpty) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(
+                  ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
                         'Erro: profissional não identificado.',
                       ),
                     ),
                   );
-
                   return;
                 }
 
@@ -912,11 +854,10 @@ class CommentsSection extends StatelessWidget {
                 }
 
                 try {
-                  final ref =
-                      FirebaseFirestore.instance
-                          .collection('empresas')
-                          .doc(empresaId)
-                          .collection('comentarios');
+                  final ref = FirebaseFirestore.instance
+                      .collection('empresas')
+                      .doc(empresaId)
+                      .collection('comentarios');
 
                   await ref.add({
                     'profissionalUid': profissionalUid,
@@ -929,15 +870,11 @@ class CommentsSection extends StatelessWidget {
                   });
 
                   if (dialogContext.mounted) {
-                    Navigator.pop(
-                      dialogContext,
-                    );
+                    Navigator.pop(dialogContext);
                   }
 
                   if (context.mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(
+                    ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
                           'Comentário publicado com sucesso!',
@@ -946,14 +883,10 @@ class CommentsSection extends StatelessWidget {
                     );
                   }
                 } catch (e) {
-                  debugPrint(
-                    'Erro ao publicar comentário: $e',
-                  );
+                  debugPrint('Erro ao publicar comentário: $e');
 
                   if (context.mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(
+                    ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
                           'Erro ao publicar comentário: $e',
@@ -973,19 +906,16 @@ class CommentsSection extends StatelessWidget {
     controller.dispose();
   }
 
-  // Reações
+  // Alterar reação
   Future<void> _alterarReacao(
     DocumentSnapshot<Map<String, dynamic>> comentario,
     String novaReacao,
   ) async {
     final usuario = FirebaseAuth.instance.currentUser;
 
-    if (usuario == null) {
-      return;
-    }
+    if (usuario == null) return;
 
-    if (novaReacao != 'like' &&
-        novaReacao != 'dislike') {
+    if (novaReacao != 'like' && novaReacao != 'dislike') {
       return;
     }
 
@@ -999,28 +929,25 @@ class CommentsSection extends StatelessWidget {
       await FirebaseFirestore.instance.runTransaction(
         (transaction) async {
           final comentarioSnapshot =
-              await transaction.get(
-            comentarioRef,
-          );
+              await transaction.get(comentarioRef);
 
-          final reacaoSnapshot =
-              await transaction.get(
-            reacaoRef,
-          );
+          final reacaoSnapshot = await transaction.get(reacaoRef);
 
-          if (!comentarioSnapshot.exists) {
-            return;
-          }
+          if (!comentarioSnapshot.exists) return;
 
           final dados = comentarioSnapshot.data();
 
-          if (dados == null) {
-            return;
-          }
+          if (dados == null) return;
 
-          final reacaoAnterior = reacaoSnapshot.exists
-              ? (reacaoSnapshot.data()?['tipo']?.toString())
-              : null;
+          String? reacaoAnterior;
+
+          if (reacaoSnapshot.exists) {
+            final dadosReacao = reacaoSnapshot.data();
+
+            if (dadosReacao != null) {
+              reacaoAnterior = dadosReacao['tipo']?.toString();
+            }
+          }
 
           int likes = dados['likes'] is num
               ? (dados['likes'] as num).toInt()
@@ -1045,10 +972,7 @@ class CommentsSection extends StatelessWidget {
               },
             );
 
-            transaction.delete(
-              reacaoRef,
-            );
-
+            transaction.delete(reacaoRef);
             return;
           }
 
@@ -1083,9 +1007,7 @@ class CommentsSection extends StatelessWidget {
         },
       );
     } catch (e) {
-      debugPrint(
-        'Erro ao alterar reação: $e',
-      );
+      debugPrint('Erro ao alterar reação: $e');
     }
   }
 
@@ -1096,18 +1018,13 @@ class CommentsSection extends StatelessWidget {
   ) async {
     final usuario = FirebaseAuth.instance.currentUser;
 
-    if (usuario == null) {
-      return;
-    }
+    if (usuario == null) return;
 
     final dados = comentario.data();
 
-    if (dados == null) {
-      return;
-    }
+    if (dados == null) return;
 
-    final usuarioId =
-        dados['usuarioId']?.toString() ?? '';
+    final usuarioId = dados['usuarioId']?.toString() ?? '';
 
     if (usuarioId != usuario.uid) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1117,7 +1034,6 @@ class CommentsSection extends StatelessWidget {
           ),
         ),
       );
-
       return;
     }
 
@@ -1125,25 +1041,21 @@ class CommentsSection extends StatelessWidget {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text(
-            'Excluir comentário?',
-          ),
+          title: const Text('Excluir comentário?'),
           content: const Text(
             'Essa ação não poderá ser desfeita.',
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(
-                dialogContext,
-                false,
-              ),
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
               child: const Text('Cancelar'),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(
-                dialogContext,
-                true,
-              ),
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
               style: TextButton.styleFrom(
                 foregroundColor: Colors.red,
               ),
@@ -1154,9 +1066,7 @@ class CommentsSection extends StatelessWidget {
       },
     );
 
-    if (confirmar != true) {
-      return;
-    }
+    if (confirmar != true) return;
 
     try {
       await comentario.reference.delete();
@@ -1164,16 +1074,12 @@ class CommentsSection extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              'Comentário excluído com sucesso.',
-            ),
+            content: Text('Comentário excluído com sucesso.'),
           ),
         );
       }
     } catch (e) {
-      debugPrint(
-        'Erro ao excluir comentário: $e',
-      );
+      debugPrint('Erro ao excluir comentário: $e');
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1191,13 +1097,10 @@ class CommentsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ref = _comentariosRef();
-
     final usuario = FirebaseAuth.instance.currentUser;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1210,9 +1113,7 @@ class CommentsSection extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(
-                width: 6,
-              ),
+              const SizedBox(width: 6),
               Icon(
                 Icons.chat_bubble_outline,
                 size: 18,
@@ -1220,17 +1121,11 @@ class CommentsSection extends StatelessWidget {
               ),
             ],
           ),
-
-          const SizedBox(
-            height: 12,
-          ),
-
+          const SizedBox(height: 12),
           if (ref == null)
             const Text(
               'Não foi possível carregar os comentários.',
-              style: TextStyle(
-                color: Colors.grey,
-              ),
+              style: TextStyle(color: Colors.grey),
             )
           else
             StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -1244,9 +1139,7 @@ class CommentsSection extends StatelessWidget {
                 if (snapshot.connectionState ==
                     ConnectionState.waiting) {
                   return const Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 20,
-                    ),
+                    padding: EdgeInsets.symmetric(vertical: 20),
                     child: Center(
                       child: CircularProgressIndicator(
                         color: Color(0xFF98B9A6),
@@ -1257,9 +1150,7 @@ class CommentsSection extends StatelessWidget {
 
                 if (snapshot.hasError) {
                   return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 10,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                     child: Text(
                       'Erro ao carregar comentários:\n${snapshot.error}',
                       style: const TextStyle(
@@ -1270,14 +1161,11 @@ class CommentsSection extends StatelessWidget {
                   );
                 }
 
-                final comentarios =
-                    snapshot.data?.docs ?? [];
+                final comentarios = snapshot.data?.docs ?? [];
 
                 if (comentarios.isEmpty) {
                   return const Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 10,
-                    ),
+                    padding: EdgeInsets.symmetric(vertical: 10),
                     child: Text(
                       'Ainda não há comentários para este profissional.',
                       style: TextStyle(
@@ -1288,107 +1176,79 @@ class CommentsSection extends StatelessWidget {
                   );
                 }
 
-                comentarios.sort(
-                  (a, b) {
-                    final dataA = a.data()['criadoEm'];
+                comentarios.sort((a, b) {
+                  final dataA = a.data()['criadoEm'];
+                  final dataB = b.data()['criadoEm'];
 
-                    final dataB = b.data()['criadoEm'];
+                  if (dataA is Timestamp && dataB is Timestamp) {
+                    return dataB.compareTo(dataA);
+                  }
 
-                    if (dataA is Timestamp &&
-                        dataB is Timestamp) {
-                      return dataB.compareTo(
-                        dataA,
-                      );
-                    }
-
-                    return 0;
-                  },
-                );
+                  return 0;
+                });
 
                 return Column(
-                  children: comentarios.map(
-                    (comentario) {
-                      final dados = comentario.data();
+                  children: comentarios.map((comentario) {
+                    final dados = comentario.data();
 
-                      final nome =
-                          (dados['nome'] ?? 'Usuário').toString();
+                    final nome =
+                        (dados['nome'] ?? 'Usuário').toString();
 
-                      final texto =
-                          (dados['comentario'] ?? '').toString();
+                    final texto =
+                        (dados['comentario'] ?? '').toString();
 
-                      final likes = dados['likes'] is num
-                          ? (dados['likes'] as num).toInt()
-                          : 0;
+                    final likes = dados['likes'] is num
+                        ? (dados['likes'] as num).toInt()
+                        : 0;
 
-                      final dislikes = dados['dislikes'] is num
-                          ? (dados['dislikes'] as num).toInt()
-                          : 0;
+                    final dislikes = dados['dislikes'] is num
+                        ? (dados['dislikes'] as num).toInt()
+                        : 0;
 
-                      final donoComentario =
-                          usuario != null &&
-                          dados['usuarioId']?.toString() ==
-                              usuario.uid;
+                    final donoComentario = usuario != null &&
+                        dados['usuarioId']?.toString() == usuario.uid;
 
-                      return Padding(
-                        padding: const EdgeInsets.only(
-                          bottom: 12,
-                        ),
-                        child: _ReactionBuilder(
-                          comentario: comentario,
-                          usuarioId: usuario?.uid,
-                          builder: (reacaoAtual) {
-                            return CommentCard(
-                              author: nome,
-                              content: texto,
-                              likes: likes,
-                              dislikes: dislikes,
-                              reacaoAtual: reacaoAtual,
-                              podeExcluir: donoComentario,
-                              onLike: () {
-                                _alterarReacao(
-                                  comentario,
-                                  'like',
-                                );
-                              },
-                              onDislike: () {
-                                _alterarReacao(
-                                  comentario,
-                                  'dislike',
-                                );
-                              },
-                              onDelete: () {
-                                _excluirComentario(
-                                  context,
-                                  comentario,
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  ).toList(),
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _ReactionBuilder(
+                        comentario: comentario,
+                        usuarioId: usuario?.uid,
+                        builder: (reacaoAtual) {
+                          return CommentCard(
+                            author: nome,
+                            content: texto,
+                            likes: likes,
+                            dislikes: dislikes,
+                            reacaoAtual: reacaoAtual,
+                            podeExcluir: donoComentario,
+                            onLike: () {
+                              _alterarReacao(comentario, 'like');
+                            },
+                            onDislike: () {
+                              _alterarReacao(comentario, 'dislike');
+                            },
+                            onDelete: () {
+                              _excluirComentario(
+                                context,
+                                comentario,
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    );
+                  }).toList(),
                 );
               },
             ),
-
-          const SizedBox(
-            height: 4,
-          ),
-
+          const SizedBox(height: 4),
           OutlinedButton(
-            onPressed: () => _abrirComentario(
-              context,
-            ),
+            onPressed: () => _abrirComentario(context),
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.black,
-              side: const BorderSide(
-                color: Colors.grey,
-              ),
+              side: const BorderSide(color: Colors.grey),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(
-                  8,
-                ),
+                borderRadius: BorderRadius.circular(8),
               ),
               padding: const EdgeInsets.symmetric(
                 horizontal: 16,
@@ -1409,15 +1269,11 @@ class CommentsSection extends StatelessWidget {
   }
 }
 
-// Reaction builder
+// Reações
 class _ReactionBuilder extends StatelessWidget {
   final DocumentSnapshot<Map<String, dynamic>> comentario;
-
   final String? usuarioId;
-
-  final Widget Function(
-    String? reacaoAtual,
-  ) builder;
+  final Widget Function(String? reacaoAtual) builder;
 
   const _ReactionBuilder({
     required this.comentario,
@@ -1427,8 +1283,7 @@ class _ReactionBuilder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (usuarioId == null ||
-        usuarioId!.isEmpty) {
+    if (usuarioId == null || usuarioId!.isEmpty) {
       return builder(null);
     }
 
@@ -1436,16 +1291,17 @@ class _ReactionBuilder extends StatelessWidget {
         .collection('reacoes')
         .doc(usuarioId);
 
-    return StreamBuilder<
-        DocumentSnapshot<Map<String, dynamic>>>(
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: reacaoRef.snapshots(),
       builder: (context, snapshot) {
         String? reacaoAtual;
 
-        if (snapshot.hasData &&
-            snapshot.data!.exists) {
-          reacaoAtual =
-              snapshot.data!.data()?['tipo']?.toString();
+        if (snapshot.hasData && snapshot.data!.exists) {
+          final dadosReacao = snapshot.data!.data();
+
+          if (dadosReacao != null) {
+            reacaoAtual = dadosReacao['tipo']?.toString();
+          }
 
           if (reacaoAtual != 'like' &&
               reacaoAtual != 'dislike') {
@@ -1453,9 +1309,7 @@ class _ReactionBuilder extends StatelessWidget {
           }
         }
 
-        return builder(
-          reacaoAtual,
-        );
+        return builder(reacaoAtual);
       },
     );
   }
@@ -1488,20 +1342,15 @@ class CommentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final likeSelecionado =
-        reacaoAtual == 'like';
-
-    final dislikeSelecionado =
-        reacaoAtual == 'dislike';
+    final likeSelecionado = reacaoAtual == 'like';
+    final dislikeSelecionado = reacaoAtual == 'dislike';
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(
-          16,
-        ),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: Colors.grey.shade300,
         ),
@@ -1521,7 +1370,6 @@ class CommentCard extends StatelessWidget {
                   ),
                 ),
               ),
-
               if (podeExcluir)
                 IconButton(
                   onPressed: onDelete,
@@ -1539,11 +1387,7 @@ class CommentCard extends StatelessWidget {
                 ),
             ],
           ),
-
-          const SizedBox(
-            height: 4,
-          ),
-
+          const SizedBox(height: 4),
           Text(
             content,
             style: const TextStyle(
@@ -1551,18 +1395,12 @@ class CommentCard extends StatelessWidget {
               height: 1.3,
             ),
           ),
-
-          const SizedBox(
-            height: 8,
-          ),
-
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               InkWell(
-                borderRadius: BorderRadius.circular(
-                  8,
-                ),
+                borderRadius: BorderRadius.circular(8),
                 onTap: onLike,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -1580,9 +1418,7 @@ class CommentCard extends StatelessWidget {
                             ? const Color(0xFF4F7D63)
                             : Colors.grey[700],
                       ),
-                      const SizedBox(
-                        width: 4,
-                      ),
+                      const SizedBox(width: 4),
                       Text(
                         '$likes',
                         style: TextStyle(
@@ -1596,15 +1432,9 @@ class CommentCard extends StatelessWidget {
                   ),
                 ),
               ),
-
-              const SizedBox(
-                width: 12,
-              ),
-
+              const SizedBox(width: 12),
               InkWell(
-                borderRadius: BorderRadius.circular(
-                  8,
-                ),
+                borderRadius: BorderRadius.circular(8),
                 onTap: onDislike,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -1622,9 +1452,7 @@ class CommentCard extends StatelessWidget {
                             ? Colors.redAccent
                             : Colors.grey[700],
                       ),
-                      const SizedBox(
-                        width: 4,
-                      ),
+                      const SizedBox(width: 4),
                       Text(
                         '$dislikes',
                         style: TextStyle(

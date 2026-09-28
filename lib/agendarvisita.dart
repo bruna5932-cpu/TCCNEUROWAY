@@ -27,6 +27,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
 
   bool _agendando = false;
 
+  // Dias da semana.
   final List<String> _diasSemana = [
     'DOM',
     'SEG',
@@ -37,6 +38,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     'SÁB',
   ];
 
+  // Meses do ano.
   final List<String> _meses = [
     'Janeiro',
     'Fevereiro',
@@ -52,6 +54,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     'Dezembro',
   ];
 
+  // Horários disponíveis.
   final List<String> _horarios = [
     '08:00',
     '08:30',
@@ -73,6 +76,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     '17:30',
   ];
 
+  // Inicialização.
   @override
   void initState() {
     super.initState();
@@ -91,6 +95,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     );
   }
 
+  // Volta para o mês anterior.
   void _mesAnterior() {
     final hoje = DateTime.now();
 
@@ -113,6 +118,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     });
   }
 
+  // Avança para o próximo mês.
   void _proximoMes() {
     setState(() {
       _mesAtual = DateTime(
@@ -122,6 +128,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     });
   }
 
+  // Verifica se a data é hoje.
   bool _ehHoje(DateTime data) {
     final hoje = DateTime.now();
 
@@ -130,6 +137,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
         data.day == hoje.day;
   }
 
+  // Verifica se a data já passou.
   bool _ehDataPassada(DateTime data) {
     final hoje = DateTime.now();
 
@@ -142,6 +150,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     return data.isBefore(hojeSemHora);
   }
 
+  // Retorna os dias do mês.
   int _quantidadeDiasNoMes() {
     return DateTime(
       _mesAtual.year,
@@ -150,6 +159,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     ).day;
   }
 
+  // Retorna o primeiro dia do mês.
   int _primeiroDiaDoMes() {
     return DateTime(
           _mesAtual.year,
@@ -159,6 +169,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
         7;
   }
 
+  // Seleciona uma data.
   void _selecionarData(int dia) {
     final data = DateTime(
       _mesAtual.year,
@@ -176,26 +187,16 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     });
   }
 
+  // Monta o calendário.
   Widget _buildCalendario() {
     final quantidadeDias = _quantidadeDiasNoMes();
     final primeiroDia = _primeiroDiaDoMes();
-
-    final quantidadeCelulas =
-        primeiroDia + quantidadeDias;
-
-    final quantidadeLinhas =
-        (quantidadeCelulas / 7).ceil();
+    final quantidadeCelulas = primeiroDia + quantidadeDias;
+    final quantidadeLinhas = (quantidadeCelulas / 7).ceil();
 
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 13,
-      ),
-      padding: const EdgeInsets.fromLTRB(
-        10,
-        8,
-        10,
-        10,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 13),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
       decoration: BoxDecoration(
         color: const Color(0xFFE7EAEA),
         borderRadius: BorderRadius.circular(24),
@@ -211,10 +212,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
               GestureDetector(
                 onTap: _mesAnterior,
                 child: const Padding(
-                  padding: EdgeInsets.only(
-                    left: 3,
-                    right: 8,
-                  ),
+                  padding: EdgeInsets.only(left: 3, right: 8),
                   child: Text(
                     '<',
                     style: TextStyle(
@@ -238,10 +236,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
               GestureDetector(
                 onTap: _proximoMes,
                 child: const Padding(
-                  padding: EdgeInsets.only(
-                    left: 8,
-                    right: 3,
-                  ),
+                  padding: EdgeInsets.only(left: 8, right: 3),
                   child: Text(
                     '>',
                     style: TextStyle(
@@ -277,18 +272,12 @@ class _AgendarVisitaState extends State<AgendarVisita> {
                 children: List.generate(
                   7,
                   (coluna) {
-                    final indice =
-                        linha * 7 + coluna;
+                    final indice = linha * 7 + coluna;
+                    final dia = indice - primeiroDia + 1;
 
-                    final dia =
-                        indice - primeiroDia + 1;
-
-                    if (dia < 1 ||
-                        dia > quantidadeDias) {
+                    if (dia < 1 || dia > quantidadeDias) {
                       return const Expanded(
-                        child: SizedBox(
-                          height: 27,
-                        ),
+                        child: SizedBox(height: 27),
                       );
                     }
 
@@ -300,52 +289,37 @@ class _AgendarVisitaState extends State<AgendarVisita> {
 
                     final selecionada =
                         _dataSelecionada != null &&
-                        _dataSelecionada!.year ==
-                            data.year &&
-                        _dataSelecionada!.month ==
-                            data.month &&
-                        _dataSelecionada!.day ==
-                            data.day;
+                        _dataSelecionada!.year == data.year &&
+                        _dataSelecionada!.month == data.month &&
+                        _dataSelecionada!.day == data.day;
 
                     final hoje = _ehHoje(data);
-                    final passada =
-                        _ehDataPassada(data);
+                    final passada = _ehDataPassada(data);
 
                     return Expanded(
                       child: GestureDetector(
                         onTap: passada
                             ? null
-                            : () =>
-                                _selecionarData(dia),
+                            : () => _selecionarData(dia),
                         child: Container(
                           height: 27,
-                          margin:
-                              const EdgeInsets.all(1),
+                          margin: const EdgeInsets.all(1),
                           decoration: BoxDecoration(
                             color: selecionada
-                                ? const Color(
-                                    0xFF76A085,
-                                  )
+                                ? const Color(0xFF76A085)
                                 : hoje
-                                    ? const Color(
-                                        0xFFD0DDD4,
-                                      )
+                                    ? const Color(0xFFD0DDD4)
                                     : Colors.transparent,
-                            borderRadius:
-                                BorderRadius.circular(
-                              8,
-                            ),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Center(
                             child: Text(
                               '$dia',
                               style: TextStyle(
                                 fontSize: 10,
-                                fontWeight:
-                                    selecionada ||
-                                            hoje
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
+                                fontWeight: selecionada || hoje
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                                 color: passada
                                     ? Colors.grey
                                     : selecionada
@@ -367,6 +341,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     );
   }
 
+  // Monta a seleção do profissional.
   Widget _buildProfissional() {
     if (widget.profissionais.isEmpty) {
       return Row(
@@ -427,31 +402,26 @@ class _AgendarVisitaState extends State<AgendarVisita> {
               ),
               items: widget.profissionais
                   .map((profissional) {
-                final nome =
-                    (profissional['nome'] ?? '')
-                        .toString();
+                    final nome =
+                        (profissional['nome'] ?? '').toString();
 
-                if (nome.isEmpty) {
-                  return null;
-                }
+                    if (nome.isEmpty) {
+                      return null;
+                    }
 
-                return DropdownMenuItem<String>(
-                  value: nome,
-                  child: Text(
-                    nome,
-                    style: const TextStyle(
-                      fontSize: 12,
-                    ),
-                  ),
-                );
-              })
-                  .whereType<
-                      DropdownMenuItem<String>>()
+                    return DropdownMenuItem<String>(
+                      value: nome,
+                      child: Text(
+                        nome,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    );
+                  })
+                  .whereType<DropdownMenuItem<String>>()
                   .toList(),
               onChanged: (valor) {
                 setState(() {
-                  _profissionalSelecionado =
-                      valor;
+                  _profissionalSelecionado = valor;
                   _horarioSelecionado = null;
                 });
               },
@@ -462,6 +432,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     );
   }
 
+  // Monta a seleção do horário.
   Widget _buildHorario() {
     return Row(
       children: [
@@ -490,9 +461,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
                   value: horario,
                   child: Text(
                     horario,
-                    style: const TextStyle(
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(fontSize: 12),
                   ),
                 );
               }).toList(),
@@ -500,8 +469,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
                   ? null
                   : (valor) {
                       setState(() {
-                        _horarioSelecionado =
-                            valor;
+                        _horarioSelecionado = valor;
                       });
                     },
             ),
@@ -511,6 +479,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     );
   }
 
+  // Gera o ID do agendamento.
   String _gerarIdHorario() {
     final data = _dataSelecionada!;
 
@@ -524,15 +493,14 @@ class _AgendarVisitaState extends State<AgendarVisita> {
         .toLowerCase()
         .replaceAll(RegExp(r'[^a-z0-9]+'), '_');
 
-    final horario = _horarioSelecionado!
-        .replaceAll(':', '');
+    final horario = _horarioSelecionado!.replaceAll(':', '');
 
-    final empresa =
-        (widget.empresaId ?? 'empresa').trim();
+    final empresa = (widget.empresaId ?? 'empresa').trim();
 
     return '${empresa}_${profissional}_${dataFormatada}_$horario';
   }
 
+  // Realiza o agendamento.
   Future<void> _agendar() async {
     if (_dataSelecionada == null) {
       _mostrarMensagem(
@@ -559,8 +527,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
       return;
     }
 
-    final usuario =
-        FirebaseAuth.instance.currentUser;
+    final usuario = FirebaseAuth.instance.currentUser;
 
     if (usuario == null) {
       _mostrarMensagem(
@@ -584,8 +551,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     });
 
     try {
-      final firestore =
-          FirebaseFirestore.instance;
+      final firestore = FirebaseFirestore.instance;
 
       final agendamentoRef = firestore
           .collection('agendamentos')
@@ -594,14 +560,10 @@ class _AgendarVisitaState extends State<AgendarVisita> {
       await firestore.runTransaction(
         (transaction) async {
           final agendamentoSnapshot =
-              await transaction.get(
-            agendamentoRef,
-          );
+              await transaction.get(agendamentoRef);
 
           if (agendamentoSnapshot.exists) {
-            throw Exception(
-              'HORARIO_JA_AGENDADO',
-            );
+            throw Exception('HORARIO_JA_AGENDADO');
           }
 
           transaction.set(
@@ -610,15 +572,11 @@ class _AgendarVisitaState extends State<AgendarVisita> {
               'usuarioId': usuario.uid,
               'empresaId': widget.empresaId,
               'empresaNome': widget.empresaNome,
-              'profissional':
-                  _profissionalSelecionado ?? '',
+              'profissional': _profissionalSelecionado ?? '',
               'horario': _horarioSelecionado,
-              'data': Timestamp.fromDate(
-                _dataSelecionada!,
-              ),
+              'data': Timestamp.fromDate(_dataSelecionada!),
               'status': 'pendente',
-              'criadoEm':
-                  FieldValue.serverTimestamp(),
+              'criadoEm': FieldValue.serverTimestamp(),
             },
           );
         },
@@ -640,9 +598,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
         return;
       }
 
-      if (e.toString().contains(
-            'HORARIO_JA_AGENDADO',
-          )) {
+      if (e.toString().contains('HORARIO_JA_AGENDADO')) {
         _mostrarMensagem(
           'Este profissional já possui um agendamento neste dia e horário. Escolha outro horário.',
           vermelho: true,
@@ -662,6 +618,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     }
   }
 
+  // Mostra mensagens na tela.
   void _mostrarMensagem(
     String mensagem, {
     bool vermelho = false,
@@ -669,19 +626,16 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensagem),
-        backgroundColor:
-            vermelho ? Colors.red : null,
+        backgroundColor: vermelho ? Colors.red : null,
       ),
     );
   }
 
+  // Monta a tela.
   @override
   Widget build(BuildContext context) {
-    final screenHeight =
-        MediaQuery.of(context).size.height;
-
-    final molduraHeight =
-        screenHeight * 0.15;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final molduraHeight = screenHeight * 0.15;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -690,51 +644,55 @@ class _AgendarVisitaState extends State<AgendarVisita> {
         child: Stack(
           children: [
             SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    height: molduraHeight * 0.75,
-                  ),
+                  SizedBox(height: molduraHeight),
+                  const SizedBox(height: 8),
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
                     ),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints:
-                              const BoxConstraints(),
-                          icon: const Icon(
-                            Icons.arrow_back_ios,
-                            size: 26,
-                            color: Colors.black,
-                          ),
-                          onPressed: () {
-                            Navigator.pop(context);
+                        InkWell(
+                          onTap: () {
+                            if (Navigator.canPop(context)) {
+                              Navigator.pop(context);
+                            }
                           },
+                          child: const Padding(
+                            padding: EdgeInsets.all(8),
+                            child: Icon(
+                              Icons.arrow_back_ios_new,
+                              color: Colors.black,
+                              size: 22,
+                            ),
+                          ),
                         ),
-                        const SizedBox(width: 2),
-                        const Text(
-                          'Agendar cliente',
-                          style: TextStyle(
-                            fontSize: 25,
-                            fontWeight:
-                                FontWeight.bold,
-                            color: Colors.black,
+                        const SizedBox(width: 4),
+                        const Expanded(
+                          child: Text(
+                            'Agendar cliente',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 25,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 8),
                   _buildCalendario(),
                   const SizedBox(height: 7),
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: 24,
                     ),
                     child: Column(
@@ -759,47 +717,31 @@ class _AgendarVisitaState extends State<AgendarVisita> {
                           width: 80,
                           height: 38,
                           child: ElevatedButton(
-                            onPressed: _agendando
-                                ? null
-                                : _agendar,
-                            style:
-                                ElevatedButton
-                                    .styleFrom(
+                            onPressed: _agendando ? null : _agendar,
+                            style: ElevatedButton.styleFrom(
                               backgroundColor:
-                                  const Color(
-                                0xFF76A085,
-                              ),
-                              foregroundColor:
-                                  Colors.black,
+                                  const Color(0xFF76A085),
+                              foregroundColor: Colors.black,
                               elevation: 0,
-                              padding:
-                                  EdgeInsets.zero,
-                              shape:
-                                  RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius
-                                        .circular(4),
+                              padding: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
                               ),
                             ),
                             child: _agendando
                                 ? const SizedBox(
                                     width: 18,
                                     height: 18,
-                                    child:
-                                        CircularProgressIndicator(
+                                    child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color:
-                                          Colors.white,
+                                      color: Colors.white,
                                     ),
                                   )
                                 : const Text(
                                     'Agendar',
-                                    style:
-                                        TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
-                                      fontWeight:
-                                          FontWeight
-                                              .bold,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                           ),
@@ -821,8 +763,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
                   'imagem/quebrasuperior.png',
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  alignment:
-                      Alignment.topCenter,
+                  alignment: Alignment.topCenter,
                 ),
               ),
             ),
