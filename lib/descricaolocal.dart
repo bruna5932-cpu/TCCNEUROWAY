@@ -620,11 +620,16 @@ Widget _buildEstrelasMedia(
   // CONTEÚDO
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      bottomNavigationBar:
-          _buildBottomNavigationBar(),
-      body: _buildLocalConteudo(),
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: const TextScaler.linear(1.0),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        bottomNavigationBar:
+            _buildBottomNavigationBar(),
+        body: _buildLocalConteudo(),
+      ),
     );
   }
 
@@ -1045,7 +1050,6 @@ Widget _buildEstrelasMedia(
                 ),
 
               const SizedBox(height: 24),
-const SizedBox(height: 24),
 
 // PROFISSIONAIS
 Padding(
@@ -1745,14 +1749,15 @@ const SizedBox(height: 24),
                   CrossAxisAlignment.start,
               children: [
                 SizedBox(
-                  width: 75,
+                  width: 90,
                   child: Text(
                     '$dia:',
-                    style:
-                        const TextStyle(
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.visible,
+                    style: const TextStyle(
                       fontSize: 13,
-                      fontWeight:
-                          FontWeight.w600,
+                      fontWeight: FontWeight.w600,
                       color: Colors.black,
                     ),
                   ),
