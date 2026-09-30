@@ -1,13 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:neuroway/agendarvisita.dart';
-import 'package:neuroway/agendamentos.dart';
-import 'package:neuroway/favoritos.dart';
-import 'package:neuroway/peril.dart';
 import 'package:neuroway/menuprincipal.dart';
 import 'package:neuroway/descricaoprofi.dart';
 
@@ -519,9 +518,7 @@ class _DescricaoLocalScreenState
       },
     );
   }
-
   // AGENDAMENTO
-
   void _abrirAgendarVisita(
     String nome,
     List<Map<String, dynamic>> profissionais,
@@ -537,9 +534,7 @@ class _DescricaoLocalScreenState
       ),
     );
   }
-
   // NAVEGAÇÃO
-
   void _selecionarNavegacao(int index) {
     Navigator.pushAndRemoveUntil(
       context,
@@ -551,9 +546,78 @@ class _DescricaoLocalScreenState
       (route) => false,
     );
   }
+  // Converter foto Base64
+Uint8List? _decodificarFoto(
+  String? fotoBase64,
+) {
+  if (fotoBase64 == null ||
+      fotoBase64.trim().isEmpty) {
+    return null;
+  }
 
+  try {
+    return base64Decode(
+      fotoBase64.trim(),
+    );
+  } catch (e) {
+    debugPrint(
+      'Erro ao carregar foto: $e',
+    );
+
+    return null;
+  }
+}
+// CARREGAMENTO
+Widget _buildMensagemCarregamento(
+  Widget child,
+) {
+  return SingleChildScrollView(
+    child: Padding(
+      padding: const EdgeInsets.only(
+        top: 180,
+      ),
+      child: SizedBox(
+        height: 400,
+        child: Center(
+          child: child,
+        ),
+      ),
+    ),
+  );
+}
+
+// ESTRELAS
+Widget _buildEstrelasMedia(
+  double media, {
+  double tamanho = 18,
+}) {
+  return Row(
+    mainAxisSize: MainAxisSize.min,
+    children: List.generate(
+      5,
+      (index) {
+        final numero = index + 1;
+
+        IconData icone;
+
+        if (media >= numero) {
+          icone = Icons.star;
+        } else if (media >= numero - 0.5) {
+          icone = Icons.star_half;
+        } else {
+          icone = Icons.star_border;
+        }
+
+        return Icon(
+          icone,
+          color: Colors.amber,
+          size: tamanho,
+        );
+      },
+    ),
+  );
+}
   // CONTEÚDO
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -614,7 +678,17 @@ class _DescricaoLocalScreenState
         }
 
         final dados = snapshot.data!.data()!;
+        // Foto principal do local
+        final String fotoLocalBase64 =
+            dados['fotoPerfilBase64']
+                ?.toString()
+                .trim() ??
+            '';
 
+        final Uint8List? fotoLocalBytes =
+            _decodificarFoto(
+          fotoLocalBase64,
+        );
         final String nome =
             (dados['nome'] ?? 'Empresa').toString();
 
@@ -931,9 +1005,11 @@ class _DescricaoLocalScreenState
               ),
 
               const SizedBox(height: 16),
-              // FOTOS
-              _buildFotos(fotos),
-
+              // FOTO DO LOCAL
+              _buildFotos(
+                fotoLocalBytes,
+                fotos,
+              ),
               const SizedBox(height: 20),
               // DESCRIÇÃO
               if (descricao.trim().isNotEmpty)
@@ -969,90 +1045,76 @@ class _DescricaoLocalScreenState
                 ),
 
               const SizedBox(height: 24),
-              // PROFISSIONAIS
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(
-                  horizontal: 16,
-                ),
-                child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Profissionais',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight:
-                            FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildProfissionais(
-                      profissionais,
-                    ),
-                  ],
-                ),
-              ),
+const SizedBox(height: 24),
 
-              const SizedBox(height: 24),
+// PROFISSIONAIS
+Padding(
+  padding: const EdgeInsets.symmetric(
+    horizontal: 16,
+  ),
+  child: Column(
+    crossAxisAlignment:
+        CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Profissionais',
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      const SizedBox(height: 12),
+      _buildProfissionais(
+        profissionais,
+      ),
+    ],
+  ),
+),
+
+const SizedBox(height: 24),
+
               // LOCALIZAÇÃO
               if (endereco.trim().isNotEmpty)
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                   ),
                   child: Container(
                     width: double.infinity,
-                    padding:
-                        const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color:
-                            Colors.grey.shade300,
+                        color: Colors.grey.shade300,
                       ),
-                      borderRadius:
-                          BorderRadius.circular(
-                        12,
-                      ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Icon(
                           Icons.location_on,
-                          color:
-                              Color(0xFF76A085),
+                          color: Color(0xFF76A085),
                           size: 24,
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start,
+                                CrossAxisAlignment.start,
                             children: [
                               const Text(
                                 'Localização',
                                 style: TextStyle(
                                   fontSize: 15,
-                                  fontWeight:
-                                      FontWeight
-                                          .bold,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              const SizedBox(
-                                height: 4,
-                              ),
+                              const SizedBox(height: 4),
                               Text(
                                 endereco,
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color:
-                                      Colors.grey[
-                                          700],
+                                  color: Colors.grey[700],
                                   height: 1.3,
                                 ),
                               ),
@@ -1063,63 +1125,50 @@ class _DescricaoLocalScreenState
                     ),
                   ),
                 ),
+
               // TELEFONE
               if (telefone.trim().isNotEmpty)
                 Padding(
-                  padding:
-                      const EdgeInsets.only(
+                  padding: const EdgeInsets.only(
                     left: 16,
                     right: 16,
                     top: 14,
                   ),
                   child: Container(
                     width: double.infinity,
-                    padding:
-                        const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color:
-                            Colors.grey.shade300,
+                        color: Colors.grey.shade300,
                       ),
-                      borderRadius:
-                          BorderRadius.circular(
-                        12,
-                      ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [
                         const Icon(
                           Icons.phone,
-                          color:
-                              Color(0xFF76A085),
+                          color: Color(0xFF76A085),
                           size: 23,
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start,
+                                CrossAxisAlignment.start,
                             children: [
                               const Text(
                                 'Telefone',
                                 style: TextStyle(
                                   fontSize: 15,
-                                  fontWeight:
-                                      FontWeight
-                                          .bold,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              const SizedBox(
-                                height: 4,
-                              ),
+                              const SizedBox(height: 4),
                               Text(
                                 telefone,
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color:
-                                      Colors.grey[
-                                          700],
+                                  color: Colors.grey[700],
                                 ),
                               ),
                             ],
@@ -1131,38 +1180,37 @@ class _DescricaoLocalScreenState
                 ),
 
               const SizedBox(height: 20),
+
               // HORÁRIOS
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                 ),
                 child: _buildHorarios(
                   horarios,
                 ),
               ),
+
               // PAGAMENTO
               if (possuiPagamento) ...[
                 const SizedBox(height: 24),
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                   ),
-                  child:
-                      _buildFormasPagamento(
+                  child: _buildFormasPagamento(
                     cartao: cartao,
                     pix: pix,
                     outros: outros,
                   ),
                 ),
               ],
+
               // REDES SOCIAIS
               if (possuiRedesSociais) ...[
                 const SizedBox(height: 24),
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                   ),
                   child: _buildRedesSociais(
@@ -1173,22 +1221,21 @@ class _DescricaoLocalScreenState
                   ),
                 ),
               ],
+
               // AGENDAMENTO
               const SizedBox(height: 24),
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                 ),
-                child:
-                    _buildInformacaoAgendamento(
+                child: _buildInformacaoAgendamento(
                   necessitaAgendamento:
                       necessitaAgendamento,
                   nome: nome,
-                  profissionais:
-                      profissionais,
+                  profissionais: profissionais,
                 ),
               ),
+
               // COMENTÁRIOS
               const SizedBox(height: 24),
 
@@ -1203,70 +1250,24 @@ class _DescricaoLocalScreenState
       },
     );
   }
-  // CARREGAMENTO
-  Widget _buildMensagemCarregamento(
-    Widget child,
-  ) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding:
-            const EdgeInsets.only(top: 180),
-        child: SizedBox(
-          height: 400,
-          child: Center(
-            child: child,
-          ),
-        ),
-      ),
-    );
-  }
-  // ESTRELAS
-  Widget _buildEstrelasMedia(
-    double media, {
-    double tamanho = 18,
-  }) {
-    return Row(
-      mainAxisSize:
-          MainAxisSize.min,
-      children: List.generate(
-        5,
-        (index) {
-          final numero = index + 1;
 
-          IconData icone;
-
-          if (media >= numero) {
-            icone = Icons.star;
-          } else if (media >= numero - 0.5) {
-            icone = Icons.star_half;
-          } else {
-            icone = Icons.star_border;
-          }
-
-          return Icon(
-            icone,
-            color: Colors.amber,
-            size: tamanho,
-          );
-        },
-      ),
-    );
-  }
-  // FOTOS
+  // Foto do local
   Widget _buildFotos(
+    Uint8List? fotoLocalBytes,
     List<String> fotos,
   ) {
-    if (fotos.isEmpty) {
+    final int quantidade =
+        fotos.length + (fotoLocalBytes != null ? 1 : 0);
+
+    if (quantidade == 0) {
       return SizedBox(
         height: 200,
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(
+          padding: const EdgeInsets.symmetric(
             horizontal: 16,
           ),
           child: ClipRRect(
-            borderRadius:
-                BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(16),
             child: Container(
               width: double.infinity,
               color: Colors.grey[300],
@@ -1286,24 +1287,46 @@ class _DescricaoLocalScreenState
     return SizedBox(
       height: 200,
       child: Padding(
-        padding:
-            const EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: 16,
         ),
         child: ClipRRect(
-          borderRadius:
-              BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16),
           child: PageView.builder(
-            itemCount: fotos.length,
-            physics:
-                const BouncingScrollPhysics(),
-            itemBuilder:
-                (
-              context,
-              index,
-            ) {
+            itemCount: quantidade,
+            physics: const BouncingScrollPhysics(),
+            itemBuilder: (context, index) {
+              if (fotoLocalBytes != null &&
+                  index == 0) {
+                return Image.memory(
+                  fotoLocalBytes,
+                  width: double.infinity,
+                  height: 200,
+                  fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                  errorBuilder:
+                      (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.grey[300],
+                      child: const Center(
+                        child: Icon(
+                          Icons.store,
+                          color: Colors.white,
+                          size: 60,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }
+
+              final int fotoIndex =
+                  fotoLocalBytes != null
+                      ? index - 1
+                      : index;
+
               return _buildFoto(
-                fotos[index],
+                fotos[fotoIndex],
               );
             },
           ),
@@ -1321,29 +1344,19 @@ class _DescricaoLocalScreenState
       height: 200,
       fit: BoxFit.cover,
       loadingBuilder:
-          (
-        context,
-        child,
-        progress,
-      ) {
+          (context, child, progress) {
         if (progress == null) {
           return child;
         }
 
         return const Center(
-          child:
-              CircularProgressIndicator(
-            color:
-                Color(0xFF76A085),
+          child: CircularProgressIndicator(
+            color: Color(0xFF76A085),
           ),
         );
       },
       errorBuilder:
-          (
-        context,
-        error,
-        stackTrace,
-      ) {
+          (context, error, stackTrace) {
         return Container(
           color: Colors.grey[300],
           child: const Center(
@@ -1357,10 +1370,10 @@ class _DescricaoLocalScreenState
       },
     );
   }
+
   // PROFISSIONAIS
   Widget _buildProfissionais(
-    List<Map<String, dynamic>>
-        profissionais,
+    List<Map<String, dynamic>> profissionais,
   ) {
     if (profissionais.isEmpty) {
       return const Text(
@@ -1375,37 +1388,20 @@ class _DescricaoLocalScreenState
     return SizedBox(
       height: 60,
       child: ListView.separated(
-        scrollDirection:
-            Axis.horizontal,
-        itemCount:
-            profissionais.length,
-        separatorBuilder:
-            (
-          context,
-          index,
-        ) {
-          return const SizedBox(
-            width: 24,
-          );
+        scrollDirection: Axis.horizontal,
+        itemCount: profissionais.length,
+        separatorBuilder: (context, index) {
+          return const SizedBox(width: 24);
         },
-        itemBuilder:
-            (
-          context,
-          index,
-        ) {
-          final profissional =
-              profissionais[index];
+        itemBuilder: (context, index) {
+          final profissional = profissionais[index];
 
           final String nome =
-              (profissional['nome'] ??
-                      '')
-                  .toString();
+              (profissional['nome'] ?? '').toString();
 
           final String especialidade =
-              (profissional[
-                          'especialidade'] ??
-                      profissional[
-                          'profissao'] ??
+              (profissional['especialidade'] ??
+                      profissional['profissao'] ??
                       '')
                   .toString();
 
@@ -1414,21 +1410,18 @@ class _DescricaoLocalScreenState
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder:
-                      (context) =>
-                          Descricaoprofi(
-                    profissional:
-                        profissional,
-                    empresaId:
-                        widget.empresaId,
+                  builder: (context) =>
+                      Descricaoprofi(
+                    profissional: profissional,
+                    empresaId: widget.empresaId,
                   ),
                 ),
               );
             },
             child: SizedBox(
               width: 145,
-              child:
-                  _buildProfessionalAvatar(
+              child: _buildProfessionalAvatar(
+                profissional,
                 nome,
                 especialidade,
               ),
@@ -1440,20 +1433,21 @@ class _DescricaoLocalScreenState
   }
 
   Widget _buildProfessionalAvatar(
+    Map<String, dynamic> profissional,
     String nome,
     String especialidade,
   ) {
+    final String uid =
+        profissional['uid']
+                ?.toString()
+                .trim() ??
+            '';
+
     return Row(
       children: [
-        CircleAvatar(
-          radius: 24,
-          backgroundColor:
-              Colors.grey[300],
-          child: const Icon(
-            Icons.person,
-            color: Colors.white,
-            size: 28,
-          ),
+        _buildFotoProfissional(
+          uid,
+          profissional,
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -1470,11 +1464,9 @@ class _DescricaoLocalScreenState
                 maxLines: 1,
                 overflow:
                     TextOverflow.ellipsis,
-                style:
-                    const TextStyle(
+                style: const TextStyle(
                   fontSize: 13,
-                  fontWeight:
-                      FontWeight.bold,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 3),
@@ -1487,8 +1479,7 @@ class _DescricaoLocalScreenState
                     TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 11,
-                  color:
-                      Colors.grey[600],
+                  color: Colors.grey[600],
                 ),
               ),
             ],
@@ -1497,6 +1488,195 @@ class _DescricaoLocalScreenState
       ],
     );
   }
+
+  Widget _buildFotoProfissional(
+    String uid,
+    Map<String, dynamic> profissional,
+  ) {
+    return FutureBuilder<Uint8List?>(
+      future: _buscarFotoProfissional(
+        uid,
+        profissional,
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState ==
+            ConnectionState.waiting) {
+          return CircleAvatar(
+            radius: 24,
+            backgroundColor:
+                Colors.grey[300],
+            child: const SizedBox(
+              width: 18,
+              height: 18,
+              child:
+                  CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFF76A085),
+              ),
+            ),
+          );
+        }
+
+        final fotoBytes = snapshot.data;
+
+        if (fotoBytes != null) {
+          return CircleAvatar(
+            radius: 24,
+            backgroundColor:
+                Colors.grey[300],
+            backgroundImage:
+                MemoryImage(fotoBytes),
+          );
+        }
+
+        return _avatarSemFoto();
+      },
+    );
+  }
+
+  Future<Uint8List?> _buscarFotoProfissional(
+    String uid,
+    Map<String, dynamic> profissional,
+  ) async {
+    final String fotoEmpresa =
+        profissional['fotoPerfilBase64']
+                ?.toString()
+                .trim() ??
+            '';
+
+    if (fotoEmpresa.isNotEmpty) {
+      final bytes =
+          _decodificarFoto(fotoEmpresa);
+
+      if (bytes != null) {
+        return bytes;
+      }
+    }
+
+    String emailProfissional =
+        profissional['email']
+                ?.toString()
+                .trim() ??
+            '';
+
+    try {
+      if (uid.isNotEmpty) {
+        final documentoProfissional =
+            await FirebaseFirestore.instance
+                .collection('profissionais')
+                .doc(uid)
+                .get();
+
+        if (documentoProfissional.exists) {
+          final dados =
+              documentoProfissional.data();
+
+          final String foto =
+              dados?['fotoPerfilBase64']
+                      ?.toString()
+                      .trim() ??
+                  '';
+
+          if (foto.isNotEmpty) {
+            final bytes =
+                _decodificarFoto(foto);
+
+            if (bytes != null) {
+              return bytes;
+            }
+          }
+
+          if (emailProfissional.isEmpty) {
+            emailProfissional =
+                dados?['email']
+                        ?.toString()
+                        .trim() ??
+                    '';
+          }
+        }
+      }
+
+      if (uid.isNotEmpty) {
+        final documentoUsuario =
+            await FirebaseFirestore.instance
+                .collection('usuarios')
+                .doc(uid)
+                .get();
+
+        if (documentoUsuario.exists) {
+          final dados =
+              documentoUsuario.data();
+
+          final String foto =
+              dados?['fotoPerfilBase64']
+                      ?.toString()
+                      .trim() ??
+                  '';
+
+          if (foto.isNotEmpty) {
+            final bytes =
+                _decodificarFoto(foto);
+
+            if (bytes != null) {
+              return bytes;
+            }
+          }
+        }
+      }
+
+      if (emailProfissional.isNotEmpty) {
+        final resultado =
+            await FirebaseFirestore.instance
+                .collection('usuarios')
+                .where(
+                  'email',
+                  isEqualTo:
+                      emailProfissional,
+                )
+                .limit(1)
+                .get();
+
+        if (resultado.docs.isNotEmpty) {
+          final dados =
+              resultado.docs.first.data();
+
+          final String foto =
+              dados['fotoPerfilBase64']
+                      ?.toString()
+                      .trim() ??
+                  '';
+
+          if (foto.isNotEmpty) {
+            final bytes =
+                _decodificarFoto(foto);
+
+            if (bytes != null) {
+              return bytes;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint(
+        'Erro ao buscar foto do profissional: $e',
+      );
+    }
+
+    return null;
+  }
+
+  Widget _avatarSemFoto() {
+    return CircleAvatar(
+      radius: 24,
+      backgroundColor: Colors.grey[300],
+      child: const Icon(
+        Icons.person,
+        color: Colors.white,
+        size: 28,
+      ),
+    );
+  }
+
   // HORÁRIOS
   Widget _buildHorarios(
     Map<String, dynamic> horarios,
@@ -1557,8 +1737,7 @@ class _DescricaoLocalScreenState
 
         linhas.add(
           Padding(
-            padding:
-                const EdgeInsets.only(
+            padding: const EdgeInsets.only(
               bottom: 5,
             ),
             child: Row(
@@ -1583,8 +1762,7 @@ class _DescricaoLocalScreenState
                     textoHorario,
                     style: TextStyle(
                       fontSize: 13,
-                      color:
-                          Colors.grey[700],
+                      color: Colors.grey[700],
                       height: 1.3,
                     ),
                   ),
@@ -1596,8 +1774,7 @@ class _DescricaoLocalScreenState
       } else {
         linhas.add(
           Padding(
-            padding:
-                const EdgeInsets.only(
+            padding: const EdgeInsets.only(
               bottom: 5,
             ),
             child: Row(
@@ -1622,8 +1799,7 @@ class _DescricaoLocalScreenState
                     'Horário não informado',
                     style: TextStyle(
                       fontSize: 13,
-                      color:
-                          Colors.grey[700],
+                      color: Colors.grey[700],
                       height: 1.3,
                     ),
                   ),
@@ -1633,16 +1809,6 @@ class _DescricaoLocalScreenState
           ),
         );
       }
-    }
-
-    if (linhas.isEmpty) {
-      return Text(
-        'Horário não informado.',
-        style: TextStyle(
-          fontSize: 13,
-          color: Colors.grey[700],
-        ),
-      );
     }
 
     return Container(
@@ -1687,7 +1853,6 @@ class _DescricaoLocalScreenState
       ),
     );
   }
-  // FORMAS DE PAGAMENTO
   Widget _buildFormasPagamento({
     required bool cartao,
     required bool pix,

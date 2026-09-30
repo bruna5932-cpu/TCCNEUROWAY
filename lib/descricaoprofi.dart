@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -39,50 +41,74 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
   // Buscar profissional
   Future<void> _buscarProfissional() async {
     try {
-      final profissionalInicial = widget.profissional;
-      String? profissionalUid;
+      final profissionalInicial =
+          widget.profissional;
 
-      if (profissionalInicial != null) {
-        profissionalUid =
-            profissionalInicial['uid']?.toString() ??
-            profissionalInicial['id']?.toString() ??
-            profissionalInicial['profissionalUid']?.toString();
-      }
+      final Map<String, dynamic> dadosIniciais =
+          profissionalInicial != null
+              ? Map<String, dynamic>.from(
+                  profissionalInicial,
+                )
+              : {};
 
-      Map<String, dynamic>? dadosProfissional;
+      final String profissionalUid =
+          (dadosIniciais['uid'] ??
+                  dadosIniciais['id'] ??
+                  dadosIniciais['profissionalUid'] ??
+                  '')
+              .toString()
+              .trim();
 
-      if (profissionalUid != null && profissionalUid.isNotEmpty) {
-        final documento = await FirebaseFirestore.instance
-            .collection('profissionais')
-            .doc(profissionalUid)
-            .get();
+      Map<String, dynamic>? dadosColecao;
+      Map<String, dynamic>? dadosEmpresa;
 
-        if (documento.exists && documento.data() != null) {
-          dadosProfissional = documento.data();
+      // 1 - Buscar na coleção profissionais
+      if (profissionalUid.isNotEmpty) {
+        final documento =
+            await FirebaseFirestore.instance
+                .collection('profissionais')
+                .doc(profissionalUid)
+                .get();
+
+        if (documento.exists &&
+            documento.data() != null) {
+          dadosColecao = documento.data();
         }
       }
 
-      if (dadosProfissional == null &&
-          widget.empresaId != null &&
+      // 2 - Buscar também dentro da empresa
+      if (widget.empresaId != null &&
           widget.empresaId!.isNotEmpty &&
-          profissionalUid != null &&
           profissionalUid.isNotEmpty) {
-        final documentoEmpresa = await FirebaseFirestore.instance
-            .collection('empresas')
-            .doc(widget.empresaId)
-            .get();
+        final documentoEmpresa =
+            await FirebaseFirestore.instance
+                .collection('empresas')
+                .doc(widget.empresaId)
+                .get();
 
-        final dadosEmpresa = documentoEmpresa.data();
-        final profissionais = dadosEmpresa?['profissionais'];
+        final dadosEmpresaFirestore =
+            documentoEmpresa.data();
+
+        final profissionais =
+            dadosEmpresaFirestore?['profissionais'];
 
         if (profissionais is List) {
           for (final item in profissionais) {
             if (item is Map) {
-              final mapa = Map<String, dynamic>.from(item);
-              final uidItem = mapa['uid']?.toString();
+              final mapa =
+                  Map<String, dynamic>.from(
+                item,
+              );
 
-              if (uidItem == profissionalUid) {
-                dadosProfissional = mapa;
+              final uidItem =
+                  mapa['uid']
+                          ?.toString()
+                          .trim() ??
+                      '';
+
+              if (uidItem ==
+                  profissionalUid) {
+                dadosEmpresa = mapa;
                 break;
               }
             }
@@ -90,23 +116,154 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
         }
       }
 
-      if (mounted) {
-        setState(() {
-          _profissional = dadosProfissional ?? profissionalInicial;
-          _carregandoProfissional = false;
-        });
+      // 3 - Juntar todos os dados
+      final Map<String, dynamic> dadosFinais =
+          {};
+
+      dadosFinais.addAll(
+        dadosIniciais,
+      );
+
+      if (dadosEmpresa != null) {
+        dadosFinais.addAll(
+          dadosEmpresa,
+        );
       }
+
+      if (dadosColecao != null) {
+        dadosFinais.addAll(
+          dadosColecao,
+        );
+      }
+
+      // 4 - Procurar foto Base64
+      String fotoPerfilBase64 = '';
+
+      final fontesFoto = [
+        dadosColecao,
+        dadosEmpresa,
+        dadosIniciais,
+      ];
+
+      for (final fonte in fontesFoto) {
+        if (fonte == null) continue;
+
+        final foto =
+            fonte['fotoPerfilBase64']
+                    ?.toString()
+                    .trim() ??
+                '';
+
+        if (foto.isNotEmpty) {
+          fotoPerfilBase64 = foto;
+          break;
+        }
+      }
+
+      // 5 - Se ainda não achou,
+      // tenta buscar na coleção usuarios
+      if (fotoPerfilBase64.isEmpty) {
+        try {
+          Map<String, dynamic>? dadosUsuario;
+
+          if (profissionalUid.isNotEmpty) {
+            final documentoUsuario =
+                await FirebaseFirestore.instance
+                    .collection('usuarios')
+                    .doc(profissionalUid)
+                    .get();
+
+            if (documentoUsuario.exists) {
+              dadosUsuario =
+                  documentoUsuario.data();
+            }
+          }
+
+          if (dadosUsuario != null) {
+            final foto =
+                dadosUsuario['fotoPerfilBase64']
+                        ?.toString()
+                        .trim() ??
+                    '';
+
+            if (foto.isNotEmpty) {
+              fotoPerfilBase64 = foto;
+            }
+          }
+
+          // Se UID for diferente,
+          // procura pelo e-mail
+          if (fotoPerfilBase64.isEmpty) {
+            final String email =
+                (dadosFinais['email'] ?? '')
+                    .toString()
+                    .trim();
+
+            if (email.isNotEmpty) {
+              final resultado =
+                  await FirebaseFirestore.instance
+                      .collection('usuarios')
+                      .where(
+                        'email',
+                        isEqualTo: email,
+                      )
+                      .limit(1)
+                      .get();
+
+              if (resultado.docs.isNotEmpty) {
+                final dados =
+                    resultado.docs.first.data();
+
+                final foto =
+                    dados['fotoPerfilBase64']
+                            ?.toString()
+                            .trim() ??
+                        '';
+
+                if (foto.isNotEmpty) {
+                  fotoPerfilBase64 = foto;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint(
+            'Erro ao buscar foto do usuário: $e',
+          );
+        }
+      }
+
+      // Coloca a foto encontrada nos dados finais
+      if (fotoPerfilBase64.isNotEmpty) {
+        dadosFinais['fotoPerfilBase64'] =
+            fotoPerfilBase64;
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _profissional =
+            dadosFinais.isNotEmpty
+                ? dadosFinais
+                : profissionalInicial;
+
+        _carregandoProfissional = false;
+      });
 
       await _verificarFavorito();
     } catch (e) {
-      debugPrint('Erro ao buscar profissional: $e');
+      debugPrint(
+        'Erro ao buscar profissional: $e',
+      );
 
-      if (mounted) {
-        setState(() {
-          _profissional = widget.profissional;
-          _carregandoProfissional = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _profissional =
+            widget.profissional;
+
+        _carregandoProfissional = false;
+      });
 
       await _verificarFavorito();
     }
@@ -146,7 +303,9 @@ class _DescricaoprofiState extends State<Descricaoprofi> {
   String _obterFotoProfissional() {
     final profissional = _profissional ?? {};
 
-    final foto = profissional['foto'] ??
+    final foto =
+        profissional['fotoPerfilBase64'] ??
+        profissional['foto'] ??
         profissional['fotoUrl'] ??
         profissional['imagem'] ??
         profissional['fotoPerfil'] ??
@@ -564,6 +723,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
 
 // Cabeçalho do profissional
 class ProfileHeaderSection extends StatelessWidget {
+  
   final String nome;
   final String especialidade;
   final String foto;
@@ -580,6 +740,70 @@ class ProfileHeaderSection extends StatelessWidget {
     required this.carregandoFavorito,
     required this.onFavorite,
   });
+  Widget _buildFoto(
+  String foto,
+) {
+  try {
+    // Foto nova salva em Base64
+    if (!foto.startsWith('http://') &&
+        !foto.startsWith('https://')) {
+      final bytes = base64Decode(
+        foto,
+      );
+
+      return Image.memory(
+        bytes,
+        width: 110,
+        height: 110,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        errorBuilder:
+            (context, error, stackTrace) {
+          return const Icon(
+            Icons.person,
+            size: 65,
+            color: Colors.white,
+          );
+        },
+      );
+    }
+
+    // Compatibilidade com fotos antigas por URL
+    return Image.network(
+      foto,
+      width: 110,
+      height: 110,
+      fit: BoxFit.cover,
+      loadingBuilder:
+          (context, child, progress) {
+        if (progress == null) {
+          return child;
+        }
+
+        return const Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.white,
+          ),
+        );
+      },
+      errorBuilder:
+          (context, error, stackTrace) {
+        return const Icon(
+          Icons.person,
+          size: 65,
+          color: Colors.white,
+        );
+      },
+    );
+  } catch (e) {
+    return const Icon(
+      Icons.person,
+      size: 65,
+      color: Colors.white,
+    );
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -633,38 +857,8 @@ class ProfileHeaderSection extends StatelessWidget {
               ),
               child: foto.isNotEmpty
                   ? ClipOval(
-                      child: Image.network(
+                      child: _buildFoto(
                         foto,
-                        width: 110,
-                        height: 110,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (
-                          context,
-                          child,
-                          loadingProgress,
-                        ) {
-                          if (loadingProgress == null) {
-                            return child;
-                          }
-
-                          return const Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          );
-                        },
-                        errorBuilder: (
-                          context,
-                          error,
-                          stackTrace,
-                        ) {
-                          return const Icon(
-                            Icons.person,
-                            size: 65,
-                            color: Colors.white,
-                          );
-                        },
                       ),
                     )
                   : const Icon(
@@ -673,6 +867,7 @@ class ProfileHeaderSection extends StatelessWidget {
                       color: Colors.white,
                     ),
             ),
+
             const SizedBox(width: 10),
 
             // Nome e profissão

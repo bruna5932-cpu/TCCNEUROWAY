@@ -27,7 +27,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
 
   bool _agendando = false;
 
-  // Dias da semana.
+  // Dias da semana
   final List<String> _diasSemana = [
     'DOM',
     'SEG',
@@ -38,7 +38,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     'SÁB',
   ];
 
-  // Meses do ano.
+  // Meses
   final List<String> _meses = [
     'Janeiro',
     'Fevereiro',
@@ -54,7 +54,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     'Dezembro',
   ];
 
-  // Horários disponíveis.
+  // Horários
   final List<String> _horarios = [
     '08:00',
     '08:30',
@@ -76,7 +76,6 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     '17:30',
   ];
 
-  // Inicialização.
   @override
   void initState() {
     super.initState();
@@ -95,7 +94,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     );
   }
 
-  // Volta para o mês anterior.
+  // Mês anterior
   void _mesAnterior() {
     final hoje = DateTime.now();
 
@@ -118,7 +117,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     });
   }
 
-  // Avança para o próximo mês.
+  // Próximo mês
   void _proximoMes() {
     setState(() {
       _mesAtual = DateTime(
@@ -128,7 +127,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     });
   }
 
-  // Verifica se a data é hoje.
+  // Verificar hoje
   bool _ehHoje(DateTime data) {
     final hoje = DateTime.now();
 
@@ -137,7 +136,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
         data.day == hoje.day;
   }
 
-  // Verifica se a data já passou.
+  // Verificar data passada
   bool _ehDataPassada(DateTime data) {
     final hoje = DateTime.now();
 
@@ -150,7 +149,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     return data.isBefore(hojeSemHora);
   }
 
-  // Retorna os dias do mês.
+  // Quantidade de dias do mês
   int _quantidadeDiasNoMes() {
     return DateTime(
       _mesAtual.year,
@@ -159,7 +158,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     ).day;
   }
 
-  // Retorna o primeiro dia do mês.
+  // Primeiro dia do mês
   int _primeiroDiaDoMes() {
     return DateTime(
           _mesAtual.year,
@@ -169,7 +168,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
         7;
   }
 
-  // Seleciona uma data.
+  // Selecionar data
   void _selecionarData(int dia) {
     final data = DateTime(
       _mesAtual.year,
@@ -187,7 +186,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     });
   }
 
-  // Monta o calendário.
+  // Calendário
   Widget _buildCalendario() {
     final quantidadeDias = _quantidadeDiasNoMes();
     final primeiroDia = _primeiroDiaDoMes();
@@ -212,7 +211,10 @@ class _AgendarVisitaState extends State<AgendarVisita> {
               GestureDetector(
                 onTap: _mesAnterior,
                 child: const Padding(
-                  padding: EdgeInsets.only(left: 3, right: 8),
+                  padding: EdgeInsets.only(
+                    left: 3,
+                    right: 8,
+                  ),
                   child: Text(
                     '<',
                     style: TextStyle(
@@ -236,7 +238,10 @@ class _AgendarVisitaState extends State<AgendarVisita> {
               GestureDetector(
                 onTap: _proximoMes,
                 child: const Padding(
-                  padding: EdgeInsets.only(left: 8, right: 3),
+                  padding: EdgeInsets.only(
+                    left: 8,
+                    right: 3,
+                  ),
                   child: Text(
                     '>',
                     style: TextStyle(
@@ -248,7 +253,9 @@ class _AgendarVisitaState extends State<AgendarVisita> {
               ),
             ],
           ),
+
           const SizedBox(height: 7),
+
           Row(
             children: _diasSemana.map((dia) {
               return Expanded(
@@ -264,7 +271,9 @@ class _AgendarVisitaState extends State<AgendarVisita> {
               );
             }).toList(),
           ),
+
           const SizedBox(height: 3),
+
           ...List.generate(
             quantidadeLinhas,
             (linha) {
@@ -341,7 +350,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     );
   }
 
-  // Monta a seleção do profissional.
+  // Seleção do profissional
   Widget _buildProfissional() {
     if (widget.profissionais.isEmpty) {
       return Row(
@@ -413,7 +422,9 @@ class _AgendarVisitaState extends State<AgendarVisita> {
                       value: nome,
                       child: Text(
                         nome,
-                        style: const TextStyle(fontSize: 12),
+                        style: const TextStyle(
+                          fontSize: 12,
+                        ),
                       ),
                     );
                   })
@@ -432,7 +443,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     );
   }
 
-  // Monta a seleção do horário.
+  // Seleção do horário
   Widget _buildHorario() {
     return Row(
       children: [
@@ -461,7 +472,9 @@ class _AgendarVisitaState extends State<AgendarVisita> {
                   value: horario,
                   child: Text(
                     horario,
-                    style: const TextStyle(fontSize: 12),
+                    style: const TextStyle(
+                      fontSize: 12,
+                    ),
                   ),
                 );
               }).toList(),
@@ -479,7 +492,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     );
   }
 
-  // Gera o ID do agendamento.
+  // ID do agendamento
   String _gerarIdHorario() {
     final data = _dataSelecionada!;
 
@@ -491,16 +504,21 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     final profissional = _profissionalSelecionado!
         .trim()
         .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '_');
+        .replaceAll(
+          RegExp(r'[^a-z0-9]+'),
+          '_',
+        );
 
-    final horario = _horarioSelecionado!.replaceAll(':', '');
+    final horario =
+        _horarioSelecionado!.replaceAll(':', '');
 
-    final empresa = (widget.empresaId ?? 'empresa').trim();
+    final empresa =
+        (widget.empresaId ?? 'empresa').trim();
 
     return '${empresa}_${profissional}_${dataFormatada}_$horario';
   }
 
-  // Realiza o agendamento.
+  // Realizar agendamento
   Future<void> _agendar() async {
     if (_dataSelecionada == null) {
       _mostrarMensagem(
@@ -527,7 +545,8 @@ class _AgendarVisitaState extends State<AgendarVisita> {
       return;
     }
 
-    final usuario = FirebaseAuth.instance.currentUser;
+    final usuario =
+        FirebaseAuth.instance.currentUser;
 
     if (usuario == null) {
       _mostrarMensagem(
@@ -551,7 +570,8 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     });
 
     try {
-      final firestore = FirebaseFirestore.instance;
+      final firestore =
+          FirebaseFirestore.instance;
 
       final agendamentoRef = firestore
           .collection('agendamentos')
@@ -560,10 +580,14 @@ class _AgendarVisitaState extends State<AgendarVisita> {
       await firestore.runTransaction(
         (transaction) async {
           final agendamentoSnapshot =
-              await transaction.get(agendamentoRef);
+              await transaction.get(
+            agendamentoRef,
+          );
 
           if (agendamentoSnapshot.exists) {
-            throw Exception('HORARIO_JA_AGENDADO');
+            throw Exception(
+              'HORARIO_JA_AGENDADO',
+            );
           }
 
           transaction.set(
@@ -572,19 +596,21 @@ class _AgendarVisitaState extends State<AgendarVisita> {
               'usuarioId': usuario.uid,
               'empresaId': widget.empresaId,
               'empresaNome': widget.empresaNome,
-              'profissional': _profissionalSelecionado ?? '',
+              'profissional':
+                  _profissionalSelecionado ?? '',
               'horario': _horarioSelecionado,
-              'data': Timestamp.fromDate(_dataSelecionada!),
+              'data': Timestamp.fromDate(
+                _dataSelecionada!,
+              ),
               'status': 'pendente',
-              'criadoEm': FieldValue.serverTimestamp(),
+              'criadoEm':
+                  FieldValue.serverTimestamp(),
             },
           );
         },
       );
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       _mostrarMensagem(
         'Agendamento realizado com sucesso!',
@@ -594,11 +620,11 @@ class _AgendarVisitaState extends State<AgendarVisita> {
         _horarioSelecionado = null;
       });
     } catch (e) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
-      if (e.toString().contains('HORARIO_JA_AGENDADO')) {
+      if (e
+          .toString()
+          .contains('HORARIO_JA_AGENDADO')) {
         _mostrarMensagem(
           'Este profissional já possui um agendamento neste dia e horário. Escolha outro horário.',
           vermelho: true,
@@ -618,7 +644,7 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     }
   }
 
-  // Mostra mensagens na tela.
+  // Mensagem
   void _mostrarMensagem(
     String mensagem, {
     bool vermelho = false,
@@ -626,144 +652,201 @@ class _AgendarVisitaState extends State<AgendarVisita> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensagem),
-        backgroundColor: vermelho ? Colors.red : null,
+        backgroundColor:
+            vermelho ? Colors.red : null,
       ),
     );
   }
 
-  // Monta a tela.
+  // Tela
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final molduraHeight = screenHeight * 0.15;
+    final screenHeight =
+        MediaQuery.of(context).size.height;
+
+    final molduraHeight =
+        screenHeight * 0.15;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         top: false,
-        child: Stack(
+        child: Column(
           children: [
-            SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: molduraHeight),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        InkWell(
-                          onTap: () {
-                            if (Navigator.canPop(context)) {
-                              Navigator.pop(context);
-                            }
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Icon(
-                              Icons.arrow_back_ios_new,
-                              color: Colors.black,
-                              size: 22,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Expanded(
-                          child: Text(
-                            'Agendar cliente',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 25,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildCalendario(),
-                  const SizedBox(height: 7),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                    ),
-                    child: Column(
-                      children: [
-                        _buildProfissional(),
-                        const SizedBox(height: 2),
-                        _buildHorario(),
-                        const SizedBox(height: 16),
-                        if (_dataSelecionada != null)
-                          Text(
-                            'Data: '
-                            '${_dataSelecionada!.day.toString().padLeft(2, '0')}/'
-                            '${_dataSelecionada!.month.toString().padLeft(2, '0')}/'
-                            '${_dataSelecionada!.year}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        const SizedBox(height: 15),
-                        SizedBox(
-                          width: 80,
-                          height: 38,
-                          child: ElevatedButton(
-                            onPressed: _agendando ? null : _agendar,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  const Color(0xFF76A085),
-                              foregroundColor: Colors.black,
-                              elevation: 0,
-                              padding: EdgeInsets.zero,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            child: _agendando
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text(
-                                    'Agendar',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                ],
+            // Quebra-cabeça fixo
+            SizedBox(
+              height: molduraHeight,
+              width: double.infinity,
+              child: Image.asset(
+                'imagem/quebrasuperior.png',
+                width: double.infinity,
+                height: molduraHeight,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
               ),
             ),
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: SizedBox(
-                height: molduraHeight,
-                child: Image.asset(
-                  'imagem/quebrasuperior.png',
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
+
+            // Conteúdo rolável
+            Expanded(
+              child: SingleChildScrollView(
+                physics:
+                    const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+
+                    // Título
+                    Padding(
+                      padding:
+                          const EdgeInsets.symmetric(
+                        horizontal: 16,
+                      ),
+                      child: Row(
+                        crossAxisAlignment:
+                            CrossAxisAlignment.center,
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              if (Navigator.canPop(
+                                context,
+                              )) {
+                                Navigator.pop(
+                                  context,
+                                );
+                              }
+                            },
+                            child: const Padding(
+                              padding:
+                                  EdgeInsets.all(8),
+                              child: Icon(
+                                Icons
+                                    .arrow_back_ios_new,
+                                color: Colors.black,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Expanded(
+                            child: Text(
+                              'Agendar cliente',
+                              maxLines: 1,
+                              overflow:
+                                  TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 25,
+                                fontWeight:
+                                    FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Calendário
+                    _buildCalendario(),
+
+                    const SizedBox(height: 7),
+
+                    Padding(
+                      padding:
+                          const EdgeInsets.symmetric(
+                        horizontal: 24,
+                      ),
+                      child: Column(
+                        children: [
+                          // Profissional
+                          _buildProfissional(),
+
+                          const SizedBox(height: 2),
+
+                          // Horário
+                          _buildHorario(),
+
+                          const SizedBox(height: 16),
+
+                          // Data selecionada
+                          if (_dataSelecionada !=
+                              null)
+                            Text(
+                              'Data: '
+                              '${_dataSelecionada!.day.toString().padLeft(2, '0')}/'
+                              '${_dataSelecionada!.month.toString().padLeft(2, '0')}/'
+                              '${_dataSelecionada!.year}',
+                              style:
+                                  const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+
+                          const SizedBox(height: 15),
+
+                          // Botão agendar
+                          SizedBox(
+                            width: 80,
+                            height: 38,
+                            child: ElevatedButton(
+                              onPressed:
+                                  _agendando
+                                      ? null
+                                      : _agendar,
+                              style: ElevatedButton
+                                  .styleFrom(
+                                backgroundColor:
+                                    const Color(
+                                  0xFF76A085,
+                                ),
+                                foregroundColor:
+                                    Colors.black,
+                                elevation: 0,
+                                padding:
+                                    EdgeInsets.zero,
+                                shape:
+                                    RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius
+                                          .circular(
+                                    4,
+                                  ),
+                                ),
+                              ),
+                              child: _agendando
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child:
+                                          CircularProgressIndicator(
+                                        strokeWidth:
+                                            2,
+                                        color: Colors
+                                            .white,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Agendar',
+                                      style:
+                                          TextStyle(
+                                        fontSize: 12,
+                                        fontWeight:
+                                            FontWeight
+                                                .bold,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 30),
+                  ],
                 ),
               ),
             ),

@@ -1,10 +1,12 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:neuroway/favoritos.dart';
@@ -25,12 +27,14 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
   String? empresaUid;
 
   String nome = 'Carregando...';
+  String email = 'Não informado';
   String cnpj = 'Não informado';
   String categoria = 'Não informado';
   String numero = 'Não informado';
   String descricao = 'Não informado';
   String endereco = 'Não informado';
-  String fotoPerfilUrl = '';
+  String fotoPerfilBase64 = '';
+  Uint8List? fotoPerfilBytes;
 
   String instagram = 'Não informado';
   String facebook = 'Não informado';
@@ -117,7 +121,7 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
     return null;
   }
 
-  // Buscar dados da empresa
+  // Buscar dados
   Future<void> _buscarDadosEmpresa() async {
     try {
       final referencia = await _obterReferenciaEmpresa();
@@ -194,36 +198,81 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
 
       if (!mounted) return;
 
-      setState(() {
-        nome = _valor(dados['nome']);
-        cnpj = _valor(dados['cnpj']);
-        categoria = _valor(dados['categoria']);
-        numero = _valor(dados['telefone'] ?? dados['numero']);
-        descricao = _valor(dados['descricao']);
-        endereco = _valor(dados['endereco']);
-        fotoPerfilUrl = dados['fotoPerfilUrl']?.toString() ?? '';
+final emailAuth =
+    FirebaseAuth.instance.currentUser?.email?.trim() ?? '';
 
-        horarios = horariosConvertidos;
+final emailBanco =
+    dados['email']?.toString().trim() ?? '';
 
-        instagram = _valor(redes['instagram']);
-        facebook = _valor(redes['facebook']);
-        tiktok = _valor(redes['tiktok']);
-        website = _valor(redes['website']);
+// Foto
+final fotoBase64 =
+    dados['fotoPerfilBase64']?.toString() ?? '';
 
-        necessitaAgendamento = _valor(dados['necessitaAgendamento']);
+Uint8List? bytesFoto;
 
-        pagamentoCartao = _valor(pagamentos['cartao']);
-        pagamentoPix = _valor(pagamentos['pix']);
-        pagamentoOutros = _valor(pagamentos['outros']);
+if (fotoBase64.isNotEmpty) {
+  try {
+    bytesFoto = base64Decode(
+      fotoBase64,
+    );
+  } catch (e) {
+    debugPrint(
+      'Erro ao carregar foto: $e',
+    );
 
-        profissionais = profissionaisBanco;
+    bytesFoto = null;
+  }
+}
 
-        fotos = dados['fotos'] is List
-            ? List<dynamic>.from(dados['fotos'])
-            : [];
+if (!mounted) return;
 
-        carregando = false;
-      });
+setState(() {
+      nome = _valor(dados['nome']);
+
+      email = emailAuth.isNotEmpty
+          ? emailAuth
+          : (emailBanco.isNotEmpty
+              ? emailBanco
+              : 'Não informado');
+
+      cnpj = _valor(dados['cnpj']);
+      categoria = _valor(dados['categoria']);
+      numero = _valor(
+        dados['telefone'] ?? dados['numero'],
+      );
+      descricao = _valor(dados['descricao']);
+      endereco = _valor(dados['endereco']);
+
+      fotoPerfilBase64 = fotoBase64;
+      fotoPerfilBytes = bytesFoto;
+
+      horarios = horariosConvertidos;
+
+      instagram = _valor(redes['instagram']);
+      facebook = _valor(redes['facebook']);
+      tiktok = _valor(redes['tiktok']);
+      website = _valor(redes['website']);
+
+      necessitaAgendamento =
+          _valor(dados['necessitaAgendamento']);
+
+      pagamentoCartao =
+          _valor(pagamentos['cartao']);
+
+      pagamentoPix =
+          _valor(pagamentos['pix']);
+
+      pagamentoOutros =
+          _valor(pagamentos['outros']);
+
+      profissionais = profissionaisBanco;
+
+      fotos = dados['fotos'] is List
+          ? List<dynamic>.from(dados['fotos'])
+          : [];
+
+      carregando = false;
+    });
     } catch (e) {
       debugPrint('Erro ao carregar empresa: $e');
 
@@ -236,7 +285,7 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
     }
   }
 
-  // Salvar informações
+  // Salvar informação
   Future<void> _salvarCampo(String campo, dynamic valor) async {
     try {
       if (mounted) {
@@ -286,22 +335,241 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
     await _salvarCampo(campo, dados);
   }
 
-  // Alterar foto da empresa
-  Future<void> _alterarFoto() async {
+  // Confirmar senha
+  Future<String?> _pedirSenha() async {
+    final controller = TextEditingController();
+
+    final senhaConfirmada = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        bool carregandoSenha = false;
+        bool ocultarSenha = true;
+        String? erroSenha;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> confirmarSenha() async {
+              final senha = controller.text.trim();
+
+              if (senha.isEmpty) {
+                setDialogState(() {
+                  erroSenha = 'Digite sua senha.';
+                });
+                return;
+              }
+
+              setDialogState(() {
+                carregandoSenha = true;
+                erroSenha = null;
+              });
+
+              try {
+                final usuario = FirebaseAuth.instance.currentUser;
+
+                if (usuario == null) {
+                  setDialogState(() {
+                    carregandoSenha = false;
+                    erroSenha = 'Usuário não identificado.';
+                  });
+                  return;
+                }
+
+                final emailAtual = usuario.email;
+
+                if (emailAtual == null || emailAtual.isEmpty) {
+                  setDialogState(() {
+                    carregandoSenha = false;
+                    erroSenha =
+                        'Não foi possível confirmar sua senha.';
+                  });
+                  return;
+                }
+
+                final credencial = EmailAuthProvider.credential(
+                  email: emailAtual,
+                  password: senha,
+                );
+
+                await usuario.reauthenticateWithCredential(
+                  credencial,
+                );
+
+                if (!dialogContext.mounted) return;
+
+                Navigator.pop(dialogContext, senha);
+              } on FirebaseAuthException catch (e) {
+                debugPrint('Erro ao validar senha: ${e.code}');
+
+                if (!dialogContext.mounted) return;
+
+                final senhaIncorreta =
+                    e.code == 'wrong-password' ||
+                    e.code == 'invalid-credential' ||
+                    e.code == 'invalid-login-credentials';
+
+                setDialogState(() {
+                  carregandoSenha = false;
+                  erroSenha = senhaIncorreta
+                      ? 'Senha inválida. Digite a senha correta.'
+                      : 'Não foi possível confirmar a senha.';
+                });
+              } catch (e) {
+                debugPrint('Erro ao validar senha: $e');
+
+                if (!dialogContext.mounted) return;
+
+                setDialogState(() {
+                  carregandoSenha = false;
+                  erroSenha =
+                      'Não foi possível confirmar a senha.';
+                });
+              }
+            }
+
+            return AlertDialog(
+              title: const Text('Confirme sua senha'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Para salvar esta alteração, digite a senha da sua conta.',
+                  ),
+                  const SizedBox(height: 18),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    obscureText: ocultarSenha,
+                    enabled: !carregandoSenha,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) {
+                      if (!carregandoSenha) {
+                        confirmarSenha();
+                      }
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Senha',
+                      border: const OutlineInputBorder(),
+                      errorText: erroSenha,
+                      suffixIcon: IconButton(
+                        onPressed: carregandoSenha
+                            ? null
+                            : () {
+                                setDialogState(() {
+                                  ocultarSenha = !ocultarSenha;
+                                });
+                              },
+                        icon: Icon(
+                          ocultarSenha
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: carregandoSenha
+                      ? null
+                      : () => Navigator.pop(dialogContext),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: verde,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed:
+                      carregandoSenha ? null : confirmarSenha,
+                  child: carregandoSenha
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Confirmar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
+    return senhaConfirmada;
+  }
+
+  // Editar nome
+  void _mostrarEdicaoNome() {
+    final controller = TextEditingController(
+      text: nome == 'Não informado' ? '' : nome,
+    );
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Nome'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.name,
+            textCapitalization: TextCapitalization.words,
+            maxLines: 1,
+            decoration: const InputDecoration(
+              labelText: 'Nome',
+              hintText: 'Digite o nome da empresa',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Fechar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: verde,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                final valor = controller.text.trim();
+
+                if (valor.isEmpty) {
+                  _mostrarMensagem('Preencha o nome.');
+                  return;
+                }
+
+                if (valor == nome) {
+                  Navigator.pop(dialogContext);
+                  return;
+                }
+
+                Navigator.pop(dialogContext);
+                await _salvarNome(valor);
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    ).then((_) => controller.dispose());
+  }
+
+  // Salvar nome
+  Future<void> _salvarNome(String valor) async {
+    final senha = await _pedirSenha();
+
+    if (senha == null) return;
+
     try {
-      final imagem = await ImagePicker().pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 80,
-      );
-
-      if (imagem == null) return;
-
-      if (mounted) {
-        setState(() {
-          enviandoFoto = true;
-        });
-      }
-
       final usuario = FirebaseAuth.instance.currentUser;
 
       if (usuario == null) {
@@ -309,47 +577,651 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
         return;
       }
 
-      final referenciaEmpresa = await _obterReferenciaEmpresa();
+      final referencia = await _obterReferenciaEmpresa();
 
-      if (referenciaEmpresa == null) {
+      if (referencia == null) {
         _mostrarMensagem('Empresa não encontrada.');
         return;
       }
 
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child(
-            'empresas/${empresaUid ?? usuario.uid}/foto_perfil.jpg',
-          );
+      await referencia.update({
+        'nome': valor,
+      });
 
-      await storageRef.putFile(File(imagem.path));
+      await usuario.updateDisplayName(valor);
 
-      final url = await storageRef.getDownloadURL();
+      if (!mounted) return;
 
-      await referenciaEmpresa.update({
-        'fotoPerfilUrl': url,
+      setState(() {
+        nome = valor;
+      });
+
+      _mostrarMensagem('Nome atualizado com sucesso.');
+    } catch (e) {
+      debugPrint('Erro ao salvar nome: $e');
+
+      if (mounted) {
+        _mostrarMensagem('Não foi possível atualizar o nome.');
+      }
+    }
+  }
+
+  // Editar e-mail
+  void _mostrarEdicaoEmail() {
+    final controller = TextEditingController(
+      text: email == 'Não informado' ? '' : email,
+    );
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('E-mail'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.emailAddress,
+            maxLines: 1,
+            decoration: const InputDecoration(
+              labelText: 'E-mail',
+              hintText: 'Digite o novo e-mail',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Fechar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: verde,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                final valor =
+                    controller.text.trim().toLowerCase();
+
+                if (valor.isEmpty) {
+                  _mostrarMensagem('Preencha o e-mail.');
+                  return;
+                }
+
+                if (!_emailValido(valor)) {
+                  _mostrarMensagem('Digite um e-mail válido.');
+                  return;
+                }
+
+                if (valor == email.toLowerCase()) {
+                  _mostrarMensagem('Esse já é o seu e-mail.');
+                  return;
+                }
+
+                Navigator.pop(dialogContext);
+                await _salvarEmail(valor);
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    ).then((_) => controller.dispose());
+  }
+
+  // Validar e-mail
+  bool _emailValido(String valor) {
+    final regex = RegExp(
+      r'^[A-Za-z0-9.!#$%&'
+      r"'"
+      r'*+/=?^_`{|}~-]+@[A-Za-z0-9]'
+      r'(?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?'
+      r'(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$',
+    );
+
+    return regex.hasMatch(valor);
+  }
+
+  // Salvar e-mail
+  Future<void> _salvarEmail(String valor) async {
+    final senha = await _pedirSenha();
+
+    if (senha == null) return;
+
+    try {
+      await _alterarEmailNoFirebase(
+        novoEmail: valor,
+      );
+
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: valor,
+        password: senha,
+      );
+
+      final referencia = await _obterReferenciaEmpresa();
+
+      if (referencia == null) {
+        _mostrarMensagem('Empresa não encontrada.');
+        return;
+      }
+
+      await referencia.update({
+        'email': valor,
       });
 
       if (!mounted) return;
 
       setState(() {
-        fotoPerfilUrl = url;
+        email = valor;
       });
 
-      _mostrarMensagem('Foto atualizada com sucesso.');
+      _mostrarMensagem('E-mail atualizado com sucesso.');
+    } on _ErroAlteracaoEmail catch (e) {
+      debugPrint('Erro ao alterar e-mail: ${e.codigo}');
+
+      if (!mounted) return;
+
+      switch (e.codigo) {
+        case 'EMAIL_EXISTS':
+          _mostrarMensagem(
+            'Esse e-mail já está sendo usado por outra conta.',
+          );
+          break;
+
+        case 'INVALID_EMAIL':
+          _mostrarMensagem(
+            'O e-mail informado é inválido.',
+          );
+          break;
+
+        default:
+          _mostrarMensagem(
+            'Não foi possível alterar o e-mail.',
+          );
+      }
+    } on FirebaseAuthException catch (e) {
+      debugPrint(
+        'Erro Auth ao alterar e-mail: ${e.code}',
+      );
+
+      if (!mounted) return;
+
+      switch (e.code) {
+        case 'email-already-in-use':
+          _mostrarMensagem(
+            'Esse e-mail já está sendo usado por outra conta.',
+          );
+          break;
+
+        case 'invalid-email':
+          _mostrarMensagem(
+            'O e-mail informado é inválido.',
+          );
+          break;
+
+        case 'wrong-password':
+        case 'invalid-credential':
+        case 'invalid-login-credentials':
+          _mostrarMensagem('Senha inválida.');
+          break;
+
+        default:
+          _mostrarMensagem(
+            'Não foi possível atualizar o e-mail.',
+          );
+      }
     } catch (e) {
-      debugPrint('Erro ao alterar foto: $e');
-      _mostrarMensagem('Não foi possível alterar a foto.');
-    } finally {
+      debugPrint('Erro ao salvar e-mail: $e');
+
       if (mounted) {
-        setState(() {
-          enviandoFoto = false;
-        });
+        _mostrarMensagem(
+          'Não foi possível atualizar o e-mail.',
+        );
       }
     }
   }
 
-  // Sair da conta
+  // Alterar e-mail
+  Future<void> _alterarEmailNoFirebase({
+    required String novoEmail,
+  }) async {
+    final usuario = FirebaseAuth.instance.currentUser;
+
+    if (usuario == null) {
+      throw const _ErroAlteracaoEmail(
+        'ERRO_ALTERAR_EMAIL',
+      );
+    }
+
+    final idToken =
+        await usuario.getIdToken(true);
+
+    if (idToken == null || idToken.isEmpty) {
+      throw const _ErroAlteracaoEmail(
+        'ERRO_ALTERAR_EMAIL',
+      );
+    }
+
+    final apiKey =
+        Firebase.app().options.apiKey;
+
+    final uri = Uri.https(
+      'identitytoolkit.googleapis.com',
+      '/v1/accounts:update',
+      {
+        'key': apiKey,
+      },
+    );
+
+    final client = HttpClient();
+
+    try {
+      final request =
+          await client.postUrl(uri);
+
+      request.headers.contentType =
+          ContentType.json;
+
+      request.write(
+        jsonEncode({
+          'idToken': idToken,
+          'email': novoEmail,
+          'returnSecureToken': true,
+        }),
+      );
+
+      final response =
+          await request.close();
+
+      final respostaTexto =
+          await utf8.decoder.bind(response).join();
+
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300) {
+        return;
+      }
+
+      String codigo = 'ERRO_ALTERAR_EMAIL';
+
+      try {
+        final resposta =
+            jsonDecode(respostaTexto);
+
+        final mensagem =
+            resposta['error']?['message'];
+
+        if (mensagem != null) {
+          codigo =
+              mensagem.toString().split(' ').first;
+        }
+      } catch (_) {
+        codigo = 'ERRO_ALTERAR_EMAIL';
+      }
+
+      throw _ErroAlteracaoEmail(codigo);
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  // Alterar senha
+  void _mostrarAlterarSenha() {
+    final senhaAtualController =
+        TextEditingController();
+
+    final novaSenhaController =
+        TextEditingController();
+
+    bool ocultarSenhaAtual = true;
+    bool ocultarNovaSenha = true;
+    bool carregandoSenha = false;
+    String? erro;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> salvar() async {
+              final senhaAtual =
+                  senhaAtualController.text.trim();
+
+              final novaSenha =
+                  novaSenhaController.text.trim();
+
+              if (senhaAtual.isEmpty) {
+                setDialogState(() {
+                  erro = 'Digite sua senha atual.';
+                });
+                return;
+              }
+
+              if (novaSenha.isEmpty) {
+                setDialogState(() {
+                  erro = 'Digite a nova senha.';
+                });
+                return;
+              }
+
+              if (senhaAtual == novaSenha) {
+                setDialogState(() {
+                  erro =
+                      'A nova senha deve ser diferente da senha atual.';
+                });
+                return;
+              }
+
+              setDialogState(() {
+                carregandoSenha = true;
+                erro = null;
+              });
+
+              final resultado = await _alterarSenha(
+                senhaAtual: senhaAtual,
+                novaSenha: novaSenha,
+              );
+
+              if (!dialogContext.mounted) return;
+
+              if (resultado == 'sucesso') {
+                Navigator.pop(dialogContext);
+                return;
+              }
+
+              setDialogState(() {
+                carregandoSenha = false;
+
+                erro = resultado == 'senhaIncorreta'
+                    ? 'Senha atual incorreta.'
+                    : 'Não foi possível alterar a senha.';
+              });
+            }
+
+            return AlertDialog(
+              title: const Text('Alterar senha'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller:
+                        senhaAtualController,
+                    autofocus: true,
+                    obscureText:
+                        ocultarSenhaAtual,
+                    enabled:
+                        !carregandoSenha,
+                    decoration: InputDecoration(
+                      labelText: 'Senha atual',
+                      border:
+                          const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        onPressed: carregandoSenha
+                            ? null
+                            : () {
+                                setDialogState(() {
+                                  ocultarSenhaAtual =
+                                      !ocultarSenhaAtual;
+                                });
+                              },
+                        icon: Icon(
+                          ocultarSenhaAtual
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  TextField(
+                    controller:
+                        novaSenhaController,
+                    obscureText:
+                        ocultarNovaSenha,
+                    enabled:
+                        !carregandoSenha,
+                    textInputAction:
+                        TextInputAction.done,
+                    onSubmitted: (_) {
+                      if (!carregandoSenha) {
+                        salvar();
+                      }
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Nova senha',
+                      border:
+                          const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        onPressed: carregandoSenha
+                            ? null
+                            : () {
+                                setDialogState(() {
+                                  ocultarNovaSenha =
+                                      !ocultarNovaSenha;
+                                });
+                              },
+                        icon: Icon(
+                          ocultarNovaSenha
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (erro != null) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment:
+                          Alignment.centerLeft,
+                      child: Text(
+                        erro!,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: carregandoSenha
+                      ? null
+                      : () =>
+                          Navigator.pop(
+                            dialogContext,
+                          ),
+                  child:
+                      const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  style:
+                      ElevatedButton.styleFrom(
+                    backgroundColor: verde,
+                    foregroundColor:
+                        Colors.white,
+                  ),
+                  onPressed:
+                      carregandoSenha ? null : salvar,
+                  child: carregandoSenha
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child:
+                              CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Salvar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).then((_) {
+      senhaAtualController.dispose();
+      novaSenhaController.dispose();
+    });
+  }
+
+  // Salvar senha
+  Future<String> _alterarSenha({
+    required String senhaAtual,
+    required String novaSenha,
+  }) async {
+    try {
+      final usuario =
+          FirebaseAuth.instance.currentUser;
+
+      if (usuario == null) {
+        return 'erro';
+      }
+
+      final emailAtual = usuario.email;
+
+      if (emailAtual == null ||
+          emailAtual.isEmpty) {
+        return 'erro';
+      }
+
+      final credencial =
+          EmailAuthProvider.credential(
+        email: emailAtual,
+        password: senhaAtual,
+      );
+
+      await usuario.reauthenticateWithCredential(
+        credencial,
+      );
+
+      await usuario.updatePassword(
+        novaSenha,
+      );
+
+      if (mounted) {
+        _mostrarMensagem(
+          'Senha alterada com sucesso.',
+        );
+      }
+
+      return 'sucesso';
+    } on FirebaseAuthException catch (e) {
+      debugPrint(
+        'Erro ao alterar senha: ${e.code}',
+      );
+
+      switch (e.code) {
+        case 'wrong-password':
+        case 'invalid-credential':
+        case 'invalid-login-credentials':
+          return 'senhaIncorreta';
+
+        default:
+          return 'erro';
+      }
+    } catch (e) {
+      debugPrint(
+        'Erro ao alterar senha: $e',
+      );
+
+      return 'erro';
+    }
+  }
+  // Alterar foto
+Future<void> _alterarFoto() async {
+  try {
+    final imagem = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 45,
+      maxWidth: 500,
+      maxHeight: 500,
+    );
+
+    if (imagem == null) return;
+
+    if (mounted) {
+      setState(() {
+        enviandoFoto = true;
+      });
+    }
+
+    final bytes = await imagem.readAsBytes();
+
+    if (bytes.isEmpty) {
+      _mostrarMensagem(
+        'Não foi possível carregar a foto.',
+      );
+      return;
+    }
+
+    if (bytes.length > 450000) {
+      _mostrarMensagem(
+        'A foto é muito grande. Escolha uma imagem menor.',
+      );
+      return;
+    }
+
+    final base64Foto = base64Encode(bytes);
+
+    if (base64Foto.length > 650000) {
+      _mostrarMensagem(
+        'A foto é muito grande. Escolha uma imagem menor.',
+      );
+      return;
+    }
+
+    final referenciaEmpresa =
+        await _obterReferenciaEmpresa();
+
+    if (referenciaEmpresa == null) {
+      _mostrarMensagem(
+        'Empresa não encontrada.',
+      );
+      return;
+    }
+
+    // Salvar foto no Firestore
+    await referenciaEmpresa.set(
+      {
+        'fotoPerfilBase64': base64Foto,
+      },
+      SetOptions(
+        merge: true,
+      ),
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      fotoPerfilBase64 = base64Foto;
+      fotoPerfilBytes = bytes;
+    });
+
+    _mostrarMensagem(
+      'Foto atualizada com sucesso.',
+    );
+  } catch (e) {
+    debugPrint(
+      'Erro ao alterar foto: $e',
+    );
+
+    if (mounted) {
+      _mostrarMensagem(
+        'Não foi possível alterar a foto.',
+      );
+    }
+  } finally {
+    if (mounted) {
+      setState(() {
+        enviandoFoto = false;
+      });
+    }
+  }
+}
+
+  // Sair
   Future<void> _sair() async {
     try {
       await FirebaseAuth.instance.signOut();
@@ -364,10 +1236,13 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
         (route) => false,
       );
     } catch (e) {
-      _mostrarMensagem('Erro ao sair da conta.');
+      _mostrarMensagem(
+        'Erro ao sair da conta.',
+      );
     }
   }
 
+  // Tela
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -376,7 +1251,9 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
         top: false,
         child: carregando
             ? Center(
-                child: CircularProgressIndicator(color: verde),
+                child: CircularProgressIndicator(
+                  color: verde,
+                ),
               )
             : Column(
                 children: [
@@ -389,17 +1266,22 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                       children: [
                         Row(
                           children: [
+                            // Foto
                             GestureDetector(
                               onTap: _alterarFoto,
                               child: Stack(
                                 children: [
                                   CircleAvatar(
                                     radius: 50,
-                                    backgroundColor: const Color(0xFFF1F1F1),
-                                    backgroundImage: fotoPerfilUrl.isNotEmpty
-                                        ? NetworkImage(fotoPerfilUrl)
-                                        : null,
-                                    child: fotoPerfilUrl.isEmpty
+                                    backgroundColor:
+                                        const Color(0xFFF1F1F1),
+                                    backgroundImage:
+                                        fotoPerfilBytes != null
+                                            ? MemoryImage(
+                                                fotoPerfilBytes!,
+                                              )
+                                            : null,
+                                    child: fotoPerfilBytes == null
                                         ? const Icon(
                                             Icons.business,
                                             size: 55,
@@ -423,37 +1305,114 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                                 ],
                               ),
                             ),
+
                             const SizedBox(width: 18),
+
                             Expanded(
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    nome,
-                                    style: const TextStyle(
-                                      fontSize: 25,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                                  // Nome
+                                  Row(
+                                    mainAxisSize:
+                                        MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          nome,
+                                          style:
+                                              const TextStyle(
+                                            fontSize: 25,
+                                            fontWeight:
+                                                FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
+                                          maxLines: 2,
+                                          overflow:
+                                              TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      InkWell(
+                                        onTap:
+                                            _mostrarEdicaoNome,
+                                        borderRadius:
+                                            BorderRadius.circular(
+                                          20,
+                                        ),
+                                        child: const Padding(
+                                          padding:
+                                              EdgeInsets.all(3),
+                                          child: Icon(
+                                            Icons.edit_outlined,
+                                            size: 17,
+                                            color:
+                                                Color(0xFF495057),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
+
                                   const SizedBox(height: 5),
-                                  Text(
-                                    categoria,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Color(0xFF495057),
-                                    ),
+
+                                  // E-mail
+                                  Row(
+                                    mainAxisSize:
+                                        MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          email,
+                                          style:
+                                              const TextStyle(
+                                            fontSize: 16,
+                                            color:
+                                                Color(0xFF495057),
+                                          ),
+                                          maxLines: 2,
+                                          overflow:
+                                              TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      InkWell(
+                                        onTap:
+                                            _mostrarEdicaoEmail,
+                                        borderRadius:
+                                            BorderRadius.circular(
+                                          20,
+                                        ),
+                                        child: const Padding(
+                                          padding:
+                                              EdgeInsets.all(3),
+                                          child: Icon(
+                                            Icons.edit_outlined,
+                                            size: 16,
+                                            color:
+                                                Color(0xFF495057),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
+
+                                  // Alterar foto
                                   TextButton(
-                                    onPressed:
-                                        enviandoFoto ? null : _alterarFoto,
+                                    onPressed: enviandoFoto
+                                        ? null
+                                        : _alterarFoto,
                                     child: Text(
                                       enviandoFoto
                                           ? 'Enviando foto...'
                                           : 'Alterar foto',
-                                      style: TextStyle(color: verde),
+                                      style:
+                                          TextStyle(color: verde),
                                     ),
                                   ),
                                 ],
@@ -461,67 +1420,109 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                             ),
                           ],
                         ),
+
                         const SizedBox(height: 25),
+
+                        // Alterar senha
+                        _opcao(
+                          Icons.lock_outline,
+                          'Alterar senha',
+                          _mostrarAlterarSenha,
+                        ),
+
+                        _divisor(),
+
+                        // CNPJ
                         _opcao(
                           Icons.badge_outlined,
                           'CNPJ: $cnpj',
                           _mostrarCnpj,
                         ),
+
                         _divisor(),
+
+                        // Telefone
                         _opcao(
                           Icons.phone_outlined,
                           'Telefone: $numero',
                           _mostrarTelefone,
                         ),
+
                         _divisor(),
+
+                        // Endereço
                         _opcao(
                           Icons.location_on_outlined,
                           endereco,
                           _mostrarEndereco,
                         ),
+
                         _divisor(),
+
+                        // Horários
                         _opcao(
                           Icons.access_time_outlined,
                           'Horários de funcionamento',
                           _mostrarHorarios,
                         ),
+
                         _divisor(),
+
+                        // Descrição
                         _opcao(
                           Icons.description_outlined,
                           'Descrição',
                           _mostrarDescricao,
                         ),
+
                         _divisor(),
+
+                        // Redes sociais
                         _opcao(
                           Icons.public,
                           'Redes sociais',
                           _mostrarRedesSociais,
                         ),
+
                         _divisor(),
+
+                        // Agendamento
                         _opcao(
                           Icons.calendar_month_outlined,
                           'Agendamento: $necessitaAgendamento',
                           _mostrarAgendamento,
                         ),
+
                         _divisor(),
+
+                        // Profissionais
                         _opcao(
                           Icons.people_outline,
                           'Profissionais (${profissionais.length})',
                           _mostrarProfissionais,
                         ),
+
                         _divisor(),
+
+                        // Fotos
                         _opcao(
                           Icons.photo_library_outlined,
                           'Fotos (${fotos.length})',
                           _mostrarFotos,
                         ),
+
                         _divisor(),
+
+                        // Pagamentos
                         _opcao(
                           Icons.payment_outlined,
                           'Formas de pagamento',
                           _mostrarPagamentos,
                         ),
+
                         _divisor(),
+
+                        // Favoritos
                         _opcao(
                           Icons.favorite_border,
                           'Favoritos',
@@ -529,15 +1530,20 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const Scaffold(
-                                  backgroundColor: Colors.white,
+                                builder:
+                                    (_) => const Scaffold(
+                                  backgroundColor:
+                                      Colors.white,
                                   body: Favoritos(),
                                 ),
                               ),
                             );
                           },
                         ),
+
                         _divisor(),
+
+                        // Agendamentos
                         _opcao(
                           Icons.calendar_today_outlined,
                           'Agendamentos',
@@ -545,8 +1551,10 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const Scaffold(
-                                  backgroundColor: Colors.white,
+                                builder:
+                                    (_) => const Scaffold(
+                                  backgroundColor:
+                                      Colors.white,
                                   body: Agendamentos(),
                                 ),
                               ),
@@ -556,6 +1564,8 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                       ],
                     ),
                   ),
+
+                  // Sair
                   Padding(
                     padding: const EdgeInsets.all(20),
                     child: Align(
@@ -640,7 +1650,10 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
 
   // Máscaras
   String _somenteNumeros(String texto) {
-    return texto.replaceAll(RegExp(r'[^0-9]'), '');
+    return texto.replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
   }
 
   String _mascaraCnpj(String texto) {
@@ -648,9 +1661,17 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
     final b = StringBuffer();
 
     for (int i = 0; i < numeros.length && i < 14; i++) {
-      if (i == 2 || i == 5) b.write('.');
-      if (i == 8) b.write('/');
-      if (i == 12) b.write('-');
+      if (i == 2 || i == 5) {
+        b.write('.');
+      }
+
+      if (i == 8) {
+        b.write('/');
+      }
+
+      if (i == 12) {
+        b.write('-');
+      }
 
       b.write(numeros[i]);
     }
@@ -665,24 +1686,39 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
 
     final b = StringBuffer();
 
-    if (numeros.length >= 1) {
+    if (numeros.isNotEmpty) {
       b.write('(');
-      b.write(numeros.substring(0, numeros.length >= 2 ? 2 : 1));
+      b.write(
+        numeros.substring(
+          0,
+          numeros.length >= 2 ? 2 : 1,
+        ),
+      );
     }
 
     if (numeros.length >= 3) {
       b.write(') ');
 
-      final limite = numeros.length > 7 ? 7 : numeros.length;
-      b.write(numeros.substring(2, limite));
+      final limite =
+          numeros.length > 7 ? 7 : numeros.length;
+
+      b.write(
+        numeros.substring(
+          2,
+          limite,
+        ),
+      );
     }
 
     if (numeros.length > 7) {
       b.write('-');
+
       b.write(
         numeros.substring(
           7,
-          numeros.length > 11 ? 11 : numeros.length,
+          numeros.length > 11
+              ? 11
+              : numeros.length,
         ),
       );
     }
@@ -690,6 +1726,7 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
     return b.toString();
   }
 
+  // CNPJ
   void _mostrarCnpj() {
     _mostrarEdicaoSimples(
       titulo: 'CNPJ',
@@ -706,6 +1743,7 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
     );
   }
 
+  // Telefone
   void _mostrarTelefone() {
     _mostrarEdicaoSimples(
       titulo: 'Telefone',
@@ -722,6 +1760,7 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
     );
   }
 
+  // Endereço
   void _mostrarEndereco() {
     _mostrarEdicaoSimples(
       titulo: 'Endereço',
@@ -736,7 +1775,7 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
     );
   }
 
-  // Editar informações simples
+  // Editar campo
   void _mostrarEdicaoSimples({
     required String titulo,
     required String valorInicial,
@@ -747,22 +1786,31 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
     int? limite,
   }) {
     final controller = TextEditingController(
-      text: valorInicial == 'Não informado' ? '' : valorInicial,
+      text: valorInicial == 'Não informado'
+          ? ''
+          : valorInicial,
     );
 
     bool editando = false;
 
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+      builder: (dialogContext) =>
+          StatefulBuilder(
+        builder: (context, setDialogState) =>
+            AlertDialog(
           title: Row(
             children: [
-              Expanded(child: Text(titulo)),
+              Expanded(
+                child: Text(titulo),
+              ),
               IconButton(
-                icon: const Icon(Icons.edit_outlined),
+                icon:
+                    const Icon(Icons.edit_outlined),
                 onPressed: () {
-                  setDialogState(() => editando = true);
+                  setDialogState(
+                    () => editando = true,
+                  );
                 },
               ),
             ],
@@ -777,21 +1825,25 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                 : [
                     TextInputFormatter.withFunction(
                       (oldValue, newValue) {
-                        final texto = mascara(newValue.text);
+                        final texto =
+                            mascara(newValue.text);
 
                         return TextEditingValue(
                           text: texto,
-                          selection: TextSelection.collapsed(
+                          selection:
+                              TextSelection.collapsed(
                             offset: texto.length,
                           ),
                         );
                       },
                     ),
                   ],
-            maxLines: titulo == 'Endereço' ? 3 : 1,
+            maxLines:
+                titulo == 'Endereço' ? 3 : 1,
             decoration: InputDecoration(
               labelText: titulo,
-              border: const OutlineInputBorder(),
+              border:
+                  const OutlineInputBorder(),
               counterText: '',
             ),
           ),
@@ -804,57 +1856,85 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
             ),
             if (editando)
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
+                style:
+                    ElevatedButton.styleFrom(
                   backgroundColor: verde,
-                  foregroundColor: Colors.white,
+                  foregroundColor:
+                      Colors.white,
                 ),
                 onPressed: () async {
-                  final valor = controller.text.trim();
+                  final valor =
+                      controller.text.trim();
 
                   if (valor.isEmpty) {
-                    _mostrarMensagem('Preencha o campo.');
+                    _mostrarMensagem(
+                      'Preencha o campo.',
+                    );
                     return;
                   }
 
                   if (titulo == 'CNPJ' &&
-                      _somenteNumeros(valor).length != 14) {
-                    _mostrarMensagem('Digite um CNPJ válido.');
+                      _somenteNumeros(valor)
+                              .length !=
+                          14) {
+                    _mostrarMensagem(
+                      'Digite um CNPJ válido.',
+                    );
                     return;
                   }
 
-                  Navigator.pop(dialogContext);
+                  Navigator.pop(
+                    dialogContext,
+                  );
 
-                  await _salvarCampo(campo, valor);
+                  await _salvarCampo(
+                    campo,
+                    valor,
+                  );
 
                   if (mounted) {
                     onAtualizado(valor);
                   }
                 },
-                child: const Text('Salvar'),
+                child:
+                    const Text('Salvar'),
               ),
           ],
         ),
       ),
-    ).then((_) => controller.dispose());
+    ).then(
+      (_) => controller.dispose(),
+    );
   }
 
-  // Horários de funcionamento
+  // Horários
   void _mostrarHorarios() {
     final aberto = <String, bool>{};
-    final aberturas = <String, TextEditingController>{};
-    final fechamentos = <String, TextEditingController>{};
+
+    final aberturas =
+        <String, TextEditingController>{};
+
+    final fechamentos =
+        <String, TextEditingController>{};
 
     for (final dia in dias) {
       final dados = horarios[dia] ?? {};
 
-      aberto[dia] = dados['aberto'] == true;
+      aberto[dia] =
+          dados['aberto'] == true;
 
-      aberturas[dia] = TextEditingController(
-        text: dados['abertura']?.toString() ?? '',
+      aberturas[dia] =
+          TextEditingController(
+        text:
+            dados['abertura']?.toString() ??
+                '',
       );
 
-      fechamentos[dia] = TextEditingController(
-        text: dados['fechamento']?.toString() ?? '',
+      fechamentos[dia] =
+          TextEditingController(
+        text: dados['fechamento']
+                ?.toString() ??
+            '',
       );
     }
 
@@ -862,17 +1942,25 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+      builder: (dialogContext) =>
+          StatefulBuilder(
+        builder: (context, setDialogState) =>
+            AlertDialog(
           title: Row(
             children: [
               const Expanded(
-                child: Text('Horários de funcionamento'),
+                child: Text(
+                  'Horários de funcionamento',
+                ),
               ),
               IconButton(
-                icon: const Icon(Icons.edit_outlined),
+                icon: const Icon(
+                  Icons.edit_outlined,
+                ),
                 onPressed: () {
-                  setDialogState(() => editando = true);
+                  setDialogState(
+                    () => editando = true,
+                  );
                 },
               ),
             ],
@@ -885,18 +1973,26 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                   return Column(
                     children: [
                       CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
+                        contentPadding:
+                            EdgeInsets.zero,
                         activeColor: verde,
                         title: Text(
                           nomesDias[dia]!,
-                          style: const TextStyle(color: Colors.black),
+                          style:
+                              const TextStyle(
+                            color: Colors.black,
+                          ),
                         ),
                         value: aberto[dia],
                         onChanged: editando
                             ? (valor) {
-                                setDialogState(() {
-                                  aberto[dia] = valor ?? false;
-                                });
+                                setDialogState(
+                                  () {
+                                    aberto[dia] =
+                                        valor ??
+                                            false;
+                                  },
+                                );
                               }
                             : null,
                       ),
@@ -910,11 +2006,14 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                                 editando,
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(
+                              width: 8,
+                            ),
                             Expanded(
                               child: _campoHora(
                                 'Fechamento',
-                                fechamentos[dia]!,
+                                fechamentos[
+                                    dia]!,
                                 editando,
                               ),
                             ),
@@ -922,10 +2021,17 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                         )
                       else
                         const Padding(
-                          padding: EdgeInsets.only(bottom: 8),
+                          padding:
+                              EdgeInsets.only(
+                            bottom: 8,
+                          ),
                           child: Text(
                             'Fechado',
-                            style: TextStyle(color: Colors.grey),
+                            style:
+                                TextStyle(
+                              color:
+                                  Colors.grey,
+                            ),
                           ),
                         ),
                       const Divider(),
@@ -938,26 +2044,43 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(dialogContext);
+                Navigator.pop(
+                  dialogContext,
+                );
               },
-              child: const Text('Fechar'),
+              child:
+                  const Text('Fechar'),
             ),
             if (editando)
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
+                style:
+                    ElevatedButton.styleFrom(
                   backgroundColor: verde,
-                  foregroundColor: Colors.white,
+                  foregroundColor:
+                      Colors.white,
                 ),
                 onPressed: () async {
-                  final novosHorarios = <String, dynamic>{};
+                  final novosHorarios =
+                      <String, dynamic>{};
 
                   for (final dia in dias) {
-                    final abertura = aberturas[dia]!.text.trim();
-                    final fechamento = fechamentos[dia]!.text.trim();
+                    final abertura =
+                        aberturas[dia]!
+                            .text
+                            .trim();
+
+                    final fechamento =
+                        fechamentos[dia]!
+                            .text
+                            .trim();
 
                     if (aberto[dia] == true) {
-                      if (!_horaValida(abertura) ||
-                          !_horaValida(fechamento)) {
+                      if (!_horaValida(
+                            abertura,
+                          ) ||
+                          !_horaValida(
+                            fechamento,
+                          )) {
                         _mostrarMensagem(
                           'Confira os horários de ${nomesDias[dia]}.',
                         );
@@ -966,45 +2089,65 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                     }
 
                     novosHorarios[dia] = {
-                      'aberto': aberto[dia] == true,
-                      'abertura': aberto[dia] == true ? abertura : '',
-                      'fechamento': aberto[dia] == true ? fechamento : '',
+                      'aberto':
+                          aberto[dia] == true,
+                      'abertura':
+                          aberto[dia] == true
+                              ? abertura
+                              : '',
+                      'fechamento':
+                          aberto[dia] == true
+                              ? fechamento
+                              : '',
                     };
                   }
 
-                  Navigator.pop(dialogContext);
+                  Navigator.pop(
+                    dialogContext,
+                  );
 
-                  await _salvarMapa('horarios', novosHorarios);
+                  await _salvarMapa(
+                    'horarios',
+                    novosHorarios,
+                  );
 
                   if (mounted) {
                     setState(() {
                       horarios = {
-                        for (final dia in dias)
-                          dia: Map<String, dynamic>.from(
-                            novosHorarios[dia],
+                        for (final dia
+                            in dias)
+                          dia: Map<String,
+                              dynamic>.from(
+                            novosHorarios[
+                                dia],
                           ),
                       };
                     });
                   }
                 },
-                child: const Text('Salvar'),
+                child:
+                    const Text('Salvar'),
               ),
           ],
         ),
       ),
     ).then((_) {
-      for (final c in aberturas.values) {
+      for (final c
+          in aberturas.values) {
         c.dispose();
       }
 
-      for (final c in fechamentos.values) {
+      for (final c
+          in fechamentos.values) {
         c.dispose();
       }
     });
   }
 
   bool _horaValida(String valor) {
-    return RegExp(r'^([01]\d|2[0-3]):[0-5]\d$').hasMatch(valor);
+    return RegExp(
+      r'^([01]\d|2[0-3]):[0-5]\d$',
+    ).hasMatch(valor);
   }
 
   Widget _campoHora(
@@ -1015,39 +2158,56 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
     return TextField(
       controller: controller,
       enabled: editando,
-      keyboardType: TextInputType.datetime,
+      keyboardType:
+          TextInputType.datetime,
       inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'[0-9:]')),
-        LengthLimitingTextInputFormatter(5),
+        FilteringTextInputFormatter.allow(
+          RegExp(r'[0-9:]'),
+        ),
+        LengthLimitingTextInputFormatter(
+          5,
+        ),
         _MascaraHora(),
       ],
       decoration: InputDecoration(
         labelText: label,
         hintText: 'HH:mm',
-        border: const OutlineInputBorder(),
+        border:
+            const OutlineInputBorder(),
       ),
     );
   }
 
-  // Editar descrição
+  // Descrição
   void _mostrarDescricao() {
-    final controller = TextEditingController(
-      text: descricao == 'Não informado' ? '' : descricao,
+    final controller =
+        TextEditingController(
+      text: descricao == 'Não informado'
+          ? ''
+          : descricao,
     );
 
     bool editando = false;
 
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+      builder: (dialogContext) =>
+          StatefulBuilder(
+        builder: (context, setDialogState) =>
+            AlertDialog(
           title: Row(
             children: [
-              const Expanded(child: Text('Descrição')),
+              const Expanded(
+                child: Text('Descrição'),
+              ),
               IconButton(
-                icon: const Icon(Icons.edit_outlined),
+                icon: const Icon(
+                  Icons.edit_outlined,
+                ),
                 onPressed: () {
-                  setDialogState(() => editando = true);
+                  setDialogState(
+                    () => editando = true,
+                  );
                 },
               ),
             ],
@@ -1056,31 +2216,44 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
             controller: controller,
             enabled: editando,
             maxLines: 7,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
+            decoration:
+                const InputDecoration(
+              border:
+                  OutlineInputBorder(),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(dialogContext);
+                Navigator.pop(
+                  dialogContext,
+                );
               },
-              child: const Text('Fechar'),
+              child:
+                  const Text('Fechar'),
             ),
             if (editando)
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
+                style:
+                    ElevatedButton.styleFrom(
                   backgroundColor: verde,
-                  foregroundColor: Colors.white,
+                  foregroundColor:
+                      Colors.white,
                 ),
                 onPressed: () async {
-                  final valor = controller.text.trim();
+                  final valor =
+                      controller.text.trim();
 
                   if (valor.isEmpty) return;
 
-                  Navigator.pop(dialogContext);
+                  Navigator.pop(
+                    dialogContext,
+                  );
 
-                  await _salvarCampo('descricao', valor);
+                  await _salvarCampo(
+                    'descricao',
+                    valor,
+                  );
 
                   if (mounted) {
                     setState(() {
@@ -1088,28 +2261,47 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                     });
                   }
                 },
-                child: const Text('Salvar'),
+                child:
+                    const Text('Salvar'),
               ),
           ],
         ),
       ),
-    ).then((_) => controller.dispose());
+    ).then(
+      (_) => controller.dispose(),
+    );
   }
 
-  // Editar redes sociais
+  // Redes sociais
   void _mostrarRedesSociais() {
     final controllers = {
-      'instagram': TextEditingController(
-        text: instagram == 'Não informado' ? '' : instagram,
+      'instagram':
+          TextEditingController(
+        text: instagram ==
+                'Não informado'
+            ? ''
+            : instagram,
       ),
-      'facebook': TextEditingController(
-        text: facebook == 'Não informado' ? '' : facebook,
+      'facebook':
+          TextEditingController(
+        text: facebook ==
+                'Não informado'
+            ? ''
+            : facebook,
       ),
-      'tiktok': TextEditingController(
-        text: tiktok == 'Não informado' ? '' : tiktok,
+      'tiktok':
+          TextEditingController(
+        text:
+            tiktok == 'Não informado'
+                ? ''
+                : tiktok,
       ),
-      'website': TextEditingController(
-        text: website == 'Não informado' ? '' : website,
+      'website':
+          TextEditingController(
+        text:
+            website == 'Não informado'
+                ? ''
+                : website,
       ),
     };
 
@@ -1117,96 +2309,154 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+      builder: (dialogContext) =>
+          StatefulBuilder(
+        builder: (context, setDialogState) =>
+            AlertDialog(
           title: Row(
             children: [
-              const Expanded(child: Text('Redes sociais')),
+              const Expanded(
+                child:
+                    Text('Redes sociais'),
+              ),
               IconButton(
-                icon: const Icon(Icons.edit_outlined),
+                icon: const Icon(
+                  Icons.edit_outlined,
+                ),
                 onPressed: () {
-                  setDialogState(() => editando = true);
+                  setDialogState(
+                    () => editando = true,
+                  );
                 },
               ),
             ],
           ),
           content: SingleChildScrollView(
             child: Column(
-              children: controllers.entries.map((entry) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: TextField(
-                    controller: entry.value,
-                    enabled: editando,
-                    decoration: InputDecoration(
-                      labelText: entry.key,
-                      border: const OutlineInputBorder(),
+              children:
+                  controllers.entries.map(
+                (entry) {
+                  return Padding(
+                    padding:
+                        const EdgeInsets.only(
+                      bottom: 10,
                     ),
-                  ),
-                );
-              }).toList(),
+                    child: TextField(
+                      controller:
+                          entry.value,
+                      enabled: editando,
+                      decoration:
+                          InputDecoration(
+                        labelText:
+                            entry.key,
+                        border:
+                            const OutlineInputBorder(),
+                      ),
+                    ),
+                  );
+                },
+              ).toList(),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(dialogContext);
+                Navigator.pop(
+                  dialogContext,
+                );
               },
-              child: const Text('Fechar'),
+              child:
+                  const Text('Fechar'),
             ),
             if (editando)
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
+                style:
+                    ElevatedButton.styleFrom(
                   backgroundColor: verde,
-                  foregroundColor: Colors.white,
+                  foregroundColor:
+                      Colors.white,
                 ),
                 onPressed: () async {
                   final novasRedes = {
-                    for (final entry in controllers.entries)
-                      entry.key: entry.value.text.trim(),
+                    for (final entry
+                        in controllers.entries)
+                      entry.key:
+                          entry.value.text
+                              .trim(),
                   };
 
-                  Navigator.pop(dialogContext);
+                  Navigator.pop(
+                    dialogContext,
+                  );
 
-                  await _salvarMapa('redesSociais', novasRedes);
+                  await _salvarMapa(
+                    'redesSociais',
+                    novasRedes,
+                  );
 
                   if (mounted) {
                     setState(() {
-                      instagram = _valor(novasRedes['instagram']);
-                      facebook = _valor(novasRedes['facebook']);
-                      tiktok = _valor(novasRedes['tiktok']);
-                      website = _valor(novasRedes['website']);
+                      instagram = _valor(
+                        novasRedes[
+                            'instagram'],
+                      );
+
+                      facebook = _valor(
+                        novasRedes[
+                            'facebook'],
+                      );
+
+                      tiktok = _valor(
+                        novasRedes[
+                            'tiktok'],
+                      );
+
+                      website = _valor(
+                        novasRedes[
+                            'website'],
+                      );
                     });
                   }
                 },
-                child: const Text('Salvar'),
+                child:
+                    const Text('Salvar'),
               ),
           ],
         ),
       ),
     ).then((_) {
-      for (final c in controllers.values) {
+      for (final c
+          in controllers.values) {
         c.dispose();
       }
     });
   }
 
-  // Editar agendamento
+  // Agendamento
   void _mostrarAgendamento() {
-    String valorAtual = necessitaAgendamento;
+    String valorAtual =
+        necessitaAgendamento;
 
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Agendamento'),
-          content: DropdownButtonFormField<String>(
-            value: valorAtual == 'SIM' || valorAtual == 'NÃO'
+      builder: (dialogContext) =>
+          StatefulBuilder(
+        builder: (context, setDialogState) =>
+            AlertDialog(
+          title:
+              const Text('Agendamento'),
+          content:
+              DropdownButtonFormField<String>(
+            value: valorAtual == 'SIM' ||
+                    valorAtual == 'NÃO'
                 ? valorAtual
                 : null,
-            decoration: const InputDecoration(
-              labelText: 'Necessita agendamento?',
-              border: OutlineInputBorder(),
+            decoration:
+                const InputDecoration(
+              labelText:
+                  'Necessita agendamento?',
+              border:
+                  OutlineInputBorder(),
             ),
             items: const [
               DropdownMenuItem(
@@ -1220,24 +2470,32 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
             ],
             onChanged: (valor) {
               setDialogState(() {
-                valorAtual = valor ?? valorAtual;
+                valorAtual =
+                    valor ?? valorAtual;
               });
             },
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(dialogContext);
+                Navigator.pop(
+                  dialogContext,
+                );
               },
-              child: const Text('Fechar'),
+              child:
+                  const Text('Fechar'),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
+              style:
+                  ElevatedButton.styleFrom(
                 backgroundColor: verde,
-                foregroundColor: Colors.white,
+                foregroundColor:
+                    Colors.white,
               ),
               onPressed: () async {
-                Navigator.pop(dialogContext);
+                Navigator.pop(
+                  dialogContext,
+                );
 
                 await _salvarCampo(
                   'necessitaAgendamento',
@@ -1246,11 +2504,13 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
 
                 if (mounted) {
                   setState(() {
-                    necessitaAgendamento = valorAtual;
+                    necessitaAgendamento =
+                        valorAtual;
                   });
                 }
               },
-              child: const Text('Salvar'),
+              child:
+                  const Text('Salvar'),
             ),
           ],
         ),
@@ -1258,13 +2518,17 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
     );
   }
 
-  // Gerenciar profissionais
+  // Profissionais
   void _mostrarProfissionais() {
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text('Profissionais (${profissionais.length})'),
+      builder: (dialogContext) =>
+          StatefulBuilder(
+        builder: (context, setDialogState) =>
+            AlertDialog(
+          title: Text(
+            'Profissionais (${profissionais.length})',
+          ),
           content: SizedBox(
             width: double.maxFinite,
             height: 400,
@@ -1278,76 +2542,136 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                           ),
                         )
                       : ListView.builder(
-                          itemCount: profissionais.length,
-                          itemBuilder: (context, index) {
-                            final profissional = profissionais[index];
+                          itemCount:
+                              profissionais.length,
+                          itemBuilder:
+                              (context, index) {
+                            final profissional =
+                                profissionais[
+                                    index];
 
                             final nomeProfissional =
-                                _valor(profissional['nome']);
+                                _valor(
+                              profissional[
+                                  'nome'],
+                            );
 
-                            final especialidade = _valor(
-                              profissional['especialidade'] ??
-                                  profissional['profissao'],
+                            final especialidade =
+                                _valor(
+                              profissional[
+                                      'especialidade'] ??
+                                  profissional[
+                                      'profissao'],
                             );
 
                             final fotoUrl =
-                                profissional['fotoUrl']?.toString() ?? '';
+                                profissional[
+                                            'fotoUrl']
+                                        ?.toString() ??
+                                    '';
 
                             return Card(
                               child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: verde,
-                                  backgroundImage: fotoUrl.isNotEmpty
-                                      ? NetworkImage(fotoUrl)
-                                      : null,
-                                  child: fotoUrl.isEmpty
+                                leading:
+                                    CircleAvatar(
+                                  backgroundColor:
+                                      verde,
+                                  backgroundImage:
+                                      fotoUrl
+                                              .isNotEmpty
+                                          ? NetworkImage(
+                                              fotoUrl,
+                                            )
+                                          : null,
+                                  child: fotoUrl
+                                          .isEmpty
                                       ? const Icon(
-                                          Icons.person,
-                                          color: Colors.white,
+                                          Icons
+                                              .person,
+                                          color: Colors
+                                              .white,
                                         )
                                       : null,
                                 ),
-                                title: Text(nomeProfissional),
-                                subtitle: Text(especialidade),
-                                trailing: IconButton(
-                                  icon: const Icon(
-                                    Icons.delete_outline,
-                                    color: Colors.red,
+                                title: Text(
+                                  nomeProfissional,
+                                ),
+                                subtitle: Text(
+                                  especialidade,
+                                ),
+                                trailing:
+                                    IconButton(
+                                  icon:
+                                      const Icon(
+                                    Icons
+                                        .delete_outline,
+                                    color:
+                                        Colors.red,
                                   ),
-                                  onPressed: () async {
+                                  onPressed:
+                                      () async {
                                     final confirmar =
-                                        await showDialog<bool>(
-                                      context: dialogContext,
-                                      builder: (ctx) => AlertDialog(
-                                        title: const Text(
+                                        await showDialog<
+                                            bool>(
+                                      context:
+                                          dialogContext,
+                                      builder:
+                                          (ctx) =>
+                                              AlertDialog(
+                                        title:
+                                            const Text(
                                           'Excluir profissional',
                                         ),
-                                        content: const Text(
+                                        content:
+                                            const Text(
                                           'Tem certeza que deseja excluir esse profissional?',
                                         ),
                                         actions: [
                                           TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(ctx, false),
-                                            child: const Text('Cancelar'),
+                                            onPressed:
+                                                () =>
+                                                    Navigator.pop(
+                                              ctx,
+                                              false,
+                                            ),
+                                            child:
+                                                const Text(
+                                              'Cancelar',
+                                            ),
                                           ),
                                           ElevatedButton(
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.red,
-                                              foregroundColor: Colors.white,
+                                            style:
+                                                ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  Colors.red,
+                                              foregroundColor:
+                                                  Colors.white,
                                             ),
-                                            onPressed: () =>
-                                                Navigator.pop(ctx, true),
-                                            child: const Text('Excluir'),
+                                            onPressed:
+                                                () =>
+                                                    Navigator.pop(
+                                              ctx,
+                                              true,
+                                            ),
+                                            child:
+                                                const Text(
+                                              'Excluir',
+                                            ),
                                           ),
                                         ],
                                       ),
                                     );
 
-                                    if (confirmar == true) {
-                                      setDialogState(() {
-                                        profissionais.removeAt(index);
-                                      });
+                                    if (confirmar ==
+                                        true) {
+                                      setDialogState(
+                                        () {
+                                          profissionais
+                                              .removeAt(
+                                            index,
+                                          );
+                                        },
+                                      );
 
                                       await _salvarLista(
                                         'profissionais',
@@ -1355,7 +2679,9 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                                       );
 
                                       if (mounted) {
-                                        setState(() {});
+                                        setState(
+                                          () {},
+                                        );
                                       }
 
                                       _mostrarMensagem(
@@ -1369,55 +2695,83 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                           },
                         ),
                 ),
+
                 const SizedBox(height: 10),
+
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
+                  child:
+                      ElevatedButton.icon(
+                    style:
+                        ElevatedButton.styleFrom(
                       backgroundColor: verde,
-                      foregroundColor: Colors.white,
+                      foregroundColor:
+                          Colors.white,
                     ),
                     onPressed: () async {
-                      // Identificar empresa
-                      final uidEmpresa = empresaUid ??
-                          FirebaseAuth.instance.currentUser?.uid;
+                      final uidEmpresa =
+                          empresaUid ??
+                              FirebaseAuth
+                                  .instance
+                                  .currentUser
+                                  ?.uid;
 
-                      if (uidEmpresa == null ||
-                          uidEmpresa.trim().isEmpty) {
+                      if (uidEmpresa ==
+                              null ||
+                          uidEmpresa
+                              .trim()
+                              .isEmpty) {
                         _mostrarMensagem(
                           'Não foi possível identificar a empresa.',
                         );
                         return;
                       }
 
-                      // Abrir cadastro do profissional
                       final novo =
-                          await Navigator.push<Map<String, dynamic>>(
+                          await Navigator.push<
+                              Map<String,
+                                  dynamic>>(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => CadastroPage(
-                            empresaUid: uidEmpresa,
+                          builder: (_) =>
+                              CadastroPage(
+                            empresaUid:
+                                uidEmpresa,
                           ),
                         ),
                       );
 
-                      // Atualizar lista visual
-                      if (novo != null && mounted) {
+                      if (novo != null &&
+                          mounted) {
                         final novoProfissional =
-                            Map<String, dynamic>.from(novo);
+                            Map<String,
+                                dynamic>.from(
+                          novo,
+                        );
 
                         final uidNovo =
-                            novoProfissional['uid']?.toString() ?? '';
+                            novoProfissional[
+                                        'uid']
+                                    ?.toString() ??
+                                '';
 
-                        final existe = profissionais.any(
+                        final existe =
+                            profissionais.any(
                           (profissional) =>
-                              profissional['uid']?.toString() == uidNovo,
+                              profissional[
+                                          'uid']
+                                      ?.toString() ==
+                                  uidNovo,
                         );
 
                         if (!existe) {
-                          setDialogState(() {
-                            profissionais.add(novoProfissional);
-                          });
+                          setDialogState(
+                            () {
+                              profissionais.add(
+                                novoProfissional,
+                              );
+                            },
+                          );
                         }
 
                         setState(() {});
@@ -1427,8 +2781,12 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                         );
                       }
                     },
-                    icon: const Icon(Icons.person_add_alt_1),
-                    label: const Text('Adicionar profissional'),
+                    icon: const Icon(
+                      Icons.person_add_alt_1,
+                    ),
+                    label: const Text(
+                      'Adicionar profissional',
+                    ),
                   ),
                 ),
               ],
@@ -1437,9 +2795,12 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(dialogContext);
+                Navigator.pop(
+                  dialogContext,
+                );
               },
-              child: const Text('Fechar'),
+              child:
+                  const Text('Fechar'),
             ),
           ],
         ),
@@ -1447,15 +2808,21 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
     );
   }
 
-  // Gerenciar fotos
+  // Fotos
   void _mostrarFotos() {
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text('Fotos (${fotos.length})'),
+      builder: (dialogContext) =>
+          StatefulBuilder(
+        builder: (context, setDialogState) =>
+            AlertDialog(
+          title: Text(
+            'Fotos (${fotos.length})',
+          ),
           content: fotos.isEmpty
-              ? const Text('Nenhuma foto cadastrada.')
+              ? const Text(
+                  'Nenhuma foto cadastrada.',
+                )
               : SizedBox(
                   width: double.maxFinite,
                   height: 300,
@@ -1467,21 +2834,38 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                       mainAxisSpacing: 8,
                     ),
                     itemCount: fotos.length,
-                    itemBuilder: (context, index) {
-                      final foto = fotos[index].toString();
+                    itemBuilder:
+                        (context, index) {
+                      final foto =
+                          fotos[index]
+                              .toString();
 
                       return Stack(
                         children: [
                           Positioned.fill(
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius:
+                                  BorderRadius.circular(
+                                10,
+                              ),
                               child: Image.network(
                                 foto,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  color: Colors.grey.shade300,
-                                  child: const Icon(
-                                    Icons.broken_image,
+                                fit:
+                                    BoxFit.cover,
+                                errorBuilder:
+                                    (
+                                  _,
+                                  __,
+                                  ___,
+                                ) =>
+                                        Container(
+                                  color: Colors
+                                      .grey
+                                      .shade300,
+                                  child:
+                                      const Icon(
+                                    Icons
+                                        .broken_image,
                                     size: 40,
                                   ),
                                 ),
@@ -1492,20 +2876,32 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
                             right: 0,
                             top: 0,
                             child: IconButton(
-                              onPressed: () async {
-                                setDialogState(() {
-                                  fotos.removeAt(index);
-                                });
+                              onPressed:
+                                  () async {
+                                setDialogState(
+                                  () {
+                                    fotos.removeAt(
+                                      index,
+                                    );
+                                  },
+                                );
 
-                                await _salvarLista('fotos', fotos);
+                                await _salvarLista(
+                                  'fotos',
+                                  fotos,
+                                );
 
                                 if (mounted) {
-                                  setState(() {});
+                                  setState(
+                                    () {},
+                                  );
                                 }
                               },
-                              icon: const Icon(
+                              icon:
+                                  const Icon(
                                 Icons.delete,
-                                color: Colors.red,
+                                color:
+                                    Colors.red,
                               ),
                             ),
                           ),
@@ -1517,9 +2913,12 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(dialogContext);
+                Navigator.pop(
+                  dialogContext,
+                );
               },
-              child: const Text('Fechar'),
+              child:
+                  const Text('Fechar'),
             ),
           ],
         ),
@@ -1527,17 +2926,28 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
     );
   }
 
-  // Editar formas de pagamento
+  // Pagamentos
   void _mostrarPagamentos() {
     final controllers = {
-      'cartao': TextEditingController(
-        text: pagamentoCartao == 'Não informado' ? '' : pagamentoCartao,
+      'cartao':
+          TextEditingController(
+        text: pagamentoCartao ==
+                'Não informado'
+            ? ''
+            : pagamentoCartao,
       ),
       'pix': TextEditingController(
-        text: pagamentoPix == 'Não informado' ? '' : pagamentoPix,
+        text: pagamentoPix ==
+                'Não informado'
+            ? ''
+            : pagamentoPix,
       ),
-      'outros': TextEditingController(
-        text: pagamentoOutros == 'Não informado' ? '' : pagamentoOutros,
+      'outros':
+          TextEditingController(
+        text: pagamentoOutros ==
+                'Não informado'
+            ? ''
+            : pagamentoOutros,
       ),
     };
 
@@ -1545,75 +2955,123 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+      builder: (dialogContext) =>
+          StatefulBuilder(
+        builder: (context, setDialogState) =>
+            AlertDialog(
           title: Row(
             children: [
               const Expanded(
-                child: Text('Formas de pagamento'),
+                child: Text(
+                  'Formas de pagamento',
+                ),
               ),
               IconButton(
-                icon: const Icon(Icons.edit_outlined),
+                icon: const Icon(
+                  Icons.edit_outlined,
+                ),
                 onPressed: () {
-                  setDialogState(() => editando = true);
+                  setDialogState(
+                    () => editando = true,
+                  );
                 },
               ),
             ],
           ),
           content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: controllers.entries.map((entry) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: TextField(
-                  controller: entry.value,
-                  enabled: editando,
-                  decoration: InputDecoration(
-                    labelText: entry.key,
-                    border: const OutlineInputBorder(),
+            mainAxisSize:
+                MainAxisSize.min,
+            children:
+                controllers.entries.map(
+              (entry) {
+                return Padding(
+                  padding:
+                      const EdgeInsets.only(
+                    bottom: 10,
                   ),
-                ),
-              );
-            }).toList(),
+                  child: TextField(
+                    controller:
+                        entry.value,
+                    enabled: editando,
+                    decoration:
+                        InputDecoration(
+                      labelText:
+                          entry.key,
+                      border:
+                          const OutlineInputBorder(),
+                    ),
+                  ),
+                );
+              },
+            ).toList(),
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(dialogContext);
+                Navigator.pop(
+                  dialogContext,
+                );
               },
-              child: const Text('Fechar'),
+              child:
+                  const Text('Fechar'),
             ),
             if (editando)
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
+                style:
+                    ElevatedButton.styleFrom(
                   backgroundColor: verde,
-                  foregroundColor: Colors.white,
+                  foregroundColor:
+                      Colors.white,
                 ),
                 onPressed: () async {
                   final pagamentos = {
-                    for (final entry in controllers.entries)
-                      entry.key: entry.value.text.trim(),
+                    for (final entry
+                        in controllers.entries)
+                      entry.key:
+                          entry.value.text
+                              .trim(),
                   };
 
-                  Navigator.pop(dialogContext);
+                  Navigator.pop(
+                    dialogContext,
+                  );
 
-                  await _salvarMapa('formasPagamento', pagamentos);
+                  await _salvarMapa(
+                    'formasPagamento',
+                    pagamentos,
+                  );
 
                   if (mounted) {
                     setState(() {
-                      pagamentoCartao = _valor(pagamentos['cartao']);
-                      pagamentoPix = _valor(pagamentos['pix']);
-                      pagamentoOutros = _valor(pagamentos['outros']);
+                      pagamentoCartao =
+                          _valor(
+                        pagamentos[
+                            'cartao'],
+                      );
+
+                      pagamentoPix =
+                          _valor(
+                        pagamentos[
+                            'pix'],
+                      );
+
+                      pagamentoOutros =
+                          _valor(
+                        pagamentos[
+                            'outros'],
+                      );
                     });
                   }
                 },
-                child: const Text('Salvar'),
+                child:
+                    const Text('Salvar'),
               ),
           ],
         ),
       ),
     ).then((_) {
-      for (final c in controllers.values) {
+      for (final c
+          in controllers.values) {
         c.dispose();
       }
     });
@@ -1621,20 +3079,23 @@ class _PerfilEmpresaState extends State<PerfilEmpresa> {
 }
 
 // Máscara de horário
-class _MascaraHora extends TextInputFormatter {
+class _MascaraHora
+    extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    final numeros = newValue.text.replaceAll(
+    final numeros =
+        newValue.text.replaceAll(
       RegExp(r'[^0-9]'),
       '',
     );
 
-    final limitado = numeros.length > 4
-        ? numeros.substring(0, 4)
-        : numeros;
+    final limitado =
+        numeros.length > 4
+            ? numeros.substring(0, 4)
+            : numeros;
 
     String resultado = limitado;
 
@@ -1645,9 +3106,20 @@ class _MascaraHora extends TextInputFormatter {
 
     return TextEditingValue(
       text: resultado,
-      selection: TextSelection.collapsed(
+      selection:
+          TextSelection.collapsed(
         offset: resultado.length,
       ),
     );
   }
+}
+
+// Erro ao alterar e-mail
+class _ErroAlteracaoEmail
+    implements Exception {
+  final String codigo;
+
+  const _ErroAlteracaoEmail(
+    this.codigo,
+  );
 }

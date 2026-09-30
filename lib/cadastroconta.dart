@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -24,7 +25,7 @@ class CriarContaState extends State<CriarConta> {
       TextEditingController();
 
   // Foto de perfil
-  File? _fotoPerfil;
+  Uint8List? _fotoPerfilBytes;
   final ImagePicker _seletorImagem = ImagePicker();
 
   // Controle da tela
@@ -48,26 +49,67 @@ class CriarContaState extends State<CriarConta> {
     try {
       final XFile? imagem = await _seletorImagem.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 80,
+        imageQuality: 45,
+        maxWidth: 500,
+        maxHeight: 500,
       );
 
-      if (imagem == null || !mounted) return;
+      if (imagem == null) return;
+
+      final bytes = await imagem.readAsBytes();
+
+      if (bytes.isEmpty) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Não foi possível carregar a foto.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+
+        return;
+      }
+
+      if (bytes.length > 450000) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'A foto é muito grande. Escolha uma imagem menor.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+
+        return;
+      }
+
+      if (!mounted) return;
 
       setState(() {
-        _fotoPerfil = File(imagem.path);
+        _fotoPerfilBytes = bytes;
       });
     } catch (e) {
+      debugPrint(
+        'Erro ao selecionar foto: $e',
+      );
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Não foi possível selecionar a foto: $e'),
+        const SnackBar(
+          content: Text(
+            'Não foi possível selecionar a foto.',
+          ),
           backgroundColor: Colors.red,
         ),
       );
     }
   }
-
   // Realizar cadastro
   Future<void> _realizarCadastro() async {
     final String nome = _userController.text.trim();
@@ -97,34 +139,72 @@ class CriarContaState extends State<CriarConta> {
       return;
     }
 
-    setState(() {
-      _carregando = true;
-    });
+setState(() {
+  _carregando = true;
+});
 
-    try {
-      final UserCredential credencial =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: senha,
+try {
+  // Preparar foto
+  String fotoPerfilBase64 = '';
+
+  if (_fotoPerfilBytes != null) {
+    fotoPerfilBase64 = base64Encode(
+      _fotoPerfilBytes!,
+    );
+
+    if (fotoPerfilBase64.length > 650000) {
+      if (!mounted) return;
+
+      setState(() {
+        _carregando = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'A foto é muito grande. Escolha uma imagem menor.',
+          ),
+          backgroundColor: Colors.red,
+        ),
       );
 
-      final User? usuario = credencial.user;
+      return;
+    }
+  }
 
-      if (usuario == null) {
-        throw Exception(
-          'O Firebase não retornou o usuário após o cadastro.',
-        );
-      }
+    final UserCredential credencial =
+        await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(
+      email: email,
+      password: senha,
+    );
 
-      final String uid = usuario.uid;
+    final User? usuario = credencial.user;
 
-      // Salvar usuário
-      await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
-        'nome': nome,
-        'cidade': cidade,
-        'email': email,
-        'criadoEm': FieldValue.serverTimestamp(),
-      });
+    if (usuario == null) {
+      throw Exception(
+        'O Firebase não retornou o usuário após o cadastro.',
+      );
+    }
+    final String uid = usuario.uid;
+
+    final dadosUsuario = <String, dynamic>{
+      'uid': uid,
+      'nome': nome,
+      'cidade': cidade,
+      'email': email,
+      'criadoEm': FieldValue.serverTimestamp(),
+    };
+
+    if (fotoPerfilBase64.isNotEmpty) {
+      dadosUsuario['fotoPerfilBase64'] =
+          fotoPerfilBase64;
+    }
+
+    await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(uid)
+        .set(dadosUsuario);
 
       if (!mounted) return;
 
@@ -467,11 +547,9 @@ class CriarContaState extends State<CriarConta> {
                                       onTap: _carregando
                                           ? null
                                           : _selecionarFoto,
-
                                       child: Container(
                                         width: 110,
                                         height: 110,
-
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           color: const Color(0xFFF1F1F1),
@@ -480,11 +558,10 @@ class CriarContaState extends State<CriarConta> {
                                             width: 2,
                                           ),
                                         ),
-
-                                        child: _fotoPerfil != null
+                                        child: _fotoPerfilBytes != null
                                             ? ClipOval(
-                                                child: Image.file(
-                                                  _fotoPerfil!,
+                                                child: Image.memory(
+                                                  _fotoPerfilBytes!,
                                                   width: 110,
                                                   height: 110,
                                                   fit: BoxFit.cover,
@@ -493,16 +570,13 @@ class CriarContaState extends State<CriarConta> {
                                             : const Column(
                                                 mainAxisAlignment:
                                                     MainAxisAlignment.center,
-
                                                 children: [
                                                   Icon(
                                                     Icons.add_a_photo_outlined,
                                                     size: 35,
                                                     color: Colors.black54,
                                                   ),
-
                                                   SizedBox(height: 5),
-
                                                   Text(
                                                     'Adicionar',
                                                     style: TextStyle(
@@ -521,12 +595,10 @@ class CriarContaState extends State<CriarConta> {
                                       onPressed: _carregando
                                           ? null
                                           : _selecionarFoto,
-
                                       child: Text(
-                                        _fotoPerfil == null
+                                        _fotoPerfilBytes == null
                                             ? 'Selecionar foto'
                                             : 'Alterar foto',
-
                                         style: const TextStyle(
                                           color: Color(0xFF76A085),
                                           fontWeight: FontWeight.bold,

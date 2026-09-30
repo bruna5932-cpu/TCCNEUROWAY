@@ -1,11 +1,11 @@
-import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
 class CadastroPage extends StatefulWidget {
@@ -34,7 +34,7 @@ class _CadastroPageState extends State<CadastroPage> {
   bool _mostrarConfirmarSenha = false;
   bool _carregando = false;
 
-  File? _fotoSelecionada;
+  Uint8List? _fotoSelecionadaBytes;
 
   @override
   void dispose() {
@@ -76,20 +76,60 @@ class _CadastroPageState extends State<CadastroPage> {
 
       final XFile? imagem = await picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 80,
+        imageQuality: 45,
+        maxWidth: 500,
+        maxHeight: 500,
       );
 
-      if (imagem != null && mounted) {
-        setState(() {
-          _fotoSelecionada = File(imagem.path);
-        });
+      if (imagem == null) return;
+
+      final bytes = await imagem.readAsBytes();
+
+      if (bytes.isEmpty) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Não foi possível carregar a foto.',
+            ),
+          ),
+        );
+
+        return;
       }
+
+      if (bytes.length > 450000) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'A foto é muito grande. Escolha uma imagem menor.',
+            ),
+          ),
+        );
+
+        return;
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _fotoSelecionadaBytes = bytes;
+      });
     } catch (e) {
+      debugPrint(
+        'Erro ao selecionar imagem: $e',
+      );
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao selecionar imagem: $e'),
+        const SnackBar(
+          content: Text(
+            'Não foi possível selecionar a foto.',
+          ),
         ),
       );
     }
@@ -175,17 +215,18 @@ class _CadastroPageState extends State<CadastroPage> {
       }
 
       final profissionalUid = usuarioCriado.uid;
-      String fotoUrl = '';
+      String fotoPerfilBase64 = '';
 
-      // Foto do profissional
-      if (_fotoSelecionada != null) {
-        final referencia = FirebaseStorage.instance
-            .ref()
-            .child('profissionais')
-            .child('$profissionalUid.jpg');
+      if (_fotoSelecionadaBytes != null) {
+        fotoPerfilBase64 = base64Encode(
+          _fotoSelecionadaBytes!,
+        );
 
-        await referencia.putFile(_fotoSelecionada!);
-        fotoUrl = await referencia.getDownloadURL();
+        if (fotoPerfilBase64.length > 650000) {
+          throw Exception(
+            'A foto é muito grande. Escolha uma imagem menor.',
+          );
+        }
       }
 
       // Dados do profissional
@@ -199,10 +240,14 @@ class _CadastroPageState extends State<CadastroPage> {
         'especialidade': profissao,
         'experiencia': experiencia,
         'tipo': 'profissional',
-        'fotoUrl': fotoUrl,
         'empresaUid': widget.empresaUid ?? '',
         'criadoEm': FieldValue.serverTimestamp(),
       };
+
+      if (fotoPerfilBase64.isNotEmpty) {
+        dadosProfissional['fotoPerfilBase64'] =
+            fotoPerfilBase64;
+      }
 
       // Salvar profissional
       await FirebaseFirestore.instance
@@ -229,14 +274,19 @@ class _CadastroPageState extends State<CadastroPage> {
         final Map<String, dynamic> profissionalParaEmpresa = {
           'uid': profissionalUid,
           'nome': nome,
+          'email': email,
           'especialidade': profissao,
           'profissao': profissao,
           'telefone': telefone,
           'descricao': descricao,
           'experiencia': experiencia,
-          'fotoUrl': fotoUrl,
           'empresaUid': empresaUid,
         };
+
+        if (fotoPerfilBase64.isNotEmpty) {
+          profissionalParaEmpresa['fotoPerfilBase64'] =
+              fotoPerfilBase64;
+        }
 
         await empresaRef.update({
           'profissionais': FieldValue.arrayUnion([
@@ -256,13 +306,16 @@ class _CadastroPageState extends State<CadastroPage> {
         {
           'uid': profissionalUid,
           'nome': nome,
+          'email': email,
           'especialidade': profissao,
           'profissao': profissao,
           'telefone': telefone,
           'descricao': descricao,
           'experiencia': experiencia,
-          'fotoUrl': fotoUrl,
-          'empresaUid': empresaUid ?? '',
+          'fotoPerfilBase64':
+              fotoPerfilBase64,
+          'empresaUid':
+              empresaUid ?? '',
         },
       );
     } on FirebaseAuthException catch (e) {
@@ -484,33 +537,33 @@ class _CadastroPageState extends State<CadastroPage> {
                               width: 2,
                             ),
                           ),
-                          child: _fotoSelecionada != null
-                              ? ClipOval(
-                                  child: Image.file(
-                                    _fotoSelecionada!,
-                                    width: 120,
-                                    height: 120,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : const Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.add_a_photo_outlined,
-                                      size: 38,
-                                      color: Colors.black54,
+                            child: _fotoSelecionadaBytes != null
+                                ? ClipOval(
+                                    child: Image.memory(
+                                      _fotoSelecionadaBytes!,
+                                      width: 120,
+                                      height: 120,
+                                      fit: BoxFit.cover,
                                     ),
-                                    SizedBox(height: 5),
-                                    Text(
-                                      'Adicionar',
-                                      style: TextStyle(
-                                        fontSize: 12,
+                                  )
+                                : const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.add_a_photo_outlined,
+                                        size: 38,
                                         color: Colors.black54,
                                       ),
-                                    ),
-                                  ],
-                                ),
+                                      SizedBox(height: 5),
+                                      Text(
+                                        'Adicionar',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                         ),
                       ),
                     ),
@@ -519,7 +572,7 @@ class _CadastroPageState extends State<CadastroPage> {
                       child: TextButton(
                         onPressed: _carregando ? null : _selecionarFoto,
                         child: Text(
-                          _fotoSelecionada == null
+                          _fotoSelecionadaBytes == null
                               ? 'Selecionar foto'
                               : 'Alterar foto',
                           style: const TextStyle(
