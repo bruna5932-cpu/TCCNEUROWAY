@@ -1,1 +1,39 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"neuroway-7c999","appId":"1:840040907500:android:7e2b769ff3d95ac7889bc9","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"neuroway-7c999","configurations":{"android":"1:840040907500:android:7e2b769ff3d95ac7889bc9","ios":"1:840040907500:ios:bd60a3c8aac4818b889bc9","macos":"1:840040907500:ios:bd60a3c8aac4818b889bc9","web":"1:840040907500:web:bf93730be96e9a59889bc9","windows":"1:840040907500:web:8db835c6e3fef44e889bc9"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "neuroway-7c999",
+          "appId": "1:840040907500:android:7e2b769ff3d95ac7889bc9",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "neuroway-7c999",
+          "configurations": {
+            "android": "1:840040907500:android:7e2b769ff3d95ac7889bc9",
+            "ios": "1:840040907500:ios:bd60a3c8aac4818b889bc9",
+            "macos": "1:840040907500:ios:bd60a3c8aac4818b889bc9",
+            "web": "1:840040907500:web:bf93730be96e9a59889bc9",
+            "windows": "1:840040907500:web:8db835c6e3fef44e889bc9"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
