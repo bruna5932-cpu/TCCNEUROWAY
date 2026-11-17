@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart';
+
 import 'package:neuroway/agendarvisita.dart';
 import 'package:neuroway/menuprincipal.dart';
 import 'package:neuroway/descricaoprofi.dart';
@@ -534,6 +537,105 @@ class _DescricaoLocalScreenState
       ),
     );
   }
+
+// WHATSAPP
+
+Future<void> _abrirWhatsApp(String telefone) async {
+  final numero = telefone.replaceAll(RegExp(r'[^0-9]'), '');
+
+  if (numero.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Telefone da empresa não cadastrado.'),
+      ),
+    );
+    return;
+  }
+
+  final numeroCompleto =
+      numero.startsWith('55') ? numero : '55$numero';
+
+  final Uri url = Uri.parse(
+    'https://wa.me/$numeroCompleto',
+  );
+
+  try {
+    bool abriu;
+
+    if (kIsWeb) {
+      // Abre o WhatsApp em uma nova aba no navegador.
+      abriu = await launchUrl(
+        url,
+        webOnlyWindowName: '_blank',
+      );
+    } else {
+      // Abre o WhatsApp no celular.
+      abriu = await launchUrl(
+        url,
+        mode: LaunchMode.externalApplication,
+      );
+    }
+
+    if (!abriu && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível abrir o WhatsApp.'),
+        ),
+      );
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao abrir WhatsApp: $e'),
+        ),
+      );
+    }
+  }
+}
+
+
+// GOOGLE MAPS
+Future<void> _abrirGoogleMaps(String endereco) async {
+  if (endereco.trim().isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Endereço da empresa não cadastrado.'),
+      ),
+    );
+    return;
+  }
+
+  final Uri url = Uri.https(
+    'www.google.com',
+    '/maps/search/',
+    {'api': '1', 'query': endereco},
+  );
+
+  try {
+    final abriu = await launchUrl(
+      url,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!abriu && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível abrir o Google Maps.'),
+        ),
+      );
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao abrir Google Maps: $e'),
+        ),
+      );
+    }
+  }
+}
+
   // NAVEGAÇÃO
   void _selecionarNavegacao(int index) {
     Navigator.pushAndRemoveUntil(
@@ -1077,58 +1179,99 @@ Padding(
 
 const SizedBox(height: 24),
 
-              // LOCALIZAÇÃO
-              if (endereco.trim().isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                  ),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors.grey.shade300,
+              
+// LOCALIZAÇÃO
+if (endereco.trim().isNotEmpty)
+  Padding(
+    padding: const EdgeInsets.symmetric(
+      horizontal: 16,
+    ),
+    child: Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: Colors.grey.shade300,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.location_on,
+                color: Color(0xFF76A085),
+                size: 24,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Localização',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
                       ),
-                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.location_on,
-                          color: Color(0xFF76A085),
-                          size: 24,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Localização',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                endereco,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey[700],
-                                  height: 1.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 4),
+                    Text(
+                      endereco,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[700],
+                        height: 1.3,
+                      ),
                     ),
-                  ),
+                  ],
                 ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // BOTÃO DO GOOGLE MAPS
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                _abrirGoogleMaps(endereco);
+              },
+              icon: const Icon(
+                Icons.map_outlined,
+                color: Colors.white,
+                size: 20,
+              ),
+              label: const Text(
+                'Ver localização no Google Maps',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF76A085),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(9),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  ),
 
               // TELEFONE
               if (telefone.trim().isNotEmpty)
@@ -1147,35 +1290,75 @@ const SizedBox(height: 24),
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.phone,
-                          color: Color(0xFF76A085),
-                          size: 23,
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.phone,
+                              color: Color(0xFF76A085),
+                              size: 23,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Telefone',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    telefone,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Telefone',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
+
+                        const SizedBox(height: 14),
+
+                        // BOTÃO DO WHATSAPP
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              _abrirWhatsApp(telefone);
+                            },
+                            icon: const Icon(
+                              Icons.chat,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            label: const Text(
+                              'Conversar pelo WhatsApp',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                telefone,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey[700],
-                                ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF25D366),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12,
                               ),
-                            ],
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(9),
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -1183,9 +1366,9 @@ const SizedBox(height: 24),
                   ),
                 ),
 
-              const SizedBox(height: 20),
 
               // HORÁRIOS
+              const SizedBox(height: 24),
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -1242,7 +1425,6 @@ const SizedBox(height: 24),
 
               // COMENTÁRIOS
               const SizedBox(height: 24),
-
               CompanyCommentsSection(
                 empresaId: widget.empresaId,
               ),
@@ -2263,6 +2445,8 @@ const SizedBox(height: 24),
     _minhaAvaliacaoSubscription?.cancel();
     super.dispose();
   }
+
+
 }
 // COMENTÁRIOS DA EMPRESA
 class CompanyCommentsSection extends StatelessWidget {
